@@ -1,0 +1,11 @@
+{
+  "extends": "./.quasar/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "src/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "#q-app": ["./node_modules/@quasar/app-vite/types/index.d.ts"],
+      "#q-app/*": ["./node_modules/@quasar/app-vite/types/*"]
+    }
+  }
+}

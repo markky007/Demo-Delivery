@@ -1,0 +1,155 @@
+/**
+ * Table service — Supabase queries for table and QR management.
+ */
+import { supabase } from './supabase';
+import type { Table, TableQRToken, TableWithQR } from 'src/types/database';
+
+/**
+ * Resolve a public QR token to a table + restaurant context.
+ * Returns null if the token is invalid, revoked, or the table is inactive.
+ */
+export async function resolveTableFromToken(publicToken: string) {
+  const { data, error } = await supabase
+    .from('table_qr_tokens')
+    .select(
+      `
+      id,
+      table_id,
+      public_token,
+      is_active,
+      generated_at,
+      revoked_at,
+      table:tables (
+        id,
+        restaurant_id,
+        name,
+        sort_order,
+        is_active,
+        restaurant:restaurants (
+          id,
+          name,
+          description,
+          logo_url
+        )
+      )
+    `,
+    )
+    .eq('public_token', publicToken)
+    .eq('is_active', true)
+    .single();
+
+  if (error || !data) return null;
+
+  // Validate table is active
+  const tableData = data.table as unknown as Table & {
+    restaurant: { id: string; name: string; description: string | null; logo_url: string | null };
+  };
+  if (!tableData?.is_active) return null;
+
+  return {
+    qrToken: data as unknown as TableQRToken,
+    table: tableData,
+    restaurant: tableData.restaurant,
+  };
+}
+
+// ─── Owner CRUD ──────────────────────────────────────────
+
+export async function fetchTables(): Promise<TableWithQR[]> {
+  const { data, error } = await supabase
+    .from('tables')
+    .select(
+      `
+      *,
+      active_qr:table_qr_tokens (*)
+    `,
+    )
+    .order('sort_order');
+
+  if (error) throw new Error(error.message);
+
+  // Filter to only active QR tokens
+  return (data ?? []).map((t) => ({
+    ...t,
+    active_qr: Array.isArray(t.active_qr)
+      ? (t.active_qr.find((q: TableQRToken) => q.is_active) ?? null)
+      : t.active_qr,
+  })) as TableWithQR[];
+}
+
+export async function createTable(name: string, restaurantId: string): Promise<Table> {
+  // Get max sort order
+  const { data: maxData } = await supabase
+    .from('tables')
+    .select('sort_order')
+    .eq('restaurant_id', restaurantId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+
+  const nextOrder = (maxData?.[0]?.sort_order ?? 0) + 1;
+
+  const { data, error } = await supabase
+    .from('tables')
+    .insert({
+      restaurant_id: restaurantId,
+      name,
+      sort_order: nextOrder,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Table;
+}
+
+export async function updateTable(
+  id: string,
+  updates: Partial<Pick<Table, 'name' | 'is_active' | 'sort_order'>>,
+): Promise<Table> {
+  const { data, error } = await supabase
+    .from('tables')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Table;
+}
+
+export async function generateQRToken(tableId: string): Promise<TableQRToken> {
+  // Revoke existing active tokens
+  await supabase
+    .from('table_qr_tokens')
+    .update({ is_active: false, revoked_at: new Date().toISOString() })
+    .eq('table_id', tableId)
+    .eq('is_active', true);
+
+  // Generate new token
+  const token = generatePublicToken();
+
+  const { data, error } = await supabase
+    .from('table_qr_tokens')
+    .insert({
+      table_id: tableId,
+      public_token: token,
+      is_active: true,
+      generated_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as TableQRToken;
+}
+
+/**
+ * Generate a short, URL-safe random token.
+ */
+function generatePublicToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint8Array(10);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => chars[b % chars.length]).join('');
+}

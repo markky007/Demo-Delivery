@@ -1,0 +1,127 @@
+/**
+ * Order service — create, edit, and manage orders.
+ */
+import { supabase } from './supabase';
+import type { Order, OrderWithItems } from 'src/types/database';
+import type { CreateOrderPayload, UpdateOrderPayload } from 'src/types/cart';
+import type { OrderStatus } from 'src/types/enums';
+
+/**
+ * Create a new order via server-side RPC.
+ * The RPC validates availability, prices, options, and assigns queue_number.
+ */
+export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
+  const { data, error } = await supabase.rpc('create_order', {
+    p_table_session_id: payload.table_session_id,
+    p_guest_session_token: payload.guest_session_token,
+    p_items: payload.items,
+  });
+
+  if (error) throw new Error(error.message);
+  return data as Order;
+}
+
+/**
+ * Update an existing order via server-side RPC.
+ * Only allowed for QUEUED/PREPARING orders.
+ */
+export async function updateOrder(payload: UpdateOrderPayload): Promise<Order> {
+  const { data, error } = await supabase.rpc('update_order', {
+    p_order_id: payload.order_id,
+    p_guest_session_token: payload.guest_session_token,
+    p_items: payload.items,
+  });
+
+  if (error) throw new Error(error.message);
+  return data as Order;
+}
+
+/**
+ * Advance an order's status (Owner action).
+ */
+export async function advanceOrderStatus(orderId: string, newStatus: OrderStatus): Promise<Order> {
+  const { data, error } = await supabase.rpc('advance_order_status', {
+    p_order_id: orderId,
+    p_new_status: newStatus,
+  });
+
+  if (error) throw new Error(error.message);
+  return data as Order;
+}
+
+/**
+ * Fetch orders for a table session (customer view).
+ */
+export async function fetchSessionOrders(
+  tableSessionId: string,
+  guestSessionId?: string,
+): Promise<OrderWithItems[]> {
+  let query = supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      items:order_items (
+        *,
+        options:order_item_options (*)
+      )
+    `,
+    )
+    .eq('table_session_id', tableSessionId)
+    .order('queue_number');
+
+  if (guestSessionId) {
+    query = query.eq('guest_session_id', guestSessionId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderWithItems[];
+}
+
+/**
+ * Fetch today's orders for the owner queue.
+ */
+export async function fetchTodayOrders(): Promise<OrderWithItems[]> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      items:order_items (
+        *,
+        options:order_item_options (*)
+      )
+    `,
+    )
+    .gte('created_at', todayStart.toISOString())
+    .order('queue_number');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderWithItems[];
+}
+
+/**
+ * Fetch a single order with items.
+ */
+export async function fetchOrder(orderId: string): Promise<OrderWithItems | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      items:order_items (
+        *,
+        options:order_item_options (*)
+      )
+    `,
+    )
+    .eq('id', orderId)
+    .single();
+
+  if (error) return null;
+  return data as OrderWithItems;
+}

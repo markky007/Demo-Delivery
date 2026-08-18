@@ -1,4 +1,4 @@
-# QR Food Order (qr-food-order)
+# Demo Delivery (demo-delivery)
 
 ## Install the dependencies
 

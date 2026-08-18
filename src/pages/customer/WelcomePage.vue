@@ -18,8 +18,8 @@
     <!-- Welcome state -->
     <div v-else class="column items-center text-center welcome-card q-pa-xl">
       <!-- Restaurant logo / Icon -->
-      <div class="welcome-icon-wrap q-mb-md">
-        <q-icon name="restaurant" size="52px" color="primary" />
+      <div class="welcome-logo-wrap q-mb-md">
+        <img :src="logoSvg" alt="DEMO Bang saen" class="welcome-logo-img" />
       </div>
 
       <h4 class="q-my-none text-weight-bold welcome-restaurant-name">
@@ -60,6 +60,7 @@ import { resolveTableFromToken } from 'src/services/tableService';
 import { joinOrCreateSession, getOrCreateGuestToken } from 'src/services/sessionService';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { Restaurant } from 'src/types/database';
+import logoSvg from 'src/assets/logo.svg';
 
 const route = useRoute();
 const router = useRouter();
@@ -138,6 +139,20 @@ async function startOrdering() {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.welcome-logo-wrap {
+  width: 140px;
+  max-width: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-logo-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .welcome-icon-wrap--error {

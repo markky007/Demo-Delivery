@@ -16,12 +16,12 @@
           <q-item class="owner-brand q-my-xs q-mx-sm">
             <q-item-section avatar>
               <div class="owner-brand-icon">
-                <q-icon name="restaurant_menu" color="primary" size="24px" />
+                <img :src="logoMarkSvg" alt="DEMO" class="owner-brand-logo" />
               </div>
             </q-item-section>
             <q-item-section v-if="!miniDrawer">
               <q-item-label class="text-weight-bold text-subtitle1 brand-title"
-                >ระบบร้านอาหาร</q-item-label
+                >DEMO Bang saen</q-item-label
               >
               <q-item-label caption class="brand-subtitle">ผู้ดูแลร้าน (Owner)</q-item-label>
             </q-item-section>
@@ -129,6 +129,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/authStore';
+import logoMarkSvg from 'src/assets/logo-mark.svg';
 
 const route = useRoute();
 const router = useRouter();
@@ -222,10 +223,18 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary-soft);
+  background: #ffffff;
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 4px;
+}
+
+.owner-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand-title {

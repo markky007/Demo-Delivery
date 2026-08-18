@@ -2,11 +2,11 @@
   <q-page class="login-page column items-center justify-center q-pa-md">
     <div class="login-card">
       <!-- Header / Logo -->
-      <div class="text-center q-mb-xl">
+      <div class="text-center q-mb-lg">
         <div class="login-logo-wrap q-mx-auto q-mb-md">
-          <q-icon name="restaurant_menu" size="36px" color="primary" />
+          <img :src="logoSvg" alt="DEMO Bang saen" class="login-logo-img" />
         </div>
-        <h5 class="q-my-xs text-weight-bold login-title">ระบบจัดการร้านอาหาร</h5>
+        <h5 class="q-my-xs text-weight-bold login-title">DEMO Bang saen</h5>
         <p class="text-grey-7 q-mb-none text-caption">
           เข้าสู่ระบบสำหรับเจ้าของร้าน (Owner Portal)
         </p>
@@ -82,6 +82,7 @@
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from 'src/stores/authStore';
+import logoSvg from 'src/assets/logo.svg';
 
 const router = useRouter();
 const route = useRoute();
@@ -132,13 +133,17 @@ async function handleLogin() {
 }
 
 .login-logo-wrap {
-  width: 72px;
-  height: 72px;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary-soft);
+  width: 100px;
+  max-width: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.login-logo-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .login-title {

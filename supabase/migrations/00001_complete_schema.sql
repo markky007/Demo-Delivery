@@ -717,7 +717,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE table_sessions;
 
 -- Create the restaurant
 INSERT INTO restaurants (id, name, description) VALUES
-  ('00000000-0000-0000-0000-000000000001', 'Demo Restaurant', 'A demo restaurant for QR food ordering');
+  ('00000000-0000-0000-0000-000000000001', 'Demo Delivery', 'Demo Delivery');
 
 -- Create sample tables
 INSERT INTO tables (id, restaurant_id, name, sort_order) VALUES

@@ -14,7 +14,9 @@
           aria-label="ย้อนกลับ"
           class="header-action-btn"
         />
-        <div v-else class="header-placeholder"></div>
+        <div v-else class="header-logo-badge">
+          <img :src="logoMarkSvg" alt="DEMO" class="header-logo-icon" />
+        </div>
 
         <q-toolbar-title class="text-center customer-title">
           <div v-if="pageTitle" class="customer-page-name">{{ pageTitle }}</div>
@@ -81,6 +83,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useCartStore } from 'src/stores/cartStore';
 import { formatPrice } from 'src/utils/formatters';
+import logoMarkSvg from 'src/assets/logo-mark.svg';
 
 const route = useRoute();
 const router = useRouter();
@@ -159,6 +162,20 @@ onUnmounted(() => {
   height: 38px;
   background: rgba(45, 35, 30, 0.05);
   border-radius: var(--radius-pill);
+}
+
+.header-logo-badge {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo-icon {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 .header-placeholder {

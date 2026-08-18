@@ -38,9 +38,9 @@
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="isLoading" class="q-pa-xl column items-center">
-        <LoadingSkeleton type="list" :count="4" />
+      <!-- Loading Skeleton -->
+      <div v-if="isLoading" class="q-mb-lg">
+        <LoadingSkeleton type="tables" :count="6" />
       </div>
 
       <template v-else>
@@ -434,7 +434,7 @@ import { useRouter } from 'vue-router';
 import { supabase } from 'src/services/supabase';
 import { fetchTables } from 'src/services/tableService';
 import { formatPrice, formatTime, formatElapsed } from 'src/utils/formatters';
-import { APP_URL } from 'src/utils/constants';
+import { getAppUrl } from 'src/utils/constants';
 import { useNotify } from 'src/composables/useNotify';
 import QRCode from 'qrcode';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
@@ -727,7 +727,8 @@ function resetFilter() {
 async function showTableQR(table: TableWithQR) {
   selectedTable.value = table;
   if (table.active_qr) {
-    selectedTableUrl.value = `${APP_URL}/t/${table.active_qr.public_token}`;
+    const baseUrl = getAppUrl();
+    selectedTableUrl.value = `${baseUrl}/t/${table.active_qr.public_token}`;
   } else {
     selectedTableUrl.value = '';
   }
@@ -751,7 +752,8 @@ function openSelectedTableLink() {
 
 function openDirectCustomerLink(table: TableWithQR) {
   if (table.active_qr) {
-    window.open(`${APP_URL}/t/${table.active_qr.public_token}`, '_blank');
+    const baseUrl = getAppUrl();
+    window.open(`${baseUrl}/t/${table.active_qr.public_token}`, '_blank');
   } else {
     void router.push('/owner/tables');
   }

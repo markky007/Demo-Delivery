@@ -1,9 +1,7 @@
 <template>
   <q-page class="product-detail-page">
-    <!-- Loading -->
-    <div v-if="isLoading" class="q-pa-md">
-      <LoadingSkeleton type="spinner" message="กำลังโหลดข้อมูลเมนู..." />
-    </div>
+    <!-- Loading Skeleton -->
+    <LoadingSkeleton v-if="isLoading" type="product-detail" />
 
     <template v-else-if="item">
       <!-- Product Hero Image -->

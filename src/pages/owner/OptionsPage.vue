@@ -21,10 +21,8 @@
         />
       </div>
 
-      <!-- Loading -->
-      <div v-if="isLoading" class="q-pa-xl column items-center">
-        <LoadingSkeleton type="spinner" message="กำลังโหลดตัวเลือกเสริม..." />
-      </div>
+      <!-- Loading Skeleton -->
+      <LoadingSkeleton v-if="isLoading" type="options" :count="4" />
 
       <!-- Option Groups List -->
       <div v-else class="groups-list q-gutter-y-md">

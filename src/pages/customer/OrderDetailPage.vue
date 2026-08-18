@@ -1,7 +1,8 @@
 <template>
   <q-page class="order-detail-page q-pa-md">
-    <div v-if="isLoading" class="q-pa-md">
-      <LoadingSkeleton type="list" :count="2" />
+    <!-- Loading Skeleton -->
+    <div v-if="isLoading" class="order-detail-container">
+      <LoadingSkeleton type="order-detail" />
     </div>
 
     <template v-else-if="order">

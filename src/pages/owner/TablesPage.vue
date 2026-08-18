@@ -21,10 +21,8 @@
         />
       </div>
 
-      <!-- Loading -->
-      <div v-if="isLoading" class="q-pa-xl column items-center">
-        <LoadingSkeleton type="spinner" message="กำลังโหลดข้อมูลโต๊ะ..." />
-      </div>
+      <!-- Loading Skeleton -->
+      <LoadingSkeleton v-if="isLoading" type="tables" :count="6" />
 
       <!-- Tables Grid -->
       <div v-else class="tables-grid">
@@ -165,7 +163,7 @@ import {
   generateQRToken,
 } from 'src/services/tableService';
 import { supabase } from 'src/services/supabase';
-import { APP_URL } from 'src/utils/constants';
+import { getAppUrl } from 'src/utils/constants';
 import QRCode from 'qrcode';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
@@ -199,9 +197,10 @@ async function loadTables() {
 }
 
 function renderAllQRCodes() {
+  const baseUrl = getAppUrl();
   for (const table of tables.value) {
     if (table.active_qr && qrCanvasRefs[table.id]) {
-      const url = `${APP_URL}/t/${table.active_qr.public_token}`;
+      const url = `${baseUrl}/t/${table.active_qr.public_token}`;
       void QRCode.toCanvas(qrCanvasRefs[table.id]!, url, { width: 150, margin: 2 });
     }
   }

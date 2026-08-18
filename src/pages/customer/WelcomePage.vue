@@ -1,10 +1,7 @@
 <template>
   <q-page class="welcome-page column items-center justify-center q-pa-lg">
     <!-- Loading state -->
-    <div v-if="isLoading" class="column items-center q-gutter-md">
-      <q-spinner-dots size="48px" color="primary" />
-      <p class="text-grey-7 text-weight-medium">กำลังตรวจสอบข้อมูลโต๊ะ...</p>
-    </div>
+    <LoadingSkeleton v-if="isLoading" type="welcome" />
 
     <!-- Error state -->
     <div
@@ -61,6 +58,7 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { useCartStore } from 'src/stores/cartStore';
 import { resolveTableFromToken } from 'src/services/tableService';
 import { joinOrCreateSession, getOrCreateGuestToken } from 'src/services/sessionService';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { Restaurant } from 'src/types/database';
 
 const route = useRoute();

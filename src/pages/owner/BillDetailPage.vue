@@ -1,7 +1,8 @@
 <template>
   <q-page class="bill-detail-page q-pa-md">
-    <div v-if="isLoading" class="q-pa-xl column items-center">
-      <LoadingSkeleton type="list" :count="2" />
+    <!-- Loading Skeleton -->
+    <div v-if="isLoading" class="bill-detail-container">
+      <LoadingSkeleton type="bill-detail" />
     </div>
 
     <template v-else-if="session">

@@ -1,9 +1,7 @@
 <template>
   <q-page class="queue-page q-pa-md">
-    <!-- Loading -->
-    <div v-if="isLoading" class="q-pa-xl column items-center">
-      <LoadingSkeleton type="spinner" message="กำลังโหลดข้อมูลคิวออเดอร์..." />
-    </div>
+    <!-- Loading Skeleton -->
+    <LoadingSkeleton v-if="isLoading" type="queue" />
 
     <template v-else>
       <!-- Queue Header Bar -->

@@ -107,8 +107,14 @@
           </div>
         </div>
 
-        <!-- Menu Items Grid -->
-        <div class="items-grid">
+        <!-- Loading Skeleton -->
+        <div v-if="menuStore.isLoading" class="q-mb-lg">
+          <LoadingSkeleton type="menu" :count="6" />
+        </div>
+
+        <template v-else>
+          <!-- Menu Items Grid -->
+          <div class="items-grid">
           <div v-for="item in filteredItems" :key="item.id" class="item-card">
             <div class="row no-wrap items-start">
               <!-- Item Thumbnail -->
@@ -162,19 +168,25 @@
           </div>
         </div>
 
-        <div
-          v-if="filteredItems.length === 0"
-          class="text-center q-pa-xl text-grey-6 empty-search-card"
-        >
-          <q-icon name="search_off" size="48px" color="grey-4" class="q-mb-xs" />
-          <div class="text-weight-bold text-subtitle1">ไม่พบรายการอาหารที่ค้นหา</div>
-          <div class="text-caption text-grey-6 q-mt-xs">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</div>
-        </div>
+          <div
+            v-if="filteredItems.length === 0"
+            class="text-center q-pa-xl text-grey-6 empty-search-card"
+          >
+            <q-icon name="search_off" size="48px" color="grey-4" class="q-mb-xs" />
+            <div class="text-weight-bold text-subtitle1">ไม่พบรายการอาหารที่ค้นหา</div>
+            <div class="text-caption text-grey-6 q-mt-xs">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</div>
+          </div>
+        </template>
       </div>
 
       <!-- 2. Categories Tab -->
       <div v-if="activeTab === 'categories'">
-        <div class="categories-list q-gutter-y-sm">
+        <!-- Loading Skeleton -->
+        <div v-if="menuStore.isLoading" class="q-mb-lg">
+          <LoadingSkeleton type="list" :count="4" />
+        </div>
+
+        <div v-else class="categories-list q-gutter-y-sm">
           <div v-for="cat in menuStore.categories" :key="cat.id" class="category-item-card">
             <div class="row items-center justify-between">
               <div class="row items-center">
@@ -410,6 +422,7 @@ import { supabase } from 'src/services/supabase';
 import { uploadMenuImage, createLocalPreviewUrl } from 'src/services/storageService';
 import { formatPrice } from 'src/utils/formatters';
 import StatusBadge from 'src/components/StatusBadge.vue';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { MenuCategory, MenuItem } from 'src/types/database';
 
 const menuStore = useMenuStore();

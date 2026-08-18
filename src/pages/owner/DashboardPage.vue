@@ -19,8 +19,12 @@
         />
       </div>
 
-      <!-- Stats 4 Cards Grid -->
-      <div class="stats-grid q-mb-lg">
+      <!-- Loading Skeleton -->
+      <LoadingSkeleton v-if="isLoading" type="dashboard" />
+
+      <template v-else>
+        <!-- Stats 4 Cards Grid -->
+        <div class="stats-grid q-mb-lg">
         <div class="stat-card">
           <div class="stat-icon-wrap stat-icon-wrap--primary">
             <q-icon name="payments" size="24px" color="primary" />
@@ -127,15 +131,19 @@
           </div>
         </div>
       </div>
+      </template>
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { supabase } from 'src/services/supabase';
 import { formatPrice } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+
+const isLoading = ref(true);
 
 const stats = reactive({
   totalSales: 0,
@@ -188,6 +196,8 @@ onMounted(async () => {
     stats.itemsSold = count ?? 0;
   } catch (err) {
     console.error('Failed to load dashboard stats:', err);
+  } finally {
+    isLoading.value = false;
   }
 });
 </script>

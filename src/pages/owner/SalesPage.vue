@@ -40,66 +40,81 @@
         </div>
       </div>
 
-      <!-- Stats Summary -->
-      <div class="stats-row q-mb-lg">
-        <div class="stat-box">
-          <div class="stat-icon-wrap stat-icon-wrap--primary">
-            <q-icon name="payments" size="24px" color="primary" />
-          </div>
-          <div>
-            <div class="text-caption text-grey-7">ยอดขายรวมในช่วงเวลานี้</div>
-            <div class="text-h5 text-weight-bold text-primary">{{ formatPrice(totalSales) }}</div>
-          </div>
-        </div>
-
-        <div class="stat-box">
-          <div class="stat-icon-wrap stat-icon-wrap--green">
-            <q-icon name="receipt_long" size="24px" color="green-8" />
-          </div>
-          <div>
-            <div class="text-caption text-grey-7">จำนวนบิลที่ชำระสำเร็จ</div>
-            <div class="text-h5 text-weight-bold">
-              {{ bills.length }} <span class="text-caption text-grey-6">บิล</span>
+      <!-- Loading Skeleton -->
+      <div v-if="isLoading">
+        <div class="stats-row q-mb-lg">
+          <div v-for="i in 2" :key="i" class="stat-box row items-center">
+            <q-skeleton type="rect" width="52px" height="52px" class="rounded-borders" animation="wave" />
+            <div class="col q-ml-md">
+              <q-skeleton type="text" width="60%" height="14px" class="q-mb-xs" animation="wave" />
+              <q-skeleton type="text" width="80%" height="26px" animation="wave" />
             </div>
           </div>
         </div>
+        <LoadingSkeleton type="table" :count="5" />
       </div>
 
-      <!-- Bills Table -->
-      <q-table
-        :rows="bills"
-        :columns="columns"
-        row-key="id"
-        flat
-        bordered
-        :loading="isLoading"
-        class="sales-table"
-        no-data-label="ไม่พบประวัติยอดขายในช่วงเวลานี้"
-        :rows-per-page-options="[10, 20, 50]"
-      >
-        <template v-slot:body-cell-id="props">
-          <q-td :props="props">
-            <span class="text-weight-mono text-grey-8">{{ props.value }}</span>
-          </q-td>
-        </template>
-        <template v-slot:body-cell-amount="props">
-          <q-td :props="props">
-            <span class="text-weight-bold text-primary">{{
-              formatPrice(props.value as number)
-            }}</span>
-          </q-td>
-        </template>
-        <template v-slot:body-cell-status="props">
-          <q-td :props="props">
-            <StatusBadge status="SERVED" mode="raw" custom-label="ชำระเงินแล้ว" />
-          </q-td>
-        </template>
-        <template v-slot:body-cell-paid_at="props">
-          <q-td :props="props">
-            {{ props.value ? formatDateTime(props.value as string) : '—' }}
-          </q-td>
-        </template>
-      </q-table>
+      <template v-else>
+        <!-- Stats Summary -->
+        <div class="stats-row q-mb-lg">
+          <div class="stat-box">
+            <div class="stat-icon-wrap stat-icon-wrap--primary">
+              <q-icon name="payments" size="24px" color="primary" />
+            </div>
+            <div>
+              <div class="text-caption text-grey-7">ยอดขายรวมในช่วงเวลานี้</div>
+              <div class="text-h5 text-weight-bold text-primary">{{ formatPrice(totalSales) }}</div>
+            </div>
+          </div>
+
+          <div class="stat-box">
+            <div class="stat-icon-wrap stat-icon-wrap--green">
+              <q-icon name="receipt_long" size="24px" color="green-8" />
+            </div>
+            <div>
+              <div class="text-caption text-grey-7">จำนวนบิลที่ชำระสำเร็จ</div>
+              <div class="text-h5 text-weight-bold">
+                {{ bills.length }} <span class="text-caption text-grey-6">บิล</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bills Table -->
+        <q-table
+          :rows="bills"
+          :columns="columns"
+          row-key="id"
+          flat
+          bordered
+          class="sales-table"
+          no-data-label="ไม่พบประวัติยอดขายในช่วงเวลานี้"
+          :rows-per-page-options="[10, 20, 50]"
+        >
+          <template v-slot:body-cell-id="props">
+            <q-td :props="props">
+              <span class="text-weight-mono text-grey-8">{{ props.value }}</span>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-amount="props">
+            <q-td :props="props">
+              <span class="text-weight-bold text-primary">{{
+                formatPrice(props.value as number)
+              }}</span>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <StatusBadge status="SERVED" mode="raw" custom-label="ชำระเงินแล้ว" />
+            </q-td>
+          </template>
+          <template v-slot:body-cell-paid_at="props">
+            <q-td :props="props">
+              {{ props.value ? formatDateTime(props.value as string) : '—' }}
+            </q-td>
+          </template>
+        </q-table>
+      </template>
     </div>
   </q-page>
 </template>
@@ -109,6 +124,7 @@ import { ref, computed, onMounted } from 'vue';
 import { supabase } from 'src/services/supabase';
 import { formatPrice, formatDateTime } from 'src/utils/formatters';
 import StatusBadge from 'src/components/StatusBadge.vue';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { QTableColumn } from 'quasar';
 
 interface BillRow {

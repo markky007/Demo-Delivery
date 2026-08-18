@@ -17,11 +17,28 @@ export const PUBLIC_TOKEN_KEY = 'qr_food_public_token';
 /** Cart storage key prefix in localStorage */
 export const CART_STORAGE_KEY = 'qr_food_cart';
 
-/** App URL for QR code generation */
-export const APP_URL =
-  import.meta.env.VITE_APP_URL ||
-  (typeof process !== 'undefined' ? process.env?.VITE_APP_URL : '') ||
-  'http://localhost:9000';
+/**
+ * App URL for QR code generation.
+ * Dynamically uses window.location.origin when running in browser,
+ * or falls back to VITE_APP_URL / default localhost.
+ */
+export function getAppUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const envUrl = import.meta.env.VITE_APP_URL;
+    // If VITE_APP_URL is explicitly configured to a custom domain (non-localhost), use it
+    if (envUrl && !envUrl.includes('localhost')) {
+      return envUrl;
+    }
+    return window.location.origin;
+  }
+  return (
+    import.meta.env.VITE_APP_URL ||
+    (typeof process !== 'undefined' ? process.env?.VITE_APP_URL : '') ||
+    'http://localhost:9000'
+  );
+}
+
+export const APP_URL = getAppUrl();
 
 /** Order status colors for Quasar UI (warm and soft) */
 export const STATUS_COLORS: Record<string, string> = {

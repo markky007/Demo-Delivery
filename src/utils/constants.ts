@@ -23,18 +23,34 @@ export const APP_URL =
   (typeof process !== 'undefined' ? process.env?.VITE_APP_URL : '') ||
   'http://localhost:9000';
 
-/** Order status colors for UI */
+/** Order status colors for Quasar UI (warm and soft) */
 export const STATUS_COLORS: Record<string, string> = {
-  QUEUED: 'blue-6',
-  PREPARING: 'orange-8',
+  QUEUED: 'light-blue-8',
+  PREPARING: 'amber-9',
   PREPARED: 'green-7',
-  SERVED: 'grey-6',
+  SERVED: 'blue-grey-6',
+};
+
+/** Order status background colors */
+export const STATUS_BG_COLORS: Record<string, string> = {
+  QUEUED: 'light-blue-1',
+  PREPARING: 'amber-1',
+  PREPARED: 'green-1',
+  SERVED: 'grey-2',
 };
 
 /** Order status icons */
 export const STATUS_ICONS: Record<string, string> = {
   QUEUED: 'schedule',
-  PREPARING: 'restaurant',
+  PREPARING: 'soup_kitchen',
   PREPARED: 'check_circle',
   SERVED: 'done_all',
+};
+
+/** Thai Order Status Labels (Owner Side) */
+export const OWNER_STATUS_LABELS: Record<string, string> = {
+  QUEUED: 'รายการใหม่',
+  PREPARING: 'กำลังเตรียม',
+  PREPARED: 'เตรียมเสร็จแล้ว',
+  SERVED: 'เสิร์ฟครบแล้ว',
 };

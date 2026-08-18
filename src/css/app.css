@@ -1,33 +1,87 @@
-/* ─── App Global CSS ─────────────────────────────── */
-
-/* Import Inter font for modern typography */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* ─── Thai-First Design System Tokens ─────────────────────────────── */
 
 :root {
-  --app-font-family: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
-  --color-primary: #1976d2;
+  /* Typography */
+  --app-font-family:
+    'Prompt', 'LINE Seed Sans TH', -apple-system, BlinkMacSystemFont, 'Sukhumvit Set', sans-serif;
+
+  /* Primary Brand - Warm Terracotta */
+  --color-primary: #e05836;
+  --color-primary-hover: #c84323;
+  --color-primary-active: #b2381b;
+  --color-primary-soft: #fff3ed;
+  --color-primary-tint: #ffe6dc;
+
+  /* Warm Neutral Palette */
+  --color-background: #fbf9f6;
   --color-surface: #ffffff;
-  --color-background: #f5f7fa;
-  --color-text: #1a1a2e;
-  --color-text-secondary: #666;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --color-surface-elevated: #ffffff;
+  --color-surface-subtle: #f5efe9;
+  --color-surface-muted: #ece5dc;
+
+  /* Borders & Dividers */
+  --color-border: #ede5dc;
+  --color-border-subtle: #f3ede6;
+  --color-border-focus: #e05836;
+
+  /* Typography Colors */
+  --color-text-primary: #2d231e;
+  --color-text-secondary: #7a6e65;
+  --color-text-muted: #a89c93;
+  --color-text-inverse: #ffffff;
+
+  /* Semantic / Status Colors (Warm & Soft) */
+  --color-status-queued: #0284c7;
+  --color-status-queued-bg: #e0f2fe;
+  --color-status-preparing: #d97706;
+  --color-status-preparing-bg: #fef3c7;
+  --color-status-prepared: #16a34a;
+  --color-status-prepared-bg: #dcfce7;
+  --color-status-served: #64748b;
+  --color-status-served-bg: #f1f5f9;
+  --color-status-soldout: #dc2626;
+  --color-status-soldout-bg: #fee2e2;
+
+  /* Corner Radius */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  /* Shadows (Soft, Warm, Diffuse) */
+  --shadow-subtle: 0 1px 3px rgba(45, 35, 30, 0.04), 0 1px 2px rgba(45, 35, 30, 0.02);
+  --shadow-card: 0 4px 16px -2px rgba(45, 35, 30, 0.06), 0 2px 6px -1px rgba(45, 35, 30, 0.03);
+  --shadow-card-hover:
+    0 8px 24px -4px rgba(45, 35, 30, 0.09), 0 4px 10px -2px rgba(45, 35, 30, 0.04);
+  --shadow-float: 0 12px 36px -4px rgba(45, 35, 30, 0.12), 0 4px 12px -2px rgba(45, 35, 30, 0.06);
+
+  /* Touch Targets */
+  --touch-target-min: 44px;
+}
+
+/* ─── Global Reset & Body ───────────────────────── */
+* {
+  box-sizing: border-box;
 }
 
 body {
   font-family: var(--app-font-family);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 
-/* ─── Safe area insets for mobile ────────────────── */
+/* Safe area insets */
 .q-page {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* ─── Scrollbar styling ─────────────────────────── */
+/* ─── Scrollbar Styling ─────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -38,35 +92,156 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 3px;
+  background: rgba(45, 35, 30, 0.15);
+  border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(45, 35, 30, 0.28);
 }
 
-/* ─── Quasar overrides ──────────────────────────── */
+/* ─── Quasar Framework Custom Overrides ─────────── */
+
+/* Buttons */
+.q-btn {
+  font-family: var(--app-font-family);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.q-btn--unelevated.bg-primary,
+.q-btn--standard.bg-primary {
+  background: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+}
+
+.q-btn--unelevated.bg-primary:hover,
+.q-btn--standard.bg-primary:hover {
+  background: var(--color-primary-hover) !important;
+}
+
+.q-btn--unelevated.bg-primary:active,
+.q-btn--standard.bg-primary:active {
+  background: var(--color-primary-active) !important;
+}
+
+/* Cards */
 .q-card {
   border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-subtle);
 }
 
-.q-btn {
-  text-transform: none;
-  letter-spacing: 0;
+.q-card--bordered {
+  border: 1px solid var(--color-border);
 }
 
+/* Dialogs */
 .q-dialog .q-card {
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  border: 1px solid var(--color-border);
 }
 
-/* ─── Smooth transitions ────────────────────────── */
-.q-page-container {
-  transition: padding 0.3s ease;
+/* Badges */
+.q-badge {
+  font-family: var(--app-font-family);
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  padding: 4px 8px;
+  line-height: 1.2;
 }
 
-/* ─── Toast / Notify styling ────────────────────── */
+/* Form Controls (Inputs, Selects, Radios, Checkboxes) */
+.q-field {
+  font-family: var(--app-font-family);
+}
+
+.q-field--outlined .q-field__control {
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  border-color: var(--color-border);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.q-field--outlined:hover .q-field__control:before {
+  border-color: var(--color-primary-tint);
+}
+
+.q-field--outlined.q-field--focused .q-field__control {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.q-field__label {
+  font-family: var(--app-font-family);
+  color: var(--color-text-secondary);
+}
+
+/* Notifications */
 .q-notification {
+  font-family: var(--app-font-family);
   border-radius: var(--radius-md) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: var(--shadow-float) !important;
+  font-weight: 500;
+}
+
+/* Tabs */
+.q-tab {
+  font-family: var(--app-font-family);
+  text-transform: none;
+  font-weight: 500;
+  min-height: 42px;
+}
+
+.q-tab--active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Tables */
+.q-table__card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
+}
+
+.q-table th {
+  font-family: var(--app-font-family);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface-subtle);
+}
+
+.q-table td {
+  font-family: var(--app-font-family);
+  color: var(--color-text-primary);
+}
+
+/* List Items */
+.q-item {
+  font-family: var(--app-font-family);
+  border-radius: var(--radius-sm);
+}
+
+/* Utility Animations */
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -1,12 +1,12 @@
 <template>
   <q-page class="product-detail-page">
     <!-- Loading -->
-    <div v-if="isLoading" class="column items-center q-pa-xl">
-      <q-spinner-dots size="40px" color="primary" />
+    <div v-if="isLoading" class="q-pa-md">
+      <LoadingSkeleton type="spinner" message="กำลังโหลดข้อมูลเมนู..." />
     </div>
 
     <template v-else-if="item">
-      <!-- Product image -->
+      <!-- Product Hero Image -->
       <div class="product-image-wrapper">
         <img v-if="item.image_url" :src="item.image_url" :alt="item.name" class="product-image" />
         <div v-else class="product-image-placeholder">
@@ -14,98 +14,158 @@
         </div>
       </div>
 
-      <div class="product-info q-px-md q-pt-md">
-        <!-- Name + Price -->
-        <h5 class="product-name q-my-none">{{ item.name }}</h5>
-        <div class="product-price q-mt-xs">{{ formatPrice(item.base_price) }}</div>
-        <p v-if="item.description" class="product-desc q-mt-sm">
-          {{ item.description }}
-        </p>
-
-        <!-- Sold out notice -->
-        <q-banner v-if="!item.is_available" class="bg-negative text-white q-mt-md" rounded>
-          <template v-slot:avatar>
-            <q-icon name="warning" />
-          </template>
-          This item is currently sold out
-        </q-banner>
-
-        <!-- Option Groups -->
-        <div v-for="group in item.option_groups" :key="group.id" class="option-group q-mt-lg">
-          <div class="option-group-header">
-            <span class="option-group-name">{{ group.name }}</span>
-            <q-badge v-if="group.is_required" color="negative" label="Required" class="q-ml-sm" />
+      <div class="product-content q-px-md q-pt-md">
+        <!-- Title & Price -->
+        <div class="row justify-between items-start">
+          <div class="col">
+            <h5 class="product-name q-my-none text-weight-bold">{{ item.name }}</h5>
+            <p v-if="item.description" class="product-desc q-mt-xs q-mb-none">
+              {{ item.description }}
+            </p>
           </div>
-          <div v-if="group.min_selections > 0 || group.max_selections" class="option-group-hint">
-            <template v-if="group.selection_type === 'single'">Choose one</template>
-            <template v-else>
-              Choose
-              <template v-if="group.min_selections > 0"
-                >at least {{ group.min_selections }}</template
-              >
-              <template v-if="group.max_selections">, up to {{ group.max_selections }}</template>
-            </template>
-          </div>
-
-          <!-- Single select -->
-          <q-option-group
-            v-if="group.selection_type === 'single'"
-            v-model="selectedOptions[group.id]"
-            :options="groupOptions(group)"
-            type="radio"
-            class="q-mt-sm"
-          />
-
-          <!-- Multi select -->
-          <div v-else class="q-mt-sm">
-            <q-checkbox
-              v-for="opt in group.options"
-              :key="opt.id"
-              v-model="multiSelectedOptions[group.id]"
-              :val="opt.id"
-              :label="optionLabel(opt)"
-              :disable="
-                !opt.is_available ||
-                (group.max_selections !== null &&
-                  (multiSelectedOptions[group.id]?.length ?? 0) >= group.max_selections &&
-                  !multiSelectedOptions[group.id]?.includes(opt.id))
-              "
-              class="option-checkbox"
-            />
+          <div class="product-price text-right q-ml-md">
+            {{ formatPrice(item.base_price) }}
           </div>
         </div>
 
-        <!-- Special instruction -->
-        <div class="q-mt-lg">
-          <div class="option-group-name q-mb-sm">Special Instructions</div>
+        <!-- Sold out notice -->
+        <div v-if="!item.is_available" class="sold-out-banner q-mt-md">
+          <q-icon name="info" size="20px" class="q-mr-sm" />
+          <span>เมนูนี้หมดชั่วคราว ไม่สามารถสั่งได้ในขณะนี้</span>
+        </div>
+
+        <!-- Option Groups -->
+        <div v-for="group in item.option_groups" :key="group.id" class="option-group-card q-mt-md">
+          <div class="row items-center justify-between q-mb-xs">
+            <div class="option-group-name">{{ group.name }}</div>
+            <span
+              class="group-tag"
+              :class="group.is_required ? 'group-tag--required' : 'group-tag--optional'"
+            >
+              {{ group.is_required ? 'ต้องเลือก' : 'เลือกเพิ่มได้' }}
+            </span>
+          </div>
+
+          <div class="option-group-hint q-mb-sm">
+            <template v-if="group.selection_type === 'single'">เลือกได้ 1 รายการ</template>
+            <template v-else>
+              เลือกได้
+              <template v-if="group.min_selections > 0"
+                >อย่างน้อย {{ group.min_selections }}</template
+              >
+              <template v-if="group.max_selections"
+                >, สูงสุด {{ group.max_selections }} รายการ</template
+              >
+            </template>
+          </div>
+
+          <!-- Single Select (Radio options styled as rows) -->
+          <div v-if="group.selection_type === 'single'" class="options-list">
+            <div
+              v-for="opt in group.options"
+              :key="opt.id"
+              class="option-row"
+              :class="{
+                'option-row--selected': selectedOptions[group.id] === opt.id,
+                'option-row--disabled': !opt.is_available,
+              }"
+              @click="opt.is_available && (selectedOptions[group.id] = opt.id)"
+            >
+              <div class="row items-center">
+                <q-radio
+                  v-model="selectedOptions[group.id]"
+                  :val="opt.id"
+                  :disable="!opt.is_available"
+                  color="primary"
+                  dense
+                  class="q-mr-sm"
+                />
+                <span class="option-name">{{ opt.name }}</span>
+              </div>
+              <div class="option-price-adjust">
+                <span v-if="opt.price_adjustment > 0"
+                  >+{{ formatPrice(opt.price_adjustment) }}</span
+                >
+                <span v-else-if="opt.price_adjustment < 0">{{
+                  formatPrice(opt.price_adjustment)
+                }}</span>
+                <span v-else class="text-grey-5">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi Select (Checkbox options styled as rows) -->
+          <div v-else class="options-list">
+            <div
+              v-for="opt in group.options"
+              :key="opt.id"
+              class="option-row"
+              :class="{
+                'option-row--selected': multiSelectedOptions[group.id]?.includes(opt.id),
+                'option-row--disabled':
+                  !opt.is_available ||
+                  (group.max_selections !== null &&
+                    (multiSelectedOptions[group.id]?.length ?? 0) >= group.max_selections &&
+                    !multiSelectedOptions[group.id]?.includes(opt.id)),
+              }"
+              @click="toggleMultiOption(group.id, opt.id, group.max_selections, opt.is_available)"
+            >
+              <div class="row items-center">
+                <q-checkbox
+                  v-model="multiSelectedOptions[group.id]"
+                  :val="opt.id"
+                  :disable="
+                    !opt.is_available ||
+                    (group.max_selections !== null &&
+                      (multiSelectedOptions[group.id]?.length ?? 0) >= group.max_selections &&
+                      !multiSelectedOptions[group.id]?.includes(opt.id))
+                  "
+                  color="primary"
+                  dense
+                  class="q-mr-sm"
+                />
+                <span class="option-name">{{ opt.name }}</span>
+              </div>
+              <div class="option-price-adjust">
+                <span v-if="opt.price_adjustment > 0"
+                  >+{{ formatPrice(opt.price_adjustment) }}</span
+                >
+                <span v-else-if="opt.price_adjustment < 0">{{
+                  formatPrice(opt.price_adjustment)
+                }}</span>
+                <span v-else class="text-grey-5">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Special Instruction -->
+        <div class="option-group-card q-mt-md">
+          <div class="option-group-name q-mb-xs">รายละเอียดเพิ่มเติม / หมายเหตุถึงร้าน</div>
+          <p class="option-group-hint q-mb-sm">เช่น ไม่ใส่ผัก, เผ็ดน้อย, แยกน้ำซุป</p>
           <q-input
             v-model="specialInstruction"
             outlined
             autogrow
-            placeholder="e.g. No vegetables, less spicy..."
+            placeholder="ระบุข้อความถึงทางร้าน..."
             :maxlength="MAX_SPECIAL_INSTRUCTION_LENGTH"
             counter
             class="special-input"
           />
         </div>
 
-        <!-- Quantity -->
-        <div class="row items-center justify-center q-mt-lg q-mb-md quantity-row">
-          <q-btn
-            round
-            flat
-            icon="remove"
-            color="primary"
-            :disable="quantity <= 1"
-            @click="quantity--"
-          />
-          <span class="quantity-display q-mx-lg">{{ quantity }}</span>
-          <q-btn round flat icon="add" color="primary" @click="quantity++" />
+        <!-- Quantity Section -->
+        <div class="row items-center justify-between quantity-section q-mt-lg q-mb-md q-pa-md">
+          <div>
+            <div class="text-weight-bold text-subtitle1">จำนวนจาน</div>
+            <div class="text-caption text-grey-6">เลือกจำนวนที่ต้องการสั่ง</div>
+          </div>
+          <QuantityStepper v-model="quantity" :min="1" />
         </div>
       </div>
 
-      <!-- Add to cart button -->
-      <div class="add-to-cart-wrapper q-px-md q-pb-md">
+      <!-- Sticky Add to Cart Footer -->
+      <div class="add-to-cart-wrapper">
         <q-btn
           color="primary"
           unelevated
@@ -115,7 +175,10 @@
           :disable="!item.is_available || !isValid"
           @click="addToCart"
         >
-          Add to Cart — {{ formatPrice(itemTotal) }}
+          <div class="row items-center justify-between full-width q-px-sm">
+            <span class="text-weight-bold">เพิ่มลงตะกร้า</span>
+            <span class="text-weight-bold">{{ formatPrice(itemTotal) }}</span>
+          </div>
         </q-btn>
       </div>
     </template>
@@ -130,9 +193,11 @@ import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
 import { formatPrice } from 'src/utils/formatters';
 import { MAX_SPECIAL_INSTRUCTION_LENGTH } from 'src/utils/constants';
-import type { MenuItemWithOptions, OptionGroup, Option } from 'src/types/database';
-import type { CartItemOption } from 'src/types/cart';
 import { SelectionType } from 'src/types/enums';
+import QuantityStepper from 'src/components/QuantityStepper.vue';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import type { MenuItemWithOptions } from 'src/types/database';
+import type { CartItemOption } from 'src/types/cart';
 
 const route = useRoute();
 const router = useRouter();
@@ -152,7 +217,6 @@ onMounted(async () => {
   item.value = await menuStore.fetchItemWithOptions(itemId);
   isLoading.value = false;
 
-  // Initialize default selections for required single-select groups
   if (item.value) {
     for (const group of item.value.option_groups) {
       if (group.selection_type === SelectionType.SINGLE && group.is_required) {
@@ -168,22 +232,24 @@ onMounted(async () => {
   }
 });
 
-function groupOptions(group: OptionGroup & { options: Option[] }) {
-  return group.options.map((opt) => ({
-    label: optionLabel(opt),
-    value: opt.id,
-    disable: !opt.is_available,
-  }));
-}
+function toggleMultiOption(
+  groupId: string,
+  optId: string,
+  maxSelections: number | null,
+  isAvailable: boolean,
+) {
+  if (!isAvailable) return;
+  const current = multiSelectedOptions[groupId] || [];
+  const idx = current.indexOf(optId);
 
-function optionLabel(opt: Option): string {
-  if (opt.price_adjustment > 0) {
-    return `${opt.name} +${formatPrice(opt.price_adjustment)}`;
+  if (idx > -1) {
+    current.splice(idx, 1);
+  } else {
+    if (maxSelections === null || current.length < maxSelections) {
+      current.push(optId);
+    }
   }
-  if (opt.price_adjustment < 0) {
-    return `${opt.name} ${formatPrice(opt.price_adjustment)}`;
-  }
-  return opt.name;
+  multiSelectedOptions[groupId] = [...current];
 }
 
 const isValid = computed(() => {
@@ -280,22 +346,23 @@ function addToCart() {
     collectSelectedOptions(),
   );
 
-  notifySuccess('Added to cart');
+  notifySuccess('เพิ่มลงในตะกร้าเรียบร้อยแล้ว');
   router.back();
 }
 </script>
 
 <style scoped>
 .product-detail-page {
-  background: white;
-  padding-bottom: 100px;
+  background: var(--color-background);
+  padding-bottom: 120px;
 }
 
 .product-image-wrapper {
   width: 100%;
-  height: 280px;
+  height: 260px;
+  background: var(--color-surface-subtle);
   overflow: hidden;
-  background: #f0f0f0;
+  position: relative;
 }
 
 .product-image {
@@ -310,85 +377,157 @@ function addToCart() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+}
+
+.product-content {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .product-name {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #1a1a2e;
+  font-size: 1.35rem;
+  color: var(--color-text-primary);
+  line-height: 1.3;
 }
 
 .product-price {
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  color: #1976d2;
+  color: var(--color-primary);
+  white-space: nowrap;
 }
 
 .product-desc {
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
-.option-group {
-  border-top: 1px solid #eee;
-  padding-top: 16px;
-}
-
-.option-group-header {
+.sold-out-banner {
   display: flex;
   align-items: center;
+  background: var(--color-status-soldout-bg);
+  color: var(--color-status-soldout);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+/* Option group cards */
+.option-group-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-subtle);
 }
 
 .option-group-name {
   font-weight: 600;
-  font-size: 1rem;
-  color: #1a1a2e;
+  font-size: 0.98rem;
+  color: var(--color-text-primary);
+}
+
+.group-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.group-tag--required {
+  background: var(--color-status-soldout-bg);
+  color: var(--color-status-soldout);
+}
+
+.group-tag--optional {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
 }
 
 .option-group-hint {
   font-size: 0.8rem;
-  color: #888;
-  margin-top: 2px;
+  color: var(--color-text-muted);
 }
 
-.option-checkbox {
-  display: block;
-  margin-bottom: 4px;
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.option-row:hover:not(.option-row--disabled) {
+  background: #ffffff;
+  border-color: var(--color-border);
+}
+
+.option-row--selected {
+  background: var(--color-primary-soft) !important;
+  border-color: var(--color-primary-tint) !important;
+}
+
+.option-row--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.option-name {
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+}
+
+.option-price-adjust {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .special-input :deep(.q-field__control) {
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
 }
 
-.quantity-row {
-  border-top: 1px solid #eee;
-  padding-top: 16px;
+.quantity-section {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
 }
 
-.quantity-display {
-  font-size: 1.5rem;
-  font-weight: 700;
-  min-width: 48px;
-  text-align: center;
-}
-
+/* Sticky add to cart */
 .add-to-cart-wrapper {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
   padding: 12px 16px;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 50;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .add-to-cart-btn {
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   height: 52px;
   font-size: 1rem;
-  font-weight: 600;
+  box-shadow: var(--shadow-md);
 }
 </style>

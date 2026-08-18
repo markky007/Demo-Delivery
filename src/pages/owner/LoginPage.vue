@@ -1,47 +1,64 @@
 <template>
-  <q-page class="login-page column items-center justify-center">
+  <q-page class="login-page column items-center justify-center q-pa-md">
     <div class="login-card">
-      <div class="text-center q-mb-lg">
-        <q-icon name="restaurant" size="48px" color="primary" />
-        <h5 class="q-mt-md q-mb-xs text-weight-bold">QR Food Order</h5>
-        <p class="text-grey-6">Owner Login</p>
+      <!-- Header / Logo -->
+      <div class="text-center q-mb-xl">
+        <div class="login-logo-wrap q-mx-auto q-mb-md">
+          <q-icon name="restaurant_menu" size="36px" color="primary" />
+        </div>
+        <h5 class="q-my-xs text-weight-bold login-title">ระบบจัดการร้านอาหาร</h5>
+        <p class="text-grey-7 q-mb-none text-caption">
+          เข้าสู่ระบบสำหรับเจ้าของร้าน (Owner Portal)
+        </p>
       </div>
 
-      <q-form @submit.prevent="handleLogin" class="q-gutter-md">
-        <q-input
-          v-model="email"
-          outlined
-          label="Email"
-          type="email"
-          :rules="[(val) => !!val || 'Email is required']"
-          autocomplete="email"
-        >
-          <template v-slot:prepend>
-            <q-icon name="email" />
-          </template>
-        </q-input>
+      <q-form @submit.prevent="handleLogin" class="q-gutter-y-md">
+        <div>
+          <div class="field-label q-mb-xs">อีเมล</div>
+          <q-input
+            v-model="email"
+            outlined
+            placeholder="admin@restaurant.com"
+            type="email"
+            :rules="[(val) => !!val || 'กรุณาระบุอีเมล']"
+            autocomplete="email"
+            class="login-input"
+          >
+            <template v-slot:prepend>
+              <q-icon name="mail_outline" color="grey-6" />
+            </template>
+          </q-input>
+        </div>
 
-        <q-input
-          v-model="password"
-          outlined
-          label="Password"
-          :type="showPassword ? 'text' : 'password'"
-          :rules="[(val) => !!val || 'Password is required']"
-          autocomplete="current-password"
-        >
-          <template v-slot:prepend>
-            <q-icon name="lock" />
-          </template>
-          <template v-slot:append>
-            <q-icon
-              :name="showPassword ? 'visibility_off' : 'visibility'"
-              class="cursor-pointer"
-              @click="showPassword = !showPassword"
-            />
-          </template>
-        </q-input>
+        <div>
+          <div class="field-label q-mb-xs">รหัสผ่าน</div>
+          <q-input
+            v-model="password"
+            outlined
+            placeholder="••••••••"
+            :type="showPassword ? 'text' : 'password'"
+            :rules="[(val) => !!val || 'กรุณาระบุรหัสผ่าน']"
+            autocomplete="current-password"
+            class="login-input"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock_outline" color="grey-6" />
+            </template>
+            <template v-slot:append>
+              <q-icon
+                :name="showPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                color="grey-6"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </q-input>
+        </div>
 
-        <q-banner v-if="errorMsg" class="bg-negative text-white q-mt-sm" rounded dense>
+        <q-banner v-if="errorMsg" class="bg-red-1 text-negative q-mt-sm" rounded dense>
+          <template v-slot:avatar>
+            <q-icon name="error_outline" color="negative" />
+          </template>
           {{ errorMsg }}
         </q-banner>
 
@@ -51,10 +68,10 @@
           unelevated
           no-caps
           size="lg"
-          class="full-width login-btn"
+          class="full-width login-btn q-mt-md"
           :loading="isLoading"
         >
-          Login
+          <span>เข้าสู่ระบบ</span>
         </q-btn>
       </q-form>
     </div>
@@ -84,14 +101,14 @@ async function handleLogin() {
     const { error } = await authStore.login(email.value, password.value);
 
     if (error) {
-      errorMsg.value = error;
+      errorMsg.value = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       return;
     }
 
     const redirect = (route.query.redirect as string) || '/owner/dashboard';
     await router.push(redirect);
   } catch (err) {
-    errorMsg.value = err instanceof Error ? err.message : 'Login failed';
+    errorMsg.value = err instanceof Error ? err.message : 'เข้าสู่ระบบไม่สำเร็จ';
   } finally {
     isLoading.value = false;
   }
@@ -101,23 +118,45 @@ async function handleLogin() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: radial-gradient(circle at top, #ffffff 0%, var(--color-background) 100%);
 }
 
 .login-card {
   width: 100%;
   max-width: 400px;
-  background: white;
-  border-radius: 20px;
+  background: #ffffff;
+  border-radius: var(--radius-xl);
   padding: 40px 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  margin: 20px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+}
+
+.login-logo-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.field-label {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
 }
 
 .login-btn {
-  border-radius: 12px;
-  height: 48px;
+  border-radius: var(--radius-md);
+  height: 50px;
   font-weight: 600;
-  margin-top: 8px;
+  font-size: 1rem;
+  box-shadow: var(--shadow-md);
 }
 </style>

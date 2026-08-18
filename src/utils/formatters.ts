@@ -12,9 +12,9 @@ export function formatPrice(amount: number): string {
 }
 
 /**
- * Format a date string for display.
+ * Format a date string for display in Thai.
  * @param dateStr - ISO date string
- * @returns Formatted date like "19 ส.ค. 2026"
+ * @returns Formatted date like "19 ส.ค. 2569" or "19 ส.ค. 2026"
  */
 export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('th-TH', {
@@ -25,44 +25,45 @@ export function formatDate(dateStr: string): string {
 }
 
 /**
- * Format a time string for display.
+ * Format a time string for display (24-hour format).
  * @param dateStr - ISO date string
- * @returns Formatted time like "14:30"
+ * @returns Formatted time like "14:30 น."
  */
 export function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('th-TH', {
+  const time = new Date(dateStr).toLocaleTimeString('th-TH', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   });
+  return `${time} น.`;
 }
 
 /**
  * Format a date-time string.
  * @param dateStr - ISO date string
- * @returns Formatted string like "19 ส.ค. 2026 14:30"
+ * @returns Formatted string like "19 ส.ค. 2026 14:30 น."
  */
 export function formatDateTime(dateStr: string): string {
   return `${formatDate(dateStr)} ${formatTime(dateStr)}`;
 }
 
 /**
- * Calculate elapsed time from a given date to now.
+ * Calculate elapsed time from a given date to now in natural Thai.
  * @param dateStr - ISO date string
- * @returns Human-readable elapsed time like "5 min", "1 hr 20 min"
+ * @returns Human-readable elapsed time like "< 1 นาที", "5 นาที", "1 ชม. 20 นาที"
  */
 export function formatElapsed(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
+  const diffMs = Math.max(0, now - then);
   const diffMin = Math.floor(diffMs / 60000);
 
-  if (diffMin < 1) return '< 1 min';
-  if (diffMin < 60) return `${diffMin} min`;
+  if (diffMin < 1) return '< 1 นาที';
+  if (diffMin < 60) return `${diffMin} นาที`;
 
   const hours = Math.floor(diffMin / 60);
   const mins = diffMin % 60;
-  return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
+  return mins > 0 ? `${hours} ชม. ${mins} นาที` : `${hours} ชม.`;
 }
 
 /**

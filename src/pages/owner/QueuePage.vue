@@ -1,186 +1,279 @@
 <template>
   <q-page class="queue-page q-pa-md">
     <!-- Loading -->
-    <div v-if="isLoading" class="column items-center q-pa-xl">
-      <q-spinner-dots size="40px" color="primary" />
+    <div v-if="isLoading" class="q-pa-xl column items-center">
+      <LoadingSkeleton type="spinner" message="กำลังโหลดข้อมูลคิวออเดอร์..." />
     </div>
 
     <template v-else>
-      <!-- Queue columns / Kanban layout -->
-      <div class="queue-grid">
-        <!-- QUEUED Column -->
-        <div class="queue-column">
-          <div class="queue-column-header queued-header">
-            <q-icon name="schedule" class="q-mr-sm" />
-            QUEUED
-            <q-badge :label="queueStore.queuedOrders.length" class="q-ml-sm" />
+      <!-- Queue Header Bar -->
+      <div class="row items-center justify-between q-mb-md">
+        <div>
+          <h5 class="q-my-none text-weight-bold page-title">คิวออเดอร์ในครัว</h5>
+          <p class="text-caption text-grey-7 q-mb-none">
+            จัดการลำดับการทำอาหารและเสิร์ฟตามคิว (FIFO)
+          </p>
+        </div>
+        <div class="row items-center q-gutter-sm">
+          <q-badge color="primary" rounded class="q-px-sm q-py-xs">
+            <q-icon name="sync" size="14px" class="q-mr-xs animate-spin-slow" />
+            <span>อัปเดตแบบเรียลไทม์</span>
+          </q-badge>
+        </div>
+      </div>
+
+      <!-- Kanban 4 Columns Grid -->
+      <div class="queue-kanban-grid">
+        <!-- 1. QUEUED (รายการใหม่) -->
+        <div class="queue-column queue-column--queued">
+          <div class="queue-column-header bg-light-blue-1 text-light-blue-9">
+            <div class="row items-center">
+              <q-icon name="schedule" size="18px" class="q-mr-xs text-light-blue-8" />
+              <span class="column-title">รายการใหม่</span>
+            </div>
+            <span class="column-count-badge bg-light-blue-8 text-white">
+              {{ queueStore.queuedOrders.length }}
+            </span>
           </div>
+
           <div class="queue-column-body">
-            <div v-for="order in queueStore.queuedOrders" :key="order.id" class="queue-order-card">
+            <div
+              v-for="order in queueStore.queuedOrders"
+              :key="order.id"
+              class="queue-card queue-card--queued"
+            >
+              <!-- Card Header -->
               <div class="row items-center justify-between q-mb-xs">
-                <span class="queue-number">{{ formatQueueNumber(order.queue_number) }}</span>
-                <span class="elapsed-time">{{ formatElapsed(order.created_at) }}</span>
-              </div>
-              <div class="order-items-summary">
-                <div v-for="item in order.items" :key="item.id" class="order-item-line">
-                  <span>{{ item.snapshot_name }} x{{ item.quantity }}</span>
-                  <span v-if="item.special_instruction" class="item-note-icon" title="Has note"
-                    >📝</span
-                  >
+                <div class="row items-center">
+                  <span class="queue-seq-number">{{ formatQueueNumber(order.queue_number) }}</span>
+                </div>
+                <div class="elapsed-badge">
+                  <q-icon name="timer" size="13px" class="q-mr-xs" />
+                  <span>{{ formatElapsed(order.created_at) }}</span>
                 </div>
               </div>
-              <div class="row justify-end q-mt-sm">
+
+              <!-- Dishes List -->
+              <div class="dishes-list q-my-sm">
+                <div v-for="item in order.items" :key="item.id" class="dish-item-row">
+                  <div class="dish-name-line">
+                    <span class="text-weight-bold text-primary q-mr-xs">{{ item.quantity }}x</span>
+                    <span>{{ item.snapshot_name }}</span>
+                  </div>
+                  <!-- Special note -->
+                  <div v-if="item.special_instruction" class="dish-special-note">
+                    <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                    <span>{{ item.special_instruction }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <div class="card-action-bar q-mt-sm">
                 <q-btn
-                  color="orange-8"
                   unelevated
-                  dense
                   no-caps
-                  size="sm"
+                  class="full-width action-btn action-btn--preparing"
                   @click="advanceStatus(order.id, OrderStatus.PREPARING)"
                 >
-                  Start Preparing
+                  <q-icon name="soup_kitchen" size="16px" class="q-mr-xs" />
+                  <span>เริ่มเตรียมอาหาร</span>
                 </q-btn>
               </div>
             </div>
-            <div v-if="queueStore.queuedOrders.length === 0" class="empty-column">
-              No queued orders
+
+            <div v-if="queueStore.queuedOrders.length === 0" class="empty-column-state">
+              <q-icon name="check_circle_outline" size="32px" color="grey-4" class="q-mb-xs" />
+              <div>ไม่มีออเดอร์ใหม่</div>
             </div>
           </div>
         </div>
 
-        <!-- PREPARING Column -->
-        <div class="queue-column">
-          <div class="queue-column-header preparing-header">
-            <q-icon name="restaurant" class="q-mr-sm" />
-            PREPARING
-            <q-badge :label="queueStore.preparingOrders.length" class="q-ml-sm" />
+        <!-- 2. PREPARING (กำลังเตรียม) -->
+        <div class="queue-column queue-column--preparing">
+          <div class="queue-column-header bg-amber-1 text-amber-10">
+            <div class="row items-center">
+              <q-icon name="soup_kitchen" size="18px" class="q-mr-xs text-amber-9" />
+              <span class="column-title">กำลังเตรียม</span>
+            </div>
+            <span class="column-count-badge bg-amber-9 text-white">
+              {{ queueStore.preparingOrders.length }}
+            </span>
           </div>
+
           <div class="queue-column-body">
             <div
               v-for="order in queueStore.preparingOrders"
               :key="order.id"
-              class="queue-order-card preparing-card"
-              :class="{ 'order-updated': order.revision > 1 }"
+              class="queue-card queue-card--preparing"
+              :class="{ 'queue-card--updated': order.revision > 1 }"
             >
+              <!-- Card Header -->
               <div class="row items-center justify-between q-mb-xs">
-                <span class="queue-number">{{ formatQueueNumber(order.queue_number) }}</span>
-                <span class="elapsed-time">{{
-                  formatElapsed(order.preparing_at || order.created_at)
-                }}</span>
-              </div>
-              <q-badge
-                v-if="order.revision > 1"
-                color="warning"
-                text-color="dark"
-                label="⚠️ Updated"
-                class="q-mb-xs"
-              />
-              <div class="order-items-summary">
-                <div v-for="item in order.items" :key="item.id" class="order-item-line">
-                  <span>{{ item.snapshot_name }} x{{ item.quantity }}</span>
-                  <span v-if="item.special_instruction" class="item-note-icon" title="Has note"
-                    >📝</span
-                  >
+                <div class="row items-center">
+                  <span class="queue-seq-number">{{ formatQueueNumber(order.queue_number) }}</span>
+                </div>
+                <div class="elapsed-badge elapsed-badge--amber">
+                  <q-icon name="timer" size="13px" class="q-mr-xs" />
+                  <span>{{ formatElapsed(order.preparing_at || order.created_at) }}</span>
                 </div>
               </div>
-              <div class="row justify-end q-mt-sm">
+
+              <!-- Revision alert -->
+              <div v-if="order.revision > 1" class="revision-banner q-mb-xs">
+                <q-icon name="notification_important" size="14px" class="q-mr-xs" />
+                <span>ลูกค้ารายการนี้มีการแก้ไข</span>
+              </div>
+
+              <!-- Dishes List -->
+              <div class="dishes-list q-my-sm">
+                <div v-for="item in order.items" :key="item.id" class="dish-item-row">
+                  <div class="dish-name-line">
+                    <span class="text-weight-bold text-amber-9 q-mr-xs">{{ item.quantity }}x</span>
+                    <span>{{ item.snapshot_name }}</span>
+                  </div>
+                  <div v-if="item.special_instruction" class="dish-special-note">
+                    <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                    <span>{{ item.special_instruction }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <div class="card-action-bar q-mt-sm">
                 <q-btn
-                  color="green-7"
                   unelevated
-                  dense
                   no-caps
-                  size="sm"
+                  class="full-width action-btn action-btn--prepared"
                   @click="advanceStatus(order.id, OrderStatus.PREPARED)"
                 >
-                  Mark Ready
+                  <q-icon name="check_circle" size="16px" class="q-mr-xs" />
+                  <span>เตรียมเสร็จแล้ว</span>
                 </q-btn>
               </div>
             </div>
-            <div v-if="queueStore.preparingOrders.length === 0" class="empty-column">
-              No orders being prepared
+
+            <div v-if="queueStore.preparingOrders.length === 0" class="empty-column-state">
+              <q-icon name="restaurant" size="32px" color="grey-4" class="q-mb-xs" />
+              <div>ไม่มีรายการที่กำลังเตรียม</div>
             </div>
           </div>
         </div>
 
-        <!-- PREPARED Column -->
-        <div class="queue-column">
-          <div class="queue-column-header prepared-header">
-            <q-icon name="check_circle" class="q-mr-sm" />
-            PREPARED
-            <q-badge :label="queueStore.preparedOrders.length" class="q-ml-sm" />
+        <!-- 3. PREPARED (เตรียมเสร็จแล้ว / พร้อมเสิร์ฟ) -->
+        <div class="queue-column queue-column--prepared">
+          <div class="queue-column-header bg-green-1 text-green-9">
+            <div class="row items-center">
+              <q-icon name="check_circle" size="18px" class="q-mr-xs text-green-7" />
+              <span class="column-title">เตรียมเสร็จแล้ว</span>
+            </div>
+            <span class="column-count-badge bg-green-7 text-white">
+              {{ queueStore.preparedOrders.length }}
+            </span>
           </div>
+
           <div class="queue-column-body">
             <div
               v-for="order in queueStore.preparedOrders"
               :key="order.id"
-              class="queue-order-card prepared-card"
+              class="queue-card queue-card--prepared"
               :class="{
-                'can-serve': queueStore.canServe(order),
-                blocked: !queueStore.canServe(order),
+                'queue-card--can-serve': queueStore.canServe(order),
+                'queue-card--blocked': !queueStore.canServe(order),
               }"
             >
+              <!-- Card Header -->
               <div class="row items-center justify-between q-mb-xs">
-                <span class="queue-number">{{ formatQueueNumber(order.queue_number) }}</span>
-                <span class="elapsed-time">{{
-                  formatElapsed(order.prepared_at || order.created_at)
-                }}</span>
-              </div>
-              <div class="order-items-summary">
-                <div v-for="item in order.items" :key="item.id" class="order-item-line">
-                  <span>{{ item.snapshot_name }} x{{ item.quantity }}</span>
+                <div class="row items-center">
+                  <span class="queue-seq-number">{{ formatQueueNumber(order.queue_number) }}</span>
+                </div>
+                <div class="elapsed-badge elapsed-badge--green">
+                  <q-icon name="timer" size="13px" class="q-mr-xs" />
+                  <span>{{ formatElapsed(order.prepared_at || order.created_at) }}</span>
                 </div>
               </div>
-              <div class="row items-center justify-between q-mt-sm">
-                <q-badge
-                  v-if="!queueStore.canServe(order)"
-                  color="grey-4"
-                  text-color="grey-7"
-                  label="Waiting for earlier orders"
-                />
-                <q-space />
+
+              <!-- Dishes List -->
+              <div class="dishes-list q-my-sm">
+                <div v-for="item in order.items" :key="item.id" class="dish-item-row">
+                  <div class="dish-name-line">
+                    <span class="text-weight-bold text-green-8 q-mr-xs">{{ item.quantity }}x</span>
+                    <span>{{ item.snapshot_name }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- FIFO Block Notice if earlier order is not served yet -->
+              <div v-if="!queueStore.canServe(order)" class="fifo-block-banner q-mb-sm">
+                <q-icon name="hourglass_top" size="14px" class="q-mr-xs" />
+                <span>รอเสิร์ฟตามลำดับคิวก่อนหน้า</span>
+              </div>
+
+              <!-- Action Button: Confirm Served -->
+              <div class="card-action-bar q-mt-sm">
                 <q-btn
-                  color="blue-grey-7"
                   unelevated
-                  dense
                   no-caps
-                  size="sm"
+                  class="full-width action-btn"
+                  :class="
+                    queueStore.canServe(order)
+                      ? 'action-btn--serve-ready'
+                      : 'action-btn--serve-disabled'
+                  "
                   :disable="!queueStore.canServe(order)"
                   @click="advanceStatus(order.id, OrderStatus.SERVED)"
                 >
-                  Confirm Served
+                  <q-icon name="done_all" size="16px" class="q-mr-xs" />
+                  <span>{{
+                    queueStore.canServe(order) ? 'ยืนยันว่าเสิร์ฟครบแล้ว' : 'รอคิวก่อนหน้า'
+                  }}</span>
                 </q-btn>
               </div>
             </div>
-            <div v-if="queueStore.preparedOrders.length === 0" class="empty-column">
-              No prepared orders
+
+            <div v-if="queueStore.preparedOrders.length === 0" class="empty-column-state">
+              <q-icon name="room_service" size="32px" color="grey-4" class="q-mb-xs" />
+              <div>ไม่มีอาหารรอเสิร์ฟ</div>
             </div>
           </div>
         </div>
 
-        <!-- SERVED Column (collapsed) -->
-        <div class="queue-column served-column">
-          <div class="queue-column-header served-header">
-            <q-icon name="done_all" class="q-mr-sm" />
-            SERVED
-            <q-badge :label="queueStore.servedOrders.length" class="q-ml-sm" />
+        <!-- 4. SERVED (เสิร์ฟครบแล้ว) -->
+        <div class="queue-column queue-column--served">
+          <div class="queue-column-header bg-grey-2 text-grey-8">
+            <div class="row items-center">
+              <q-icon name="done_all" size="18px" class="q-mr-xs text-grey-7" />
+              <span class="column-title">เสิร์ฟแล้ว</span>
+            </div>
+            <span class="column-count-badge bg-grey-6 text-white">
+              {{ queueStore.servedOrders.length }}
+            </span>
           </div>
+
           <div class="queue-column-body">
             <div
-              v-for="order in queueStore.servedOrders.slice(0, 10)"
+              v-for="order in queueStore.servedOrders.slice(0, 15)"
               :key="order.id"
-              class="queue-order-card served-card"
+              class="queue-card queue-card--served"
             >
               <div class="row items-center justify-between">
-                <span class="queue-number text-grey-6">{{
-                  formatQueueNumber(order.queue_number)
-                }}</span>
-                <span class="text-grey-5 text-caption">{{
-                  formatTime(order.served_at || order.created_at)
-                }}</span>
+                <div class="row items-center">
+                  <span class="queue-seq-number text-grey-7">
+                    {{ formatQueueNumber(order.queue_number) }}
+                  </span>
+                  <span class="text-caption text-grey-6 q-ml-sm">
+                    ({{ order.items.length }} รายการ)
+                  </span>
+                </div>
+                <span class="text-caption text-grey-5">
+                  {{ formatTime(order.served_at || order.created_at) }}
+                </span>
               </div>
             </div>
-            <div v-if="queueStore.servedOrders.length === 0" class="empty-column">
-              No served orders today
+
+            <div v-if="queueStore.servedOrders.length === 0" class="empty-column-state">
+              <q-icon name="history" size="32px" color="grey-4" class="q-mb-xs" />
+              <div>ยังไม่มีรายการที่เสิร์ฟวันนี้</div>
             </div>
           </div>
         </div>
@@ -197,6 +290,7 @@ import { fetchTodayOrders, advanceOrderStatus } from 'src/services/orderService'
 import { supabase } from 'src/services/supabase';
 import { formatQueueNumber, formatElapsed, formatTime } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const queueStore = useQueueStore();
@@ -214,7 +308,6 @@ onMounted(async () => {
     isLoading.value = false;
   }
 
-  // Subscribe to realtime order changes
   realtimeChannel = supabase
     .channel('orders:restaurant')
     .on(
@@ -226,17 +319,16 @@ onMounted(async () => {
       },
       (payload) => {
         void (async () => {
-          // Re-fetch to get full order with items
           const orders = await fetchTodayOrders();
           queueStore.setOrders(orders);
 
           if (payload.eventType === 'INSERT') {
-            notifyWarning('🆕 New order received!');
+            notifyWarning('มีออเดอร์ใหม่เข้ามา!');
           }
           if (payload.eventType === 'UPDATE') {
             const newData = payload.new as { revision?: number };
             if (newData.revision && newData.revision > 1) {
-              notifyWarning('⚠️ Order updated by customer');
+              notifyWarning('ลูกค้ามีการแก้ไขรายการอาหาร');
             }
           }
         })();
@@ -244,9 +336,7 @@ onMounted(async () => {
     )
     .subscribe();
 
-  // Update elapsed times every 30 seconds
   elapsedInterval = setInterval(() => {
-    // Force re-render by touching the store
     queueStore.setOrders([...queueStore.orders]);
   }, 30000);
 });
@@ -261,9 +351,14 @@ onUnmounted(() => {
 async function advanceStatus(orderId: string, newStatus: OrderStatus) {
   try {
     await advanceOrderStatus(orderId, newStatus);
-    notifySuccess(`Order ${newStatus.toLowerCase()}`);
+    const labelMap: Record<string, string> = {
+      [OrderStatus.PREPARING]: 'เริ่มเตรียมอาหารแล้ว',
+      [OrderStatus.PREPARED]: 'เตรียมเสร็จเรียบร้อย',
+      [OrderStatus.SERVED]: 'ยืนยันการเสิร์ฟสำเร็จ',
+    };
+    notifySuccess(labelMap[newStatus] || 'อัปเดตสถานะสำเร็จ');
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to update order';
+    const msg = err instanceof Error ? err.message : 'ไม่สามารถอัปเดตสถานะได้';
     notifyError(msg);
   }
 }
@@ -271,136 +366,239 @@ async function advanceStatus(orderId: string, newStatus: OrderStatus) {
 
 <style scoped>
 .queue-page {
-  background: #f0f2f5;
+  background: var(--color-background);
   min-height: 100vh;
 }
 
-.queue-grid {
+.page-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.queue-kanban-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  min-height: calc(100vh - 100px);
+  align-items: start;
 }
 
-@media (max-width: 1024px) {
-  .queue-grid {
+@media (max-width: 1100px) {
+  .queue-kanban-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
 }
 
-@media (max-width: 600px) {
-  .queue-grid {
+@media (max-width: 650px) {
+  .queue-kanban-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
 .queue-column {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .queue-column-header {
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-radius: 12px 12px 0 0;
-  color: white;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.queued-header {
-  background: #1976d2;
+.column-title {
+  font-weight: 700;
+  font-size: 0.95rem;
 }
-.preparing-header {
-  background: #ef6c00;
-}
-.prepared-header {
-  background: #388e3c;
-}
-.served-header {
-  background: #607d8b;
+
+.column-count-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
 }
 
 .queue-column-body {
-  flex: 1;
-  background: white;
-  border-radius: 0 0 12px 12px;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 400px;
+  max-height: calc(100vh - 190px);
   overflow-y: auto;
-  max-height: calc(100vh - 160px);
 }
 
-.queue-order-card {
-  background: #fafbfc;
-  border: 1px solid #e8eaed;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 8px;
-  transition: box-shadow 0.15s;
+/* Cards */
+.queue-card {
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow-subtle);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.queue-order-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.queue-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
 }
 
-.queue-order-card.order-updated {
-  border-color: #ff9800;
-  border-width: 2px;
+.queue-card--queued {
+  border-left: 4px solid var(--color-status-queued);
 }
 
-.queue-order-card.can-serve {
-  border-color: #4caf50;
-  background: #f1f8e9;
+.queue-card--preparing {
+  border-left: 4px solid var(--color-status-preparing);
+  background: #fffdfa;
 }
 
-.queue-order-card.blocked {
-  opacity: 0.7;
+.queue-card--prepared {
+  border-left: 4px solid var(--color-status-prepared);
 }
 
-.served-card {
-  padding: 8px 12px;
-  opacity: 0.6;
+.queue-card--can-serve {
+  background: #f0fdf4;
+  border-color: #86efac;
 }
 
-.queue-number {
+.queue-card--blocked {
+  opacity: 0.82;
+}
+
+.queue-card--served {
+  padding: 10px 12px;
+  opacity: 0.75;
+  background: #fafafa;
+}
+
+.queue-seq-number {
+  font-size: 1.25rem;
   font-weight: 700;
-  font-size: 1.05rem;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
+  line-height: 1;
 }
 
-.elapsed-time {
+.elapsed-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   font-size: 0.75rem;
-  color: #888;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
 }
 
-.order-items-summary {
-  margin-top: 4px;
+.elapsed-badge--amber {
+  color: var(--color-status-preparing);
+  border-color: #fde68a;
+  background: #fffbeb;
 }
 
-.order-item-line {
-  font-size: 0.85rem;
-  color: #444;
-  line-height: 1.6;
+.elapsed-badge--green {
+  color: var(--color-status-prepared);
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.revision-banner {
   display: flex;
   align-items: center;
-  gap: 4px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
 }
 
-.item-note-icon {
-  font-size: 0.75rem;
+.fifo-block-banner {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
 }
 
-.empty-column {
+.dish-item-row {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.dish-name-line {
+  color: var(--color-text-primary);
+}
+
+.dish-special-note {
+  font-size: 0.78rem;
+  color: var(--color-status-preparing);
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+}
+
+/* Action Buttons */
+.action-btn {
+  height: 38px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.action-btn--preparing {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.action-btn--prepared {
+  background: var(--color-status-preparing);
+  color: #ffffff;
+}
+
+.action-btn--serve-ready {
+  background: var(--color-status-prepared);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+.action-btn--serve-disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
+.empty-column-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
   text-align: center;
-  color: #aaa;
-  padding: 24px;
-  font-size: 0.85rem;
 }
 
-.served-column .queue-column-body {
-  max-height: calc(100vh - 160px);
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -1,99 +1,126 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="lHh Lpr lFf" class="owner-layout">
     <!-- Sidebar navigation for owner -->
     <q-drawer
       v-model="drawerOpen"
       :mini="miniDrawer"
-      :width="260"
-      :mini-width="72"
+      :width="270"
+      :mini-width="76"
       bordered
       class="owner-drawer"
-      :breakpoint="768"
+      :breakpoint="900"
     >
-      <q-list>
-        <!-- Logo / Brand -->
-        <q-item class="owner-brand q-py-md">
-          <q-item-section avatar>
-            <q-icon name="restaurant" color="primary" size="28px" />
-          </q-item-section>
-          <q-item-section v-if="!miniDrawer">
-            <q-item-label class="text-weight-bold text-h6">QR Food</q-item-label>
-            <q-item-label caption>Owner Dashboard</q-item-label>
-          </q-item-section>
-        </q-item>
+      <div class="column full-height justify-between">
+        <q-list class="q-pt-sm">
+          <!-- Logo / Brand Header -->
+          <q-item class="owner-brand q-my-xs q-mx-sm">
+            <q-item-section avatar>
+              <div class="owner-brand-icon">
+                <q-icon name="restaurant_menu" color="primary" size="24px" />
+              </div>
+            </q-item-section>
+            <q-item-section v-if="!miniDrawer">
+              <q-item-label class="text-weight-bold text-subtitle1 brand-title"
+                >ระบบร้านอาหาร</q-item-label
+              >
+              <q-item-label caption class="brand-subtitle">ผู้ดูแลร้าน (Owner)</q-item-label>
+            </q-item-section>
+          </q-item>
 
-        <q-separator />
+          <q-separator class="q-my-sm q-mx-md separator-subtle" />
 
-        <!-- Navigation items -->
-        <q-item
-          v-for="nav in navItems"
-          :key="nav.route"
-          clickable
-          v-ripple
-          :to="nav.route"
-          active-class="owner-nav-active"
-          class="owner-nav-item"
-        >
-          <q-item-section avatar>
-            <q-icon :name="nav.icon" />
-          </q-item-section>
-          <q-item-section v-if="!miniDrawer">
-            <q-item-label>{{ nav.label }}</q-item-label>
-          </q-item-section>
-          <q-tooltip v-if="miniDrawer" anchor="center right" self="center left">
-            {{ nav.label }}
-          </q-tooltip>
-        </q-item>
-      </q-list>
+          <!-- Navigation items -->
+          <div class="q-px-sm">
+            <q-item
+              v-for="nav in navItems"
+              :key="nav.route"
+              clickable
+              v-ripple
+              :to="nav.route"
+              active-class="owner-nav-active"
+              class="owner-nav-item q-my-xs"
+            >
+              <q-item-section avatar class="nav-avatar">
+                <q-icon :name="nav.icon" size="22px" />
+              </q-item-section>
+              <q-item-section v-if="!miniDrawer">
+                <q-item-label class="nav-label">{{ nav.label }}</q-item-label>
+              </q-item-section>
+              <q-tooltip v-if="miniDrawer" anchor="center right" self="center left" class="bg-dark">
+                {{ nav.label }}
+              </q-tooltip>
+            </q-item>
+          </div>
+        </q-list>
 
-      <q-space />
+        <!-- Mini toggle + logout at bottom -->
+        <q-list class="q-pa-sm q-mb-xs">
+          <q-separator class="q-mb-sm separator-subtle" />
+          <q-item clickable v-ripple @click="miniDrawer = !miniDrawer" class="owner-nav-item gt-sm">
+            <q-item-section avatar class="nav-avatar">
+              <q-icon :name="miniDrawer ? 'chevron_right' : 'chevron_left'" size="22px" />
+            </q-item-section>
+            <q-item-section v-if="!miniDrawer">
+              <q-item-label class="nav-label text-grey-7">{{
+                miniDrawer ? 'ขยายเมนู' : 'ย่อเมนู'
+              }}</q-item-label>
+            </q-item-section>
+          </q-item>
 
-      <!-- Mini toggle + logout at bottom -->
-      <q-list class="q-mb-sm">
-        <q-separator />
-        <q-item clickable v-ripple @click="miniDrawer = !miniDrawer" class="owner-nav-item">
-          <q-item-section avatar>
-            <q-icon :name="miniDrawer ? 'chevron_right' : 'chevron_left'" />
-          </q-item-section>
-          <q-item-section v-if="!miniDrawer">
-            <q-item-label>Collapse</q-item-label>
-          </q-item-section>
-        </q-item>
-        <q-item clickable v-ripple @click="handleLogout" class="owner-nav-item text-negative">
-          <q-item-section avatar>
-            <q-icon name="logout" />
-          </q-item-section>
-          <q-item-section v-if="!miniDrawer">
-            <q-item-label>Logout</q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
+          <q-item
+            clickable
+            v-ripple
+            @click="handleLogout"
+            class="owner-nav-item logout-item text-negative"
+          >
+            <q-item-section avatar class="nav-avatar">
+              <q-icon name="logout" size="22px" />
+            </q-item-section>
+            <q-item-section v-if="!miniDrawer">
+              <q-item-label class="nav-label text-weight-medium">ออกจากระบบ</q-item-label>
+            </q-item-section>
+            <q-tooltip
+              v-if="miniDrawer"
+              anchor="center right"
+              self="center left"
+              class="bg-negative"
+            >
+              ออกจากระบบ
+            </q-tooltip>
+          </q-item>
+        </q-list>
+      </div>
     </q-drawer>
 
     <!-- Header -->
     <q-header class="owner-header" bordered>
-      <q-toolbar>
+      <q-toolbar class="owner-toolbar">
         <q-btn
           flat
           dense
           round
           icon="menu"
           @click="drawerOpen = !drawerOpen"
-          class="lt-md"
-          aria-label="Toggle menu"
+          class="lt-md q-mr-sm"
+          aria-label="เปิดเมนู"
         />
-        <q-toolbar-title class="text-weight-bold">
+        <q-toolbar-title class="owner-title text-weight-bold">
           {{ pageTitle }}
         </q-toolbar-title>
         <q-space />
-        <div class="text-caption text-grey-6 q-mr-md gt-xs">
-          {{ currentTime }}
+        <div class="row items-center time-badge gt-xs">
+          <q-icon name="schedule" size="16px" class="q-mr-xs text-grey-6" />
+          <span class="text-caption text-weight-medium text-grey-8">{{ currentTime }}</span>
         </div>
       </q-toolbar>
     </q-header>
 
-    <q-page-container>
-      <router-view />
+    <q-page-container class="owner-page-container">
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </q-page-container>
   </q-layout>
 </template>
@@ -113,24 +140,25 @@ const currentTime = ref('');
 let timeInterval: ReturnType<typeof setInterval>;
 
 const navItems = [
-  { label: 'Dashboard', icon: 'dashboard', route: '/owner/dashboard' },
-  { label: 'Order Queue', icon: 'list_alt', route: '/owner/queue' },
-  { label: 'Tables', icon: 'table_restaurant', route: '/owner/tables' },
-  { label: 'Menu', icon: 'restaurant_menu', route: '/owner/menu' },
-  { label: 'Options', icon: 'tune', route: '/owner/options' },
-  { label: 'Bills', icon: 'receipt', route: '/owner/bills' },
-  { label: 'Sales', icon: 'bar_chart', route: '/owner/sales' },
+  { label: 'ภาพรวมร้านค้า', icon: 'dashboard', route: '/owner/dashboard' },
+  { label: 'คิวออเดอร์', icon: 'soup_kitchen', route: '/owner/queue' },
+  { label: 'จัดการโต๊ะและ QR', icon: 'table_restaurant', route: '/owner/tables' },
+  { label: 'จัดการเมนูอาหาร', icon: 'restaurant_menu', route: '/owner/menu' },
+  { label: 'ตัวเลือกเสริม', icon: 'tune', route: '/owner/options' },
+  { label: 'บิลและการชำระเงิน', icon: 'receipt_long', route: '/owner/bills' },
+  { label: 'ประวัติยอดขาย', icon: 'bar_chart', route: '/owner/sales' },
 ];
 
-const pageTitle = computed(() => (route.meta.title as string) || 'Dashboard');
+const pageTitle = computed(() => (route.meta.title as string) || 'ภาพรวมร้านค้า');
 
 function updateTime() {
-  currentTime.value = new Date().toLocaleTimeString('th-TH', {
+  const time = new Date().toLocaleTimeString('th-TH', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
   });
+  currentTime.value = `${time} น.`;
 }
 
 async function handleLogout() {
@@ -149,30 +177,120 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.owner-layout {
+  background-color: var(--color-background);
+  min-height: 100vh;
+}
+
 .owner-header {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: #1a1a2e;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.owner-toolbar {
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+.owner-title {
+  font-size: 1.15rem;
+  color: var(--color-text-primary);
+}
+
+.time-badge {
+  background: var(--color-surface-subtle);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
 }
 
 .owner-drawer {
-  background: #fafbfc;
+  background: #ffffff;
+  border-right: 1px solid var(--color-border);
 }
 
 .owner-brand {
-  min-height: 64px;
+  min-height: 54px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+}
+
+.owner-brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.separator-subtle {
+  background: var(--color-border-subtle);
 }
 
 .owner-nav-item {
-  border-radius: 8px;
-  margin: 2px 8px;
+  border-radius: var(--radius-sm);
   min-height: 44px;
+  color: var(--color-text-secondary);
+  transition: all 0.15s ease;
+}
+
+.owner-nav-item:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-primary);
 }
 
 .owner-nav-active {
-  background: rgba(25, 118, 210, 0.08);
-  color: #1976d2;
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
   font-weight: 600;
+}
+
+.nav-avatar {
+  min-width: 40px;
+}
+
+.nav-label {
+  font-size: 0.92rem;
+}
+
+.logout-item:hover {
+  background: var(--color-status-soldout-bg);
+}
+
+.owner-page-container {
+  padding: 0;
+}
+
+/* Transitions */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

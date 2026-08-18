@@ -1,109 +1,128 @@
 <template>
-  <q-page class="cart-page">
+  <q-page class="cart-page q-pa-md">
     <!-- Empty cart -->
-    <div v-if="cartStore.isEmpty" class="column items-center justify-center q-pa-xl empty-cart">
-      <q-icon name="shopping_cart" size="64px" color="grey-4" />
-      <h6 class="q-mt-md q-mb-xs text-grey-6">Your cart is empty</h6>
-      <p class="text-grey-5">Add items from the menu to get started</p>
-      <q-btn color="primary" unelevated no-caps :to="`/t/${publicToken}/menu`" class="q-mt-md">
-        Browse Menu
-      </q-btn>
-    </div>
+    <EmptyState
+      v-if="cartStore.isEmpty"
+      icon="shopping_basket"
+      title="ยังไม่มีรายการอาหารในตะกร้า"
+      description="เลือกเมนูอร่อยจากหน้ารายการอาหารแล้วกลับมาสั่งได้เลย"
+      action-label="ดูเมนูอาหาร"
+      :action-to="`/t/${publicToken}/menu`"
+    />
 
-    <!-- Cart items -->
+    <!-- Cart items list -->
     <template v-else>
-      <q-list class="cart-list q-px-md q-pt-md">
-        <div v-for="item in cartStore.items" :key="item.cart_item_id" class="cart-item q-mb-md">
-          <div class="row no-wrap items-start">
-            <!-- Image -->
-            <div class="cart-item-image q-mr-md">
-              <img v-if="item.image_url" :src="item.image_url" :alt="item.name" />
-              <q-icon v-else name="restaurant" size="24px" color="grey-4" />
-            </div>
+      <div class="cart-container">
+        <div class="cart-header row items-center justify-between q-mb-sm">
+          <h6 class="q-my-none text-weight-bold cart-heading">
+            รายการที่เลือก ({{ cartStore.itemCount }} รายการ)
+          </h6>
+          <q-btn
+            flat
+            dense
+            no-caps
+            color="grey-7"
+            size="sm"
+            label="ล้างตะกร้า"
+            @click="cartStore.clearCart()"
+          />
+        </div>
 
-            <!-- Details -->
-            <div class="col">
-              <div class="cart-item-name">{{ item.name }}</div>
-
-              <!-- Options -->
-              <div v-if="item.selected_options.length > 0" class="cart-item-options">
-                <span v-for="(opt, i) in item.selected_options" :key="opt.option_id">
-                  {{ opt.name
-                  }}<span v-if="opt.price_adjustment > 0">
-                    +{{ formatPrice(opt.price_adjustment) }}</span
-                  >{{ i < item.selected_options.length - 1 ? ', ' : '' }}
-                </span>
+        <!-- Items list -->
+        <div class="cart-list q-gutter-y-sm">
+          <div v-for="item in cartStore.items" :key="item.cart_item_id" class="cart-item-card">
+            <div class="row no-wrap items-start">
+              <!-- Food Image Thumbnail -->
+              <div class="cart-item-thumb q-mr-md">
+                <img v-if="item.image_url" :src="item.image_url" :alt="item.name" />
+                <q-icon v-else name="restaurant" size="24px" color="grey-4" />
               </div>
 
-              <!-- Special instruction -->
-              <div v-if="item.special_instruction" class="cart-item-note">
-                📝 {{ item.special_instruction }}
-              </div>
-
-              <!-- Price + quantity -->
-              <div class="row items-center justify-between q-mt-sm">
-                <span class="cart-item-price">{{ formatPrice(item.subtotal) }}</span>
-                <div class="row items-center no-wrap">
+              <!-- Dish Info -->
+              <div class="col">
+                <div class="row items-start justify-between">
+                  <div class="cart-item-name">{{ item.name }}</div>
                   <q-btn
-                    round
-                    dense
                     flat
-                    icon="remove"
+                    dense
+                    round
+                    icon="close"
                     size="sm"
-                    color="primary"
-                    @click="decreaseQty(item.cart_item_id, item.quantity)"
+                    color="grey-5"
+                    @click="cartStore.removeItem(item.cart_item_id)"
+                    aria-label="ลบรายการ"
                   />
-                  <span class="cart-item-qty q-mx-sm">{{ item.quantity }}</span>
-                  <q-btn
-                    round
+                </div>
+
+                <!-- Selected Options -->
+                <div v-if="item.selected_options.length > 0" class="cart-item-options q-mt-xs">
+                  <span
+                    v-for="opt in item.selected_options"
+                    :key="opt.option_id"
+                    class="option-chip"
+                  >
+                    {{ opt.name }}
+                    <template v-if="opt.price_adjustment > 0"
+                      >+{{ formatPrice(opt.price_adjustment) }}</template
+                    >
+                  </span>
+                </div>
+
+                <!-- Special Instruction -->
+                <div v-if="item.special_instruction" class="cart-item-note q-mt-xs">
+                  <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+                  <span>{{ item.special_instruction }}</span>
+                </div>
+
+                <!-- Price + Quantity Stepper -->
+                <div class="row items-center justify-between q-mt-md">
+                  <span class="cart-item-subtotal">{{ formatPrice(item.subtotal) }}</span>
+                  <QuantityStepper
+                    :model-value="item.quantity"
+                    :min="1"
                     dense
-                    flat
-                    icon="add"
-                    size="sm"
-                    color="primary"
-                    @click="cartStore.updateItemQuantity(item.cart_item_id, item.quantity + 1)"
+                    @update:model-value="
+                      (val) => cartStore.updateItemQuantity(item.cart_item_id, val)
+                    "
                   />
                 </div>
               </div>
             </div>
-
-            <!-- Remove button -->
-            <q-btn
-              flat
-              dense
-              round
-              icon="close"
-              size="sm"
-              color="grey-5"
-              class="q-ml-sm"
-              @click="cartStore.removeItem(item.cart_item_id)"
-            />
           </div>
         </div>
-      </q-list>
 
-      <!-- Order summary -->
-      <div class="order-summary q-px-md q-mt-md">
-        <q-separator class="q-mb-md" />
-        <div class="row justify-between q-mb-sm">
-          <span class="text-grey-7">Subtotal</span>
-          <span class="text-weight-bold">{{ formatPrice(cartStore.totalAmount) }}</span>
+        <!-- Summary Card -->
+        <div class="cart-summary-card q-mt-lg">
+          <div class="row justify-between items-center q-mb-xs">
+            <span class="text-grey-7">จำนวนรายการทั้งหมด</span>
+            <span class="text-weight-medium">{{ cartStore.itemCount }} รายการ</span>
+          </div>
+          <q-separator class="q-my-sm" />
+          <div class="row justify-between items-center">
+            <span class="text-subtitle1 text-weight-bold">ยอดรวมสุทธิ</span>
+            <span class="text-h6 text-weight-bold text-primary">{{
+              formatPrice(cartStore.totalAmount)
+            }}</span>
+          </div>
         </div>
-      </div>
 
-      <!-- Confirm button -->
-      <div class="confirm-wrapper q-px-md q-py-md">
-        <q-btn
-          color="primary"
-          unelevated
-          no-caps
-          size="lg"
-          class="full-width confirm-btn"
-          @click="confirmOrder"
-          :loading="isSubmitting"
-        >
-          Confirm Order — {{ formatPrice(cartStore.totalAmount) }}
-        </q-btn>
+        <!-- Confirm order button wrapper -->
+        <div class="confirm-wrapper">
+          <q-btn
+            color="primary"
+            unelevated
+            no-caps
+            size="lg"
+            class="full-width confirm-btn"
+            @click="confirmOrder"
+            :loading="isSubmitting"
+          >
+            <div class="row items-center justify-between full-width q-px-sm">
+              <span>ยืนยันการสั่งอาหาร</span>
+              <span>{{ formatPrice(cartStore.totalAmount) }}</span>
+            </div>
+          </q-btn>
+        </div>
       </div>
     </template>
   </q-page>
@@ -117,6 +136,8 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
 import { formatPrice } from 'src/utils/formatters';
+import EmptyState from 'src/components/EmptyState.vue';
+import QuantityStepper from 'src/components/QuantityStepper.vue';
 import type { CreateOrderItemPayload } from 'src/types/cart';
 
 const route = useRoute();
@@ -128,17 +149,9 @@ const { notifySuccess, notifyError } = useNotify();
 const publicToken = computed(() => route.params.publicToken as string);
 const isSubmitting = ref(false);
 
-function decreaseQty(cartItemId: string, currentQty: number) {
-  if (currentQty <= 1) {
-    cartStore.removeItem(cartItemId);
-  } else {
-    cartStore.updateItemQuantity(cartItemId, currentQty - 1);
-  }
-}
-
 async function confirmOrder() {
   if (!sessionStore.tableSession || !sessionStore.guestSession) {
-    notifyError('Session not found. Please scan the QR code again.');
+    notifyError('ไม่พบข้อมูลเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง');
     return;
   }
 
@@ -159,10 +172,11 @@ async function confirmOrder() {
     });
 
     cartStore.clearCart();
-    notifySuccess('Order confirmed!');
+    notifySuccess('ส่งออเดอร์เรียบร้อยแล้ว!');
     void router.push(`/t/${publicToken.value}/orders`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to place order';
+    const message =
+      err instanceof Error ? err.message : 'ไม่สามารถส่งออเดอร์ได้ กรุณาลองใหม่อีกครั้ง';
     notifyError(message);
   } finally {
     isSubmitting.value = false;
@@ -172,35 +186,42 @@ async function confirmOrder() {
 
 <style scoped>
 .cart-page {
-  background: #f5f7fa;
+  background: var(--color-background);
   min-height: 100vh;
-  padding-bottom: 100px;
+  padding-bottom: 120px;
 }
 
-.empty-cart {
-  min-height: 60vh;
+.cart-container {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.cart-item {
-  background: white;
-  border-radius: 12px;
+.cart-heading {
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+}
+
+.cart-item-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   padding: 14px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-subtle);
 }
 
-.cart-item-image {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
+.cart-item-thumb {
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--color-surface-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.cart-item-image img {
+.cart-item-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -208,34 +229,44 @@ async function confirmOrder() {
 
 .cart-item-name {
   font-weight: 600;
-  font-size: 0.95rem;
-  color: #1a1a2e;
+  font-size: 0.98rem;
+  color: var(--color-text-primary);
+  line-height: 1.3;
 }
 
 .cart-item-options {
-  font-size: 0.8rem;
-  color: #888;
-  margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.option-chip {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
 }
 
 .cart-item-note {
   font-size: 0.8rem;
-  color: #666;
-  margin-top: 4px;
-  font-style: italic;
+  color: var(--color-status-preparing);
+  display: flex;
+  align-items: center;
 }
 
-.cart-item-price {
+.cart-item-subtotal {
   font-weight: 700;
-  color: #1976d2;
-  font-size: 0.95rem;
+  color: var(--color-primary);
+  font-size: 1.05rem;
 }
 
-.cart-item-qty {
-  font-weight: 600;
-  font-size: 1rem;
-  min-width: 24px;
-  text-align: center;
+.cart-summary-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 16px;
+  box-shadow: var(--shadow-subtle);
 }
 
 .confirm-wrapper {
@@ -243,15 +274,21 @@ async function confirmOrder() {
   bottom: 0;
   left: 0;
   right: 0;
-  background: white;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
+  padding: 12px 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 50;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .confirm-btn {
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   height: 52px;
   font-size: 1rem;
-  font-weight: 600;
+  box-shadow: var(--shadow-md);
 }
 </style>

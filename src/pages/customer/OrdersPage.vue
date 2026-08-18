@@ -1,79 +1,130 @@
 <template>
   <q-page class="orders-page q-pa-md">
-    <div v-if="isLoading" class="column items-center q-pa-xl">
-      <q-spinner-dots size="40px" color="primary" />
+    <div v-if="isLoading" class="q-pa-md">
+      <LoadingSkeleton type="list" :count="3" />
     </div>
 
     <template v-else>
-      <!-- Session total -->
-      <div v-if="allOrders.length > 0" class="session-total q-mb-md">
-        <div class="row justify-between items-center">
-          <span class="text-grey-7">Session Total</span>
-          <span class="text-h6 text-weight-bold">{{ formatPrice(sessionTotal) }}</span>
-        </div>
-      </div>
-
-      <!-- Current orders -->
-      <div v-if="currentOrders.length > 0" class="q-mb-lg">
-        <h6 class="section-title q-mb-sm">Current Orders</h6>
-        <div
-          v-for="order in currentOrders"
-          :key="order.id"
-          class="order-card q-mb-sm"
-          @click="openOrder(order.id)"
-        >
-          <div class="row items-center justify-between">
+      <div class="orders-container">
+        <!-- Session Total Header Card -->
+        <div v-if="allOrders.length > 0" class="session-total-card q-mb-md">
+          <div class="row justify-between items-center">
             <div>
-              <span class="order-number">{{ formatQueueNumber(order.queue_number) }}</span>
-              <span class="order-items-count q-ml-sm text-grey-6">
-                {{ order.items.length }} item{{ order.items.length > 1 ? 's' : '' }}
-              </span>
+              <div class="text-caption text-grey-7">ยอดรวมทั้งหมดของโต๊ะ</div>
+              <div class="text-weight-bold text-h6 text-primary">
+                {{ formatPrice(sessionTotal) }}
+              </div>
             </div>
-            <q-badge
-              :color="statusColor(order.status)"
-              :label="customerStatusLabel(order.status)"
-              class="order-status-badge"
-            />
-          </div>
-          <div class="row items-center justify-between q-mt-sm">
-            <span class="text-grey-6 text-caption">{{ formatTime(order.created_at) }}</span>
-            <span class="text-weight-bold">{{ formatPrice(order.total_amount) }}</span>
+            <q-btn
+              unelevated
+              no-caps
+              rounded
+              color="primary"
+              :to="`/t/${publicToken}/menu`"
+              class="add-more-btn"
+            >
+              <q-icon name="add" size="18px" class="q-mr-xs" />
+              <span>สั่งอาหารเพิ่ม</span>
+            </q-btn>
           </div>
         </div>
-      </div>
 
-      <!-- Order history -->
-      <div v-if="historyOrders.length > 0">
-        <h6 class="section-title q-mb-sm">History</h6>
-        <div
-          v-for="order in historyOrders"
-          :key="order.id"
-          class="order-card order-card-history q-mb-sm"
-          @click="openOrder(order.id)"
-        >
-          <div class="row items-center justify-between">
-            <div>
-              <span class="order-number">{{ formatQueueNumber(order.queue_number) }}</span>
-              <span class="order-items-count q-ml-sm text-grey-6">
-                {{ order.items.length }} item{{ order.items.length > 1 ? 's' : '' }}
-              </span>
-            </div>
-            <q-badge color="grey-5" label="เสิร์ฟแล้ว" class="order-status-badge" />
+        <!-- Current Active Orders -->
+        <div v-if="currentOrders.length > 0" class="q-mb-lg">
+          <div class="section-header q-mb-sm">
+            <span class="section-title">รายการที่กำลังดำเนินการ</span>
+            <q-badge color="primary" rounded :label="currentOrders.length" class="q-ml-sm" />
           </div>
-          <div class="row items-center justify-between q-mt-sm">
-            <span class="text-grey-6 text-caption">{{ formatTime(order.created_at) }}</span>
-            <span class="text-weight-bold text-grey-7">{{ formatPrice(order.total_amount) }}</span>
+
+          <div class="orders-list q-gutter-y-sm">
+            <div
+              v-for="order in currentOrders"
+              :key="order.id"
+              class="order-card"
+              @click="openOrder(order.id)"
+            >
+              <div class="row items-center justify-between q-mb-xs">
+                <div class="row items-center">
+                  <span class="order-number">{{ formatQueueNumber(order.queue_number) }}</span>
+                  <span class="order-items-count q-ml-sm text-grey-7">
+                    ({{ order.items.length }} รายการ)
+                  </span>
+                </div>
+                <StatusBadge :status="order.status" mode="customer" />
+              </div>
+
+              <!-- Quick Dish Summary Preview -->
+              <div class="order-dishes-preview q-my-xs text-grey-8">
+                <span v-for="(item, idx) in order.items" :key="item.id">
+                  {{ item.snapshot_name }} ({{ item.quantity }}){{
+                    idx < order.items.length - 1 ? ', ' : ''
+                  }}
+                </span>
+              </div>
+
+              <div class="row items-center justify-between q-mt-sm text-caption">
+                <span class="text-grey-6">{{ formatTime(order.created_at) }}</span>
+                <span class="text-weight-bold text-subtitle2">{{
+                  formatPrice(order.total_amount)
+                }}</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Empty state -->
-      <div v-if="allOrders.length === 0" class="column items-center q-pa-xl">
-        <q-icon name="receipt_long" size="64px" color="grey-4" />
-        <h6 class="q-mt-md text-grey-6">No orders yet</h6>
-        <q-btn color="primary" unelevated no-caps :to="`/t/${publicToken}/menu`" class="q-mt-md">
-          Browse Menu
-        </q-btn>
+        <!-- History / Served Orders -->
+        <div v-if="historyOrders.length > 0">
+          <div class="section-header q-mb-sm">
+            <span class="section-title text-grey-7">ประวัติอาหารที่เสิร์ฟแล้ว</span>
+            <span class="text-caption text-grey-6 q-ml-xs">({{ historyOrders.length }})</span>
+          </div>
+
+          <div class="orders-list q-gutter-y-sm">
+            <div
+              v-for="order in historyOrders"
+              :key="order.id"
+              class="order-card order-card--history"
+              @click="openOrder(order.id)"
+            >
+              <div class="row items-center justify-between q-mb-xs">
+                <div class="row items-center">
+                  <span class="order-number text-grey-8">{{
+                    formatQueueNumber(order.queue_number)
+                  }}</span>
+                  <span class="order-items-count q-ml-sm text-grey-6">
+                    ({{ order.items.length }} รายการ)
+                  </span>
+                </div>
+                <StatusBadge :status="order.status" mode="customer" />
+              </div>
+
+              <div class="order-dishes-preview q-my-xs text-grey-6">
+                <span v-for="(item, idx) in order.items" :key="item.id">
+                  {{ item.snapshot_name }} ({{ item.quantity }}){{
+                    idx < order.items.length - 1 ? ', ' : ''
+                  }}
+                </span>
+              </div>
+
+              <div class="row items-center justify-between q-mt-sm text-caption">
+                <span class="text-grey-5">{{ formatTime(order.created_at) }}</span>
+                <span class="text-weight-bold text-grey-7">{{
+                  formatPrice(order.total_amount)
+                }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <EmptyState
+          v-if="allOrders.length === 0"
+          icon="receipt_long"
+          title="ยังไม่มีรายการอาหารที่สั่ง"
+          description="เมื่อคุณสั่งอาหาร รายการและสถานะการทำจะแสดงที่นี่"
+          action-label="ไปเลือกเมนูอาหาร"
+          :action-to="`/t/${publicToken}/menu`"
+        />
       </div>
     </template>
   </q-page>
@@ -86,8 +137,10 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { fetchSessionOrders } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
 import { formatPrice, formatTime, formatQueueNumber } from 'src/utils/formatters';
-import { CustomerStatusLabel, OrderStatus } from 'src/types/enums';
-import { STATUS_COLORS } from 'src/utils/constants';
+import { OrderStatus } from 'src/types/enums';
+import StatusBadge from 'src/components/StatusBadge.vue';
+import EmptyState from 'src/components/EmptyState.vue';
+import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { OrderWithItems } from 'src/types/database';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -115,14 +168,6 @@ const historyOrders = computed(() =>
 
 const sessionTotal = computed(() => allOrders.value.reduce((sum, o) => sum + o.total_amount, 0));
 
-function statusColor(status: string): string {
-  return STATUS_COLORS[status] ?? 'grey-6';
-}
-
-function customerStatusLabel(status: string): string {
-  return CustomerStatusLabel[status as OrderStatus] ?? status;
-}
-
 function openOrder(orderId: string) {
   void router.push(`/t/${publicToken.value}/orders/${orderId}`);
 }
@@ -139,7 +184,6 @@ onMounted(async () => {
     isLoading.value = false;
   }
 
-  // Subscribe to realtime updates for this session's orders
   realtimeChannel = supabase
     .channel(`orders:session:${sessionStore.tableSession.id}`)
     .on(
@@ -170,49 +214,82 @@ onUnmounted(() => {
 
 <style scoped>
 .orders-page {
-  background: #f5f7fa;
+  background: var(--color-background);
   min-height: 100vh;
 }
 
-.session-total {
-  background: white;
-  border-radius: 12px;
+.orders-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.session-total-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   padding: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-subtle);
+}
+
+.add-more-btn {
+  padding: 6px 16px;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
 }
 
 .section-title {
   font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text-primary);
 }
 
 .order-card {
-  background: white;
-  border-radius: 12px;
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   padding: 14px 16px;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  transition: transform 0.1s;
+  box-shadow: var(--shadow-subtle);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
 }
 
 .order-card:active {
   transform: scale(0.98);
 }
 
-.order-card-history {
-  opacity: 0.7;
+.order-card--history {
+  background: var(--color-surface-subtle);
+  border-color: transparent;
 }
 
 .order-number {
   font-weight: 700;
-  font-size: 1rem;
-  color: #1a1a2e;
+  font-size: 1.1rem;
+  color: var(--color-text-primary);
 }
 
-.order-status-badge {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 8px;
+.order-items-count {
+  font-size: 0.85rem;
+}
+
+.order-dishes-preview {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

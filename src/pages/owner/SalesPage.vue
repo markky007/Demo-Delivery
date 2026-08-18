@@ -1,58 +1,106 @@
 <template>
   <q-page class="sales-page q-pa-md">
-    <div class="row items-center justify-between q-mb-md">
-      <h6 class="q-my-none">Sales History</h6>
-      <div class="row q-gutter-sm">
-        <q-input
-          v-model="dateFrom"
-          outlined
-          dense
-          type="date"
-          label="From"
-          style="max-width: 160px"
-        />
-        <q-input v-model="dateTo" outlined dense type="date" label="To" style="max-width: 160px" />
-        <q-btn unelevated no-caps color="primary" label="Filter" @click="loadSales" />
+    <div class="sales-container">
+      <!-- Header Bar & Date Filters -->
+      <div class="row items-center justify-between q-mb-lg">
+        <div>
+          <h5 class="q-my-none text-weight-bold page-title">ประวัติยอดขาย</h5>
+          <p class="text-caption text-grey-7 q-mb-none">
+            ตรวจสอบยอดขายย้อนหลังและรายการบิลที่ชำระเงินแล้ว
+          </p>
+        </div>
+
+        <div class="row items-center q-gutter-sm date-filter-row">
+          <q-input
+            v-model="dateFrom"
+            outlined
+            dense
+            type="date"
+            label="ตั้งแต่วันที่"
+            class="date-input"
+          />
+          <q-input
+            v-model="dateTo"
+            outlined
+            dense
+            type="date"
+            label="ถึงวันที่"
+            class="date-input"
+          />
+          <q-btn
+            unelevated
+            no-caps
+            rounded
+            color="primary"
+            icon="filter_alt"
+            label="กรองข้อมูล"
+            @click="loadSales"
+            class="q-px-md"
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- Summary -->
-    <div class="stats-row q-mb-lg">
-      <q-card flat bordered class="stat-card" style="border-radius: 12px">
-        <q-card-section>
-          <div class="text-caption text-grey-6">Total Sales</div>
-          <div class="text-h5 text-weight-bold">{{ formatPrice(totalSales) }}</div>
-        </q-card-section>
-      </q-card>
-      <q-card flat bordered class="stat-card" style="border-radius: 12px">
-        <q-card-section>
-          <div class="text-caption text-grey-6">Total Orders</div>
-          <div class="text-h5 text-weight-bold">{{ bills.length }}</div>
-        </q-card-section>
-      </q-card>
-    </div>
+      <!-- Stats Summary -->
+      <div class="stats-row q-mb-lg">
+        <div class="stat-box">
+          <div class="stat-icon-wrap stat-icon-wrap--primary">
+            <q-icon name="payments" size="24px" color="primary" />
+          </div>
+          <div>
+            <div class="text-caption text-grey-7">ยอดขายรวมในช่วงเวลานี้</div>
+            <div class="text-h5 text-weight-bold text-primary">{{ formatPrice(totalSales) }}</div>
+          </div>
+        </div>
 
-    <!-- Bills table -->
-    <q-table
-      :rows="bills"
-      :columns="columns"
-      row-key="id"
-      flat
-      bordered
-      :loading="isLoading"
-      class="rounded-borders"
-    >
-      <template v-slot:body-cell-amount="props">
-        <q-td :props="props">
-          <span class="text-weight-bold">{{ formatPrice(props.value as number) }}</span>
-        </q-td>
-      </template>
-      <template v-slot:body-cell-paid_at="props">
-        <q-td :props="props">
-          {{ props.value ? formatDateTime(props.value as string) : '—' }}
-        </q-td>
-      </template>
-    </q-table>
+        <div class="stat-box">
+          <div class="stat-icon-wrap stat-icon-wrap--green">
+            <q-icon name="receipt_long" size="24px" color="green-8" />
+          </div>
+          <div>
+            <div class="text-caption text-grey-7">จำนวนบิลที่ชำระสำเร็จ</div>
+            <div class="text-h5 text-weight-bold">
+              {{ bills.length }} <span class="text-caption text-grey-6">บิล</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bills Table -->
+      <q-table
+        :rows="bills"
+        :columns="columns"
+        row-key="id"
+        flat
+        bordered
+        :loading="isLoading"
+        class="sales-table"
+        no-data-label="ไม่พบประวัติยอดขายในช่วงเวลานี้"
+        :rows-per-page-options="[10, 20, 50]"
+      >
+        <template v-slot:body-cell-id="props">
+          <q-td :props="props">
+            <span class="text-weight-mono text-grey-8">{{ props.value }}</span>
+          </q-td>
+        </template>
+        <template v-slot:body-cell-amount="props">
+          <q-td :props="props">
+            <span class="text-weight-bold text-primary">{{
+              formatPrice(props.value as number)
+            }}</span>
+          </q-td>
+        </template>
+        <template v-slot:body-cell-status="props">
+          <q-td :props="props">
+            <StatusBadge status="SERVED" mode="raw" custom-label="ชำระเงินแล้ว" />
+          </q-td>
+        </template>
+        <template v-slot:body-cell-paid_at="props">
+          <q-td :props="props">
+            {{ props.value ? formatDateTime(props.value as string) : '—' }}
+          </q-td>
+        </template>
+      </q-table>
+    </div>
   </q-page>
 </template>
 
@@ -60,6 +108,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { supabase } from 'src/services/supabase';
 import { formatPrice, formatDateTime } from 'src/utils/formatters';
+import StatusBadge from 'src/components/StatusBadge.vue';
 import type { QTableColumn } from 'quasar';
 
 interface BillRow {
@@ -83,15 +132,15 @@ const totalSales = computed(() => bills.value.reduce((sum, b) => sum + b.total_a
 const columns: QTableColumn[] = [
   {
     name: 'id',
-    label: 'Bill ID',
+    label: 'รหัสบิล',
     field: 'id',
     align: 'left',
     sortable: false,
-    format: (val: string) => val.slice(0, 8) + '...',
+    format: (val: string) => `#${val.slice(0, 8)}`,
   },
-  { name: 'amount', label: 'Amount', field: 'total_amount', align: 'right', sortable: true },
-  { name: 'status', label: 'Status', field: 'status', align: 'center' },
-  { name: 'paid_at', label: 'Paid At', field: 'paid_at', align: 'left', sortable: true },
+  { name: 'amount', label: 'ยอดเงินรวม', field: 'total_amount', align: 'right', sortable: true },
+  { name: 'status', label: 'สถานะ', field: 'status', align: 'center' },
+  { name: 'paid_at', label: 'วันและเวลาที่ชำระ', field: 'paid_at', align: 'left', sortable: true },
 ];
 
 onMounted(() => loadSales());
@@ -119,11 +168,63 @@ async function loadSales() {
 
 <style scoped>
 .sales-page {
-  background: #f5f7fa;
+  background: var(--color-background);
 }
+
+.sales-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.date-input {
+  max-width: 150px;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+}
+
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
+}
+
+.stat-box {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.stat-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon-wrap--primary {
+  background: var(--color-primary-soft);
+}
+
+.stat-icon-wrap--green {
+  background: #dcfce7;
+}
+
+.sales-table {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
 }
 </style>

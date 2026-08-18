@@ -39,7 +39,9 @@ export default defineConfig((/* ctx */) => {
 
       extendViteConf(viteConf) {
         viteConf.resolve = viteConf.resolve || {};
-        const existingAlias = Array.isArray(viteConf.resolve.alias) ? {} : viteConf.resolve.alias || {};
+        const existingAlias = Array.isArray(viteConf.resolve.alias)
+          ? {}
+          : viteConf.resolve.alias || {};
         viteConf.resolve.alias = {
           ...existingAlias,
           src: new URL('./src', import.meta.url).pathname,

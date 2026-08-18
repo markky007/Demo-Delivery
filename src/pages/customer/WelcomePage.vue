@@ -1,46 +1,54 @@
 <template>
-  <q-page class="welcome-page column items-center justify-center">
+  <q-page class="welcome-page column items-center justify-center q-pa-lg">
     <!-- Loading state -->
     <div v-if="isLoading" class="column items-center q-gutter-md">
       <q-spinner-dots size="48px" color="primary" />
-      <p class="text-grey-6">Verifying table...</p>
+      <p class="text-grey-7 text-weight-medium">กำลังตรวจสอบข้อมูลโต๊ะ...</p>
     </div>
 
     <!-- Error state -->
-    <div v-else-if="errorMessage" class="column items-center q-gutter-md text-center q-px-lg">
-      <q-icon name="error_outline" size="64px" color="negative" />
+    <div
+      v-else-if="errorMessage"
+      class="column items-center q-gutter-md text-center welcome-card q-pa-xl"
+    >
+      <div class="welcome-icon-wrap welcome-icon-wrap--error">
+        <q-icon name="error_outline" size="48px" color="negative" />
+      </div>
       <h5 class="q-my-sm text-weight-bold">{{ errorMessage }}</h5>
-      <p class="text-grey-6">Please scan the QR code at your table to start ordering.</p>
+      <p class="text-grey-7">กรุณาสแกน QR Code ที่ตั้งอยู่บนโต๊ะของคุณใหม่อีกครั้ง</p>
     </div>
 
     <!-- Welcome state -->
-    <div v-else class="column items-center q-gutter-lg text-center q-px-lg welcome-content">
-      <!-- Restaurant logo placeholder -->
-      <div class="welcome-logo">
-        <q-icon name="restaurant" size="56px" color="primary" />
+    <div v-else class="column items-center text-center welcome-card q-pa-xl">
+      <!-- Restaurant logo / Icon -->
+      <div class="welcome-icon-wrap q-mb-md">
+        <q-icon name="restaurant" size="52px" color="primary" />
       </div>
 
-      <div>
-        <h4 class="q-my-none text-weight-bold welcome-restaurant-name">
-          {{ sessionStore.restaurantName }}
-        </h4>
-        <div class="welcome-table-badge q-mt-md">
-          <q-icon name="table_restaurant" size="20px" class="q-mr-xs" />
-          Table {{ sessionStore.tableName }}
-        </div>
+      <h4 class="q-my-none text-weight-bold welcome-restaurant-name">
+        {{ sessionStore.restaurantName || 'ร้านอาหาร' }}
+      </h4>
+
+      <div class="welcome-table-badge q-my-md">
+        <q-icon name="table_restaurant" size="20px" class="q-mr-xs" />
+        <span>โต๊ะ {{ sessionStore.tableName }}</span>
       </div>
+
+      <p class="welcome-tagline text-grey-7 q-mb-xl">
+        พร้อมสั่งอาหารแล้วหรือยัง? เลือกเมนูอร่อยได้ทันที
+      </p>
 
       <q-btn
         color="primary"
         unelevated
         no-caps
-        size="xl"
-        class="welcome-start-btn"
+        size="lg"
+        class="welcome-start-btn full-width"
         @click="startOrdering"
         :loading="isJoining"
       >
         <q-icon name="restaurant_menu" class="q-mr-sm" />
-        Start Ordering
+        <span>เริ่มสั่งอาหาร</span>
       </q-btn>
     </div>
   </q-page>
@@ -68,22 +76,20 @@ onMounted(async () => {
   const publicToken = route.params.publicToken as string;
 
   if (!publicToken) {
-    errorMessage.value = 'Invalid QR code';
+    errorMessage.value = 'QR Code ไม่ถูกต้อง';
     isLoading.value = false;
     return;
   }
 
   try {
-    // Resolve the QR token
     const result = await resolveTableFromToken(publicToken);
 
     if (!result) {
-      errorMessage.value = 'This table is currently unavailable.';
+      errorMessage.value = 'โต๊ะนี้ยังไม่เปิดให้บริการ';
       isLoading.value = false;
       return;
     }
 
-    // Store the context
     const guestToken = getOrCreateGuestToken();
     const { tableSession, guestSession } = await joinOrCreateSession(result.table.id, guestToken);
 
@@ -95,10 +101,9 @@ onMounted(async () => {
       publicToken,
     );
 
-    // Initialize cart for this session
     cartStore.initForSession(tableSession.id);
   } catch (err) {
-    errorMessage.value = 'Something went wrong. Please try scanning the QR code again.';
+    errorMessage.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาสแกนใหม่อีกครั้ง';
     console.error('Welcome page error:', err);
   } finally {
     isLoading.value = false;
@@ -115,51 +120,59 @@ async function startOrdering() {
 <style scoped>
 .welcome-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: radial-gradient(circle at top, #ffffff 0%, var(--color-background) 100%);
 }
 
-.welcome-content {
-  max-width: 400px;
+.welcome-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
-.welcome-logo {
+.welcome-icon-wrap {
   width: 96px;
   height: 96px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  border-radius: var(--radius-xl);
+  background: var(--color-primary-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  box-shadow: 0 8px 32px rgba(25, 118, 210, 0.25);
 }
 
-.welcome-logo .q-icon {
-  color: white;
+.welcome-icon-wrap--error {
+  background: var(--color-status-soldout-bg);
 }
 
 .welcome-restaurant-name {
-  font-size: 1.75rem;
-  color: #1a1a2e;
+  font-size: 1.65rem;
+  color: var(--color-text-primary);
+  line-height: 1.3;
 }
 
 .welcome-table-badge {
   display: inline-flex;
   align-items: center;
-  background: rgba(25, 118, 210, 0.1);
-  color: #1976d2;
-  padding: 8px 20px;
-  border-radius: 24px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  padding: 8px 24px;
+  border-radius: var(--radius-pill);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+}
+
+.welcome-tagline {
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .welcome-start-btn {
-  border-radius: 16px;
-  padding: 12px 48px;
-  font-size: 1.1rem;
+  border-radius: var(--radius-lg);
+  height: 54px;
+  font-size: 1.05rem;
   font-weight: 600;
-  min-width: 240px;
-  box-shadow: 0 4px 20px rgba(25, 118, 210, 0.3);
+  box-shadow: var(--shadow-md);
 }
 </style>

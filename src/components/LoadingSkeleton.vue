@@ -9,7 +9,13 @@
           <q-skeleton type="text" width="45%" height="15px" class="q-mb-sm" animation="wave" />
           <div class="row justify-between items-center q-mt-xs">
             <q-skeleton type="text" width="35%" height="22px" animation="wave" />
-            <q-skeleton type="QBtn" width="32px" height="32px" class="rounded-pill" animation="wave" />
+            <q-skeleton
+              type="QBtn"
+              width="32px"
+              height="32px"
+              class="rounded-pill"
+              animation="wave"
+            />
           </div>
         </div>
       </div>
@@ -75,7 +81,10 @@
     </div>
 
     <!-- 4. Order / Bill Detail Skeleton -->
-    <div v-else-if="type === 'order-detail' || type === 'bill-detail'" class="skeleton-order-detail q-gutter-y-md">
+    <div
+      v-else-if="type === 'order-detail' || type === 'bill-detail'"
+      class="skeleton-order-detail q-gutter-y-md"
+    >
       <!-- Session Header -->
       <div class="skeleton-card q-pa-md">
         <div class="row items-center justify-between q-mb-xs">
@@ -126,7 +135,13 @@
       <!-- 4 Stats Cards Grid -->
       <div class="skeleton-stats-grid">
         <div v-for="i in 4" :key="i" class="skeleton-stat-card q-pa-md">
-          <q-skeleton type="rect" width="52px" height="52px" class="rounded-borders" animation="wave" />
+          <q-skeleton
+            type="rect"
+            width="52px"
+            height="52px"
+            class="rounded-borders"
+            animation="wave"
+          />
           <div class="col q-ml-md">
             <q-skeleton type="text" width="60%" height="16px" class="q-mb-xs" animation="wave" />
             <q-skeleton type="text" width="85%" height="28px" animation="wave" />
@@ -190,7 +205,13 @@
           </div>
           <q-skeleton type="QBadge" width="70px" height="20px" animation="wave" />
         </div>
-        <q-skeleton type="rect" width="130px" height="130px" class="rounded-borders q-my-sm" animation="wave" />
+        <q-skeleton
+          type="rect"
+          width="130px"
+          height="130px"
+          class="rounded-borders q-my-sm"
+          animation="wave"
+        />
         <q-skeleton type="text" width="80px" height="18px" class="q-mb-md" animation="wave" />
         <div class="row q-gutter-xs justify-center full-width">
           <q-skeleton type="QBtn" width="80px" height="32px" animation="wave" />
@@ -204,7 +225,13 @@
       <div v-for="i in count" :key="i" class="skeleton-card q-pa-md">
         <div class="row items-center justify-between">
           <div class="row items-center q-gutter-md col">
-            <q-skeleton type="rect" width="36px" height="36px" class="rounded-borders" animation="wave" />
+            <q-skeleton
+              type="rect"
+              width="36px"
+              height="36px"
+              class="rounded-borders"
+              animation="wave"
+            />
             <div class="col">
               <div class="row items-center q-gutter-sm q-mb-xs">
                 <q-skeleton type="text" width="120px" height="20px" animation="wave" />
@@ -222,10 +249,19 @@
     </div>
 
     <!-- 9. Welcome Page Skeleton -->
-    <div v-else-if="type === 'welcome'" class="skeleton-welcome-card q-pa-xl column items-center text-center">
+    <div
+      v-else-if="type === 'welcome'"
+      class="skeleton-welcome-card q-pa-xl column items-center text-center"
+    >
       <q-skeleton type="circle" size="72px" class="q-mb-md" animation="wave" />
       <q-skeleton type="text" width="180px" height="32px" class="q-mb-md" animation="wave" />
-      <q-skeleton type="rect" width="140px" height="32px" class="rounded-borders q-mb-md" animation="wave" />
+      <q-skeleton
+        type="rect"
+        width="140px"
+        height="32px"
+        class="rounded-borders q-mb-md"
+        animation="wave"
+      />
       <q-skeleton type="text" width="220px" height="16px" class="q-mb-xl" animation="wave" />
       <q-skeleton type="rect" width="100%" height="48px" class="rounded-borders" animation="wave" />
     </div>
@@ -233,10 +269,28 @@
     <!-- 10. Data Table Skeleton -->
     <div v-else-if="type === 'table'" class="skeleton-card q-pa-md">
       <div class="row justify-between items-center q-mb-md q-pb-sm border-bottom">
-        <q-skeleton v-for="c in 4" :key="c" type="text" width="20%" height="20px" animation="wave" />
+        <q-skeleton
+          v-for="c in 4"
+          :key="c"
+          type="text"
+          width="20%"
+          height="20px"
+          animation="wave"
+        />
       </div>
-      <div v-for="r in count" :key="r" class="row justify-between items-center q-py-sm border-bottom-subtle">
-        <q-skeleton v-for="c in 4" :key="c" type="text" width="18%" height="16px" animation="wave" />
+      <div
+        v-for="r in count"
+        :key="r"
+        class="row justify-between items-center q-py-sm border-bottom-subtle"
+      >
+        <q-skeleton
+          v-for="c in 4"
+          :key="c"
+          type="text"
+          width="18%"
+          height="16px"
+          animation="wave"
+        />
       </div>
     </div>
 

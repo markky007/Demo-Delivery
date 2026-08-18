@@ -104,9 +104,7 @@ const showBack = computed(
   () => route.name !== 'customer-welcome' && route.name !== 'customer-menu',
 );
 
-const showCartBar = computed(
-  () => cartStore.itemCount > 0 && route.name === 'customer-menu',
-);
+const showCartBar = computed(() => cartStore.itemCount > 0 && route.name === 'customer-menu');
 
 const cartRoute = computed(() => `/t/${publicToken.value}/cart`);
 const ordersRoute = computed(() => `/t/${publicToken.value}/orders`);

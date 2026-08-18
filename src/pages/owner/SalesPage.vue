@@ -44,7 +44,13 @@
       <div v-if="isLoading">
         <div class="stats-row q-mb-lg">
           <div v-for="i in 2" :key="i" class="stat-box row items-center">
-            <q-skeleton type="rect" width="52px" height="52px" class="rounded-borders" animation="wave" />
+            <q-skeleton
+              type="rect"
+              width="52px"
+              height="52px"
+              class="rounded-borders"
+              animation="wave"
+            />
             <div class="col q-ml-md">
               <q-skeleton type="text" width="60%" height="14px" class="q-mb-xs" animation="wave" />
               <q-skeleton type="text" width="80%" height="26px" animation="wave" />

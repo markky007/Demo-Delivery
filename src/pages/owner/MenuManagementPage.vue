@@ -115,58 +115,58 @@
         <template v-else>
           <!-- Menu Items Grid -->
           <div class="items-grid">
-          <div v-for="item in filteredItems" :key="item.id" class="item-card">
-            <div class="row no-wrap items-start">
-              <!-- Item Thumbnail -->
-              <div class="item-thumb q-mr-md">
-                <img v-if="item.image_url" :src="item.image_url" :alt="item.name" />
-                <q-icon v-else name="restaurant" size="24px" color="grey-4" />
-              </div>
-
-              <!-- Item Info -->
-              <div class="col">
-                <div class="text-weight-bold item-title">{{ item.name }}</div>
-                <div class="item-price q-mt-xs">{{ formatPrice(item.base_price) }}</div>
-                <div class="row items-center q-gutter-xs q-mt-xs">
-                  <StatusBadge
-                    :status="item.is_available ? 'ACTIVE' : 'SOLDOUT'"
-                    mode="raw"
-                    :custom-label="item.is_available ? 'พร้อมขาย' : 'หมดชั่วคราว'"
-                  />
-                  <q-badge v-if="!item.is_active" color="grey-5" label="ปิดการใช้งาน" />
+            <div v-for="item in filteredItems" :key="item.id" class="item-card">
+              <div class="row no-wrap items-start">
+                <!-- Item Thumbnail -->
+                <div class="item-thumb q-mr-md">
+                  <img v-if="item.image_url" :src="item.image_url" :alt="item.name" />
+                  <q-icon v-else name="restaurant" size="24px" color="grey-4" />
                 </div>
-              </div>
 
-              <!-- Action Controls -->
-              <div class="column items-end q-gutter-xs">
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="edit"
-                  size="sm"
-                  color="grey-7"
-                  @click="editItem(item)"
-                  aria-label="แก้ไขเมนู"
-                />
+                <!-- Item Info -->
+                <div class="col">
+                  <div class="text-weight-bold item-title">{{ item.name }}</div>
+                  <div class="item-price q-mt-xs">{{ formatPrice(item.base_price) }}</div>
+                  <div class="row items-center q-gutter-xs q-mt-xs">
+                    <StatusBadge
+                      :status="item.is_available ? 'ACTIVE' : 'SOLDOUT'"
+                      mode="raw"
+                      :custom-label="item.is_available ? 'พร้อมขาย' : 'หมดชั่วคราว'"
+                    />
+                    <q-badge v-if="!item.is_active" color="grey-5" label="ปิดการใช้งาน" />
+                  </div>
+                </div>
 
-                <!-- Quick Availability Toggle Button -->
-                <q-btn
-                  unelevated
-                  no-caps
-                  dense
-                  size="sm"
-                  :color="item.is_available ? 'red-1' : 'green-1'"
-                  :text-color="item.is_available ? 'negative' : 'positive'"
-                  :icon="item.is_available ? 'block' : 'check_circle'"
-                  :label="item.is_available ? 'ปรับเป็นหมด' : 'เปิดขาย'"
-                  class="quick-toggle-btn"
-                  @click="toggleAvailability(item)"
-                />
+                <!-- Action Controls -->
+                <div class="column items-end q-gutter-xs">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="edit"
+                    size="sm"
+                    color="grey-7"
+                    @click="editItem(item)"
+                    aria-label="แก้ไขเมนู"
+                  />
+
+                  <!-- Quick Availability Toggle Button -->
+                  <q-btn
+                    unelevated
+                    no-caps
+                    dense
+                    size="sm"
+                    :color="item.is_available ? 'red-1' : 'green-1'"
+                    :text-color="item.is_available ? 'negative' : 'positive'"
+                    :icon="item.is_available ? 'block' : 'check_circle'"
+                    :label="item.is_available ? 'ปรับเป็นหมด' : 'เปิดขาย'"
+                    class="quick-toggle-btn"
+                    @click="toggleAvailability(item)"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
           <div
             v-if="filteredItems.length === 0"
@@ -174,7 +174,9 @@
           >
             <q-icon name="search_off" size="48px" color="grey-4" class="q-mb-xs" />
             <div class="text-weight-bold text-subtitle1">ไม่พบรายการอาหารที่ค้นหา</div>
-            <div class="text-caption text-grey-6 q-mt-xs">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</div>
+            <div class="text-caption text-grey-6 q-mt-xs">
+              ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น
+            </div>
           </div>
         </template>
       </div>

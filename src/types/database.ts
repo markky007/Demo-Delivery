@@ -176,6 +176,13 @@ export interface MenuItemWithOptions extends MenuItem {
 }
 
 export interface OrderWithItems extends Order {
+  table_session?: {
+    id: string;
+    table?: {
+      id: string;
+      name: string;
+    } | null;
+  } | null;
   items: (OrderItem & { options: OrderItemOption[] })[];
 }
 

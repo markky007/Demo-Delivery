@@ -25,112 +25,112 @@
       <template v-else>
         <!-- Stats 4 Cards Grid -->
         <div class="stats-grid q-mb-lg">
-        <div class="stat-card">
-          <div class="stat-icon-wrap stat-icon-wrap--primary">
-            <q-icon name="payments" size="24px" color="primary" />
+          <div class="stat-card">
+            <div class="stat-icon-wrap stat-icon-wrap--primary">
+              <q-icon name="payments" size="24px" color="primary" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">ยอดขายวันนี้</div>
+              <div class="stat-value text-primary">{{ formatPrice(stats.totalSales) }}</div>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-label">ยอดขายวันนี้</div>
-            <div class="stat-value text-primary">{{ formatPrice(stats.totalSales) }}</div>
-          </div>
-        </div>
 
-        <div class="stat-card">
-          <div class="stat-icon-wrap stat-icon-wrap--blue">
-            <q-icon name="receipt_long" size="24px" color="light-blue-8" />
+          <div class="stat-card">
+            <div class="stat-icon-wrap stat-icon-wrap--blue">
+              <q-icon name="receipt_long" size="24px" color="light-blue-8" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">จำนวนออเดอร์</div>
+              <div class="stat-value">
+                {{ stats.totalOrders }} <span class="stat-unit">รายการ</span>
+              </div>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-label">จำนวนออเดอร์</div>
-            <div class="stat-value">
-              {{ stats.totalOrders }} <span class="stat-unit">รายการ</span>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap stat-icon-wrap--amber">
+              <q-icon name="restaurant" size="24px" color="amber-9" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">จำนวนจานที่ขาย</div>
+              <div class="stat-value">{{ stats.itemsSold }} <span class="stat-unit">จาน</span></div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap stat-icon-wrap--green">
+              <q-icon name="trending_up" size="24px" color="green-8" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">ยอดเฉลี่ยต่อออเดอร์</div>
+              <div class="stat-value">{{ formatPrice(stats.avgOrderValue) }}</div>
             </div>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon-wrap stat-icon-wrap--amber">
-            <q-icon name="restaurant" size="24px" color="amber-9" />
+        <!-- Current Queue Summary Section -->
+        <div class="section-card q-mb-lg">
+          <div class="row items-center justify-between q-mb-md">
+            <div>
+              <div class="text-weight-bold text-subtitle1">สถานะคิวในครัวขณะนี้</div>
+              <div class="text-caption text-grey-7">จำนวนออเดอร์ที่อยู่ในแต่ละขั้นตอน</div>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-label">จำนวนจานที่ขาย</div>
-            <div class="stat-value">{{ stats.itemsSold }} <span class="stat-unit">จาน</span></div>
+
+          <div class="queue-stats-grid">
+            <!-- Queued -->
+            <div
+              class="queue-stat-card queue-stat-card--queued"
+              @click="$router.push('/owner/queue')"
+            >
+              <div class="row items-center justify-between">
+                <span class="queue-stat-label">รับออเดอร์แล้ว</span>
+                <q-icon name="schedule" size="20px" class="queue-stat-icon text-light-blue-8" />
+              </div>
+              <div class="queue-stat-count text-light-blue-8">{{ queueCounts.queued }}</div>
+              <div class="text-caption text-grey-6">รอเริ่มทำอาหาร</div>
+            </div>
+
+            <!-- Preparing -->
+            <div
+              class="queue-stat-card queue-stat-card--preparing"
+              @click="$router.push('/owner/queue')"
+            >
+              <div class="row items-center justify-between">
+                <span class="queue-stat-label">กำลังเตรียม</span>
+                <q-icon name="soup_kitchen" size="20px" class="queue-stat-icon text-amber-9" />
+              </div>
+              <div class="queue-stat-count text-amber-9">{{ queueCounts.preparing }}</div>
+              <div class="text-caption text-grey-6">กำลังปรุงในครัว</div>
+            </div>
+
+            <!-- Prepared -->
+            <div
+              class="queue-stat-card queue-stat-card--prepared"
+              @click="$router.push('/owner/queue')"
+            >
+              <div class="row items-center justify-between">
+                <span class="queue-stat-label">เตรียมเสร็จแล้ว</span>
+                <q-icon name="check_circle" size="20px" class="queue-stat-icon text-green-7" />
+              </div>
+              <div class="queue-stat-count text-green-7">{{ queueCounts.prepared }}</div>
+              <div class="text-caption text-grey-6">พร้อมยกไปเสิร์ฟ</div>
+            </div>
+
+            <!-- Served -->
+            <div
+              class="queue-stat-card queue-stat-card--served"
+              @click="$router.push('/owner/queue')"
+            >
+              <div class="row items-center justify-between">
+                <span class="queue-stat-label">เสิร์ฟครบแล้ว</span>
+                <q-icon name="done_all" size="20px" class="queue-stat-icon text-blue-grey-6" />
+              </div>
+              <div class="queue-stat-count text-blue-grey-6">{{ queueCounts.served }}</div>
+              <div class="text-caption text-grey-6">เสิร์ฟถึงโต๊ะแล้ว</div>
+            </div>
           </div>
         </div>
-
-        <div class="stat-card">
-          <div class="stat-icon-wrap stat-icon-wrap--green">
-            <q-icon name="trending_up" size="24px" color="green-8" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-label">ยอดเฉลี่ยต่อออเดอร์</div>
-            <div class="stat-value">{{ formatPrice(stats.avgOrderValue) }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Current Queue Summary Section -->
-      <div class="section-card q-mb-lg">
-        <div class="row items-center justify-between q-mb-md">
-          <div>
-            <div class="text-weight-bold text-subtitle1">สถานะคิวในครัวขณะนี้</div>
-            <div class="text-caption text-grey-7">จำนวนออเดอร์ที่อยู่ในแต่ละขั้นตอน</div>
-          </div>
-        </div>
-
-        <div class="queue-stats-grid">
-          <!-- Queued -->
-          <div
-            class="queue-stat-card queue-stat-card--queued"
-            @click="$router.push('/owner/queue')"
-          >
-            <div class="row items-center justify-between">
-              <span class="queue-stat-label">รับออเดอร์แล้ว</span>
-              <q-icon name="schedule" size="20px" class="queue-stat-icon text-light-blue-8" />
-            </div>
-            <div class="queue-stat-count text-light-blue-8">{{ queueCounts.queued }}</div>
-            <div class="text-caption text-grey-6">รอเริ่มทำอาหาร</div>
-          </div>
-
-          <!-- Preparing -->
-          <div
-            class="queue-stat-card queue-stat-card--preparing"
-            @click="$router.push('/owner/queue')"
-          >
-            <div class="row items-center justify-between">
-              <span class="queue-stat-label">กำลังเตรียม</span>
-              <q-icon name="soup_kitchen" size="20px" class="queue-stat-icon text-amber-9" />
-            </div>
-            <div class="queue-stat-count text-amber-9">{{ queueCounts.preparing }}</div>
-            <div class="text-caption text-grey-6">กำลังปรุงในครัว</div>
-          </div>
-
-          <!-- Prepared -->
-          <div
-            class="queue-stat-card queue-stat-card--prepared"
-            @click="$router.push('/owner/queue')"
-          >
-            <div class="row items-center justify-between">
-              <span class="queue-stat-label">เตรียมเสร็จแล้ว</span>
-              <q-icon name="check_circle" size="20px" class="queue-stat-icon text-green-7" />
-            </div>
-            <div class="queue-stat-count text-green-7">{{ queueCounts.prepared }}</div>
-            <div class="text-caption text-grey-6">พร้อมยกไปเสิร์ฟ</div>
-          </div>
-
-          <!-- Served -->
-          <div
-            class="queue-stat-card queue-stat-card--served"
-            @click="$router.push('/owner/queue')"
-          >
-            <div class="row items-center justify-between">
-              <span class="queue-stat-label">เสิร์ฟครบแล้ว</span>
-              <q-icon name="done_all" size="20px" class="queue-stat-icon text-blue-grey-6" />
-            </div>
-            <div class="queue-stat-count text-blue-grey-6">{{ queueCounts.served }}</div>
-            <div class="text-caption text-grey-6">เสิร์ฟถึงโต๊ะแล้ว</div>
-          </div>
-        </div>
-      </div>
       </template>
     </div>
   </q-page>

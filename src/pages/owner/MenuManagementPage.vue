@@ -1,8 +1,8 @@
 <template>
   <q-page class="menu-mgmt-page q-pa-md">
     <div class="menu-mgmt-container">
-      <!-- Tabs -->
-      <div class="row items-center justify-between q-mb-md">
+      <!-- Tabs Header -->
+      <div class="row items-center justify-between q-mb-lg">
         <q-tabs
           v-model="activeTab"
           no-caps
@@ -41,21 +41,73 @@
 
       <!-- 1. Menu Items Tab -->
       <div v-if="activeTab === 'items'">
-        <!-- Filter & Search -->
-        <div class="row items-center q-mb-md">
-          <q-select
-            v-model="filterCategory"
-            :options="categoryOptions"
-            label="กรองตามหมวดหมู่"
-            outlined
-            dense
-            clearable
-            emit-value
-            map-options
-            class="category-filter-select"
-          />
+        <!-- Filter & Search Bar Section -->
+        <div class="filter-card q-mb-lg q-pa-md">
+          <div class="row items-center justify-between q-col-gutter-md">
+            <!-- Category Pills Filter -->
+            <div class="col-12 col-md-8">
+              <div class="category-pills-scroll">
+                <!-- All categories pill -->
+                <button
+                  type="button"
+                  class="cat-filter-pill"
+                  :class="{ 'cat-filter-pill--active': filterCategory === null }"
+                  @click="filterCategory = null"
+                >
+                  <q-icon name="apps" size="16px" class="q-mr-xs" />
+                  <span>ทั้งหมด</span>
+                  <span class="cat-count-badge">{{ menuStore.items.length }}</span>
+                </button>
+
+                <!-- Category pills -->
+                <button
+                  v-for="cat in menuStore.categories"
+                  :key="cat.id"
+                  type="button"
+                  class="cat-filter-pill"
+                  :class="{ 'cat-filter-pill--active': filterCategory === cat.id }"
+                  @click="filterCategory = cat.id"
+                >
+                  <span>{{ cat.name }}</span>
+                  <span class="cat-count-badge">{{ getItemCountByCategory(cat.id) }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search input -->
+            <div class="col-12 col-md-4">
+              <q-input
+                v-model="searchQuery"
+                outlined
+                dense
+                placeholder="ค้นหาชื่อเมนู..."
+                class="search-input-box"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" size="18px" color="grey-6" />
+                </template>
+              </q-input>
+            </div>
+          </div>
+
+          <!-- Filter Meta Info -->
+          <div class="row items-center justify-between q-mt-sm text-caption text-grey-7 q-px-xs">
+            <span
+              >แสดง <strong>{{ filteredItems.length }}</strong> จาก
+              {{ menuStore.items.length }} รายการอาหาร</span
+            >
+            <span
+              v-if="filterCategory !== null || searchQuery"
+              class="clear-filter-link cursor-pointer text-weight-medium"
+              @click="clearFilters"
+            >
+              ล้างการกรอง
+            </span>
+          </div>
         </div>
 
+        <!-- Menu Items Grid -->
         <div class="items-grid">
           <div v-for="item in filteredItems" :key="item.id" class="item-card">
             <div class="row no-wrap items-start">
@@ -110,9 +162,13 @@
           </div>
         </div>
 
-        <div v-if="filteredItems.length === 0" class="text-center q-pa-xl text-grey-6">
-          <q-icon name="restaurant" size="48px" color="grey-4" class="q-mb-xs" />
-          <div>ไม่พบรายการอาหาร</div>
+        <div
+          v-if="filteredItems.length === 0"
+          class="text-center q-pa-xl text-grey-6 empty-search-card"
+        >
+          <q-icon name="search_off" size="48px" color="grey-4" class="q-mb-xs" />
+          <div class="text-weight-bold text-subtitle1">ไม่พบรายการอาหารที่ค้นหา</div>
+          <div class="text-caption text-grey-6 q-mt-xs">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</div>
         </div>
       </div>
 
@@ -125,7 +181,10 @@
                 <q-icon name="drag_indicator" color="grey-4" class="q-mr-sm" />
                 <div>
                   <div class="text-weight-bold text-subtitle2">{{ cat.name }}</div>
-                  <div class="text-caption text-grey-6">ลำดับการแสดง: {{ cat.sort_order }}</div>
+                  <div class="text-caption text-grey-6">
+                    ลำดับการแสดง: {{ cat.sort_order }} • มี
+                    {{ getItemCountByCategory(cat.id) }} รายการ
+                  </div>
                 </div>
               </div>
 
@@ -187,9 +246,9 @@
         </q-card>
       </q-dialog>
 
-      <!-- Menu Item Modal Dialog -->
+      <!-- Menu Item Modal Dialog (With Image Upload) -->
       <q-dialog v-model="showItemDialog" full-width>
-        <q-card style="max-width: 580px" class="q-pa-sm">
+        <q-card style="max-width: 600px" class="q-pa-sm">
           <q-card-section>
             <div class="text-h6 text-weight-bold">
               {{ editingItem ? 'แก้ไขเมนูอาหาร' : 'เพิ่มเมนูอาหารใหม่' }}
@@ -197,24 +256,101 @@
           </q-card-section>
 
           <q-card-section class="q-pt-none q-gutter-y-md">
+            <!-- Image Upload & Preview Section -->
+            <div>
+              <div class="field-label q-mb-xs">รูปภาพอาหาร</div>
+
+              <!-- Upload Dropzone / Image Preview -->
+              <div class="image-uploader-box">
+                <!-- Preview when image exists -->
+                <div v-if="previewImageUrl" class="image-preview-wrapper">
+                  <img :src="previewImageUrl" alt="Preview" class="preview-img" />
+                  <div class="image-overlay-actions">
+                    <q-btn
+                      unelevated
+                      no-caps
+                      rounded
+                      size="sm"
+                      color="white"
+                      text-color="dark"
+                      icon="photo_camera"
+                      label="เปลี่ยนรูปภาพ"
+                      @click="triggerFileInput"
+                      class="q-mr-xs"
+                    />
+                    <q-btn
+                      unelevated
+                      no-caps
+                      rounded
+                      size="sm"
+                      color="negative"
+                      icon="delete"
+                      label="ลบรูป"
+                      @click="removeImage"
+                    />
+                  </div>
+                </div>
+
+                <!-- Empty dropzone when no image -->
+                <div v-else class="upload-dropzone" @click="triggerFileInput">
+                  <div class="column items-center justify-center q-pa-lg text-center">
+                    <div class="upload-icon-circle q-mb-sm">
+                      <q-icon name="cloud_upload" size="32px" color="primary" />
+                    </div>
+                    <div class="text-weight-bold text-subtitle2 text-primary">
+                      คลิกเพื่ออัปโหลดรูปภาพอาหาร
+                    </div>
+                    <div class="text-caption text-grey-6 q-mt-xs">
+                      รองรับไฟล์ JPG, PNG, WebP (ขนาดไม่เกิน 5MB)
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Hidden Native File Input -->
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  accept="image/*"
+                  class="hidden-file-input"
+                  @change="handleFileSelected"
+                />
+              </div>
+
+              <!-- Optional Direct URL Input Accordion -->
+              <q-expansion-item
+                dense
+                label="หรือใส่ลิงก์รูปภาพโดยตรง (Image URL)"
+                header-class="text-caption text-grey-7 q-px-none"
+                class="q-mt-xs"
+              >
+                <q-input
+                  v-model="itemForm.image_url"
+                  outlined
+                  dense
+                  placeholder="https://example.com/image.jpg"
+                  class="q-mt-xs"
+                  @update:model-value="handleUrlInput"
+                />
+              </q-expansion-item>
+            </div>
+
             <div>
               <div class="field-label q-mb-xs">ชื่อเมนูอาหาร</div>
               <q-input v-model="itemForm.name" outlined placeholder="เช่น ข้าวกะเพราไก่ไข่ดาว" />
             </div>
 
-            <div>
-              <div class="field-label q-mb-xs">หมวดหมู่</div>
-              <q-select
-                v-model="itemForm.category_id"
-                :options="categoryOptions"
-                outlined
-                emit-value
-                map-options
-                placeholder="เลือกหมวดหมู่"
-              />
-            </div>
-
             <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <div class="field-label q-mb-xs">หมวดหมู่</div>
+                <q-select
+                  v-model="itemForm.category_id"
+                  :options="categoryOptions"
+                  outlined
+                  emit-value
+                  map-options
+                  placeholder="เลือกหมวดหมู่"
+                />
+              </div>
               <div class="col-12 col-sm-6">
                 <div class="field-label q-mb-xs">ราคาฐาน (บาท)</div>
                 <q-input
@@ -224,10 +360,6 @@
                   min="0"
                   placeholder="60"
                 />
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="field-label q-mb-xs">ลิงก์รูปภาพ (URL)</div>
-                <q-input v-model="itemForm.image_url" outlined placeholder="https://..." />
               </div>
             </div>
 
@@ -257,11 +389,11 @@
             <q-btn
               unelevated
               color="primary"
-              label="บันทึกเมนู"
+              :label="isUploading ? 'กำลังอัปโหลดรูป...' : 'บันทึกเมนู'"
               no-caps
               rounded
               @click="saveItem"
-              :loading="isSaving"
+              :loading="isSaving || isUploading"
             />
           </q-card-actions>
         </q-card>
@@ -275,6 +407,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useNotify } from 'src/composables/useNotify';
 import { supabase } from 'src/services/supabase';
+import { uploadMenuImage, createLocalPreviewUrl } from 'src/services/storageService';
 import { formatPrice } from 'src/utils/formatters';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import type { MenuCategory, MenuItem } from 'src/types/database';
@@ -284,11 +417,18 @@ const { notifySuccess, notifyError } = useNotify();
 
 const activeTab = ref('items');
 const filterCategory = ref<string | null>(null);
+const searchQuery = ref('');
 const showCatDialog = ref(false);
 const showItemDialog = ref(false);
 const isSaving = ref(false);
+const isUploading = ref(false);
 const editingCategory = ref<MenuCategory | null>(null);
 const editingItem = ref<MenuItem | null>(null);
+
+// File input refs for image upload
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const pendingImageFile = ref<File | null>(null);
+const previewImageUrl = ref<string>('');
 
 let restaurantId = '';
 
@@ -311,11 +451,33 @@ const categoryOptions = computed(() =>
   menuStore.categories.map((c) => ({ label: c.name, value: c.id })),
 );
 
+function getItemCountByCategory(catId: string | null): number {
+  if (!catId) return menuStore.items.length;
+  return menuStore.items.filter((i) => i.category_id === catId).length;
+}
+
+function clearFilters() {
+  filterCategory.value = null;
+  searchQuery.value = '';
+}
+
 const filteredItems = computed(() => {
+  let list = menuStore.items;
+
   if (filterCategory.value) {
-    return menuStore.items.filter((i) => i.category_id === filterCategory.value);
+    list = list.filter((i) => i.category_id === filterCategory.value);
   }
-  return menuStore.items;
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase();
+    list = list.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        (i.description && i.description.toLowerCase().includes(q)),
+    );
+  }
+
+  return list;
 });
 
 onMounted(async () => {
@@ -323,6 +485,44 @@ onMounted(async () => {
   if (data) restaurantId = data.id;
   await menuStore.loadMenu();
 });
+
+// Image Upload Helpers
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
+function handleFileSelected(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (!target.files || target.files.length === 0) return;
+
+  const file = target.files[0];
+  if (!file) return;
+
+  // Validate size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    notifyError('ขนาดไฟล์เกิน 5MB กรุณาเลือกรูปภาพที่มีขนาดเล็กลง');
+    return;
+  }
+
+  pendingImageFile.value = file;
+  previewImageUrl.value = createLocalPreviewUrl(file);
+}
+
+function removeImage() {
+  pendingImageFile.value = null;
+  previewImageUrl.value = '';
+  itemForm.image_url = '';
+  if (fileInputRef.value) {
+    fileInputRef.value.value = '';
+  }
+}
+
+function handleUrlInput(val: string | number | null) {
+  const str = String(val || '');
+  if (!pendingImageFile.value) {
+    previewImageUrl.value = str;
+  }
+}
 
 function openAddCategoryDialog() {
   editingCategory.value = null;
@@ -388,13 +588,35 @@ function editItem(item: MenuItem) {
   itemForm.category_id = item.category_id;
   itemForm.is_active = item.is_active;
   itemForm.is_available = item.is_available;
+
+  pendingImageFile.value = null;
+  previewImageUrl.value = item.image_url ?? '';
+
   showItemDialog.value = true;
 }
 
 async function saveItem() {
   if (!itemForm.name.trim()) return;
   isSaving.value = true;
+
   try {
+    // If a new image file was picked, upload it to Supabase Storage first
+    if (pendingImageFile.value) {
+      isUploading.value = true;
+      try {
+        const uploadedUrl = await uploadMenuImage(pendingImageFile.value);
+        itemForm.image_url = uploadedUrl;
+      } catch (uploadErr) {
+        console.error('Image upload failed, continuing with other data:', uploadErr);
+        notifyError('อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        isSaving.value = false;
+        isUploading.value = false;
+        return;
+      } finally {
+        isUploading.value = false;
+      }
+    }
+
     const payload = {
       name: itemForm.name.trim(),
       description: itemForm.description || null,
@@ -412,6 +634,7 @@ async function saveItem() {
       const maxOrder = Math.max(0, ...menuStore.items.map((i) => i.sort_order)) + 1;
       await supabase.from('menu_items').insert({ ...payload, sort_order: maxOrder });
     }
+
     showItemDialog.value = false;
     await menuStore.loadMenu();
     notifySuccess('บันทึกรายการอาหารเรียบร้อยแล้ว');
@@ -419,6 +642,7 @@ async function saveItem() {
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกรายการอาหารได้');
   } finally {
     isSaving.value = false;
+    isUploading.value = false;
   }
 }
 
@@ -430,6 +654,8 @@ function resetItemForm() {
   itemForm.category_id = '';
   itemForm.is_active = true;
   itemForm.is_available = true;
+  pendingImageFile.value = null;
+  previewImageUrl.value = '';
 }
 
 async function toggleAvailability(item: MenuItem) {
@@ -469,16 +695,97 @@ async function toggleAvailability(item: MenuItem) {
 }
 
 .add-btn {
-  padding: 8px 18px;
+  padding: 8px 20px;
   font-weight: 600;
 }
 
-.category-filter-select {
-  max-width: 260px;
+/* Filter Card */
+.filter-card {
   background: #ffffff;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
 }
 
+.category-pills-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.category-pills-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-family: var(--app-font-family);
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cat-filter-pill:hover {
+  border-color: var(--color-primary-tint);
+  background: #ffffff;
+  color: var(--color-primary);
+}
+
+.cat-filter-pill--active {
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(224, 88, 54, 0.25);
+}
+
+.cat-count-badge {
+  background: rgba(45, 35, 30, 0.08);
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  margin-left: 6px;
+}
+
+.cat-filter-pill--active .cat-count-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.search-input-box {
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-pill);
+}
+
+.search-input-box :deep(.q-field__control) {
+  border-radius: var(--radius-pill);
+}
+
+.clear-filter-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.clear-filter-link:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Items Grid */
 .items-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -530,6 +837,12 @@ async function toggleAvailability(item: MenuItem) {
   padding: 3px 8px;
 }
 
+.empty-search-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
 /* Category cards */
 .category-item-card {
   background: #ffffff;
@@ -543,5 +856,67 @@ async function toggleAvailability(item: MenuItem) {
   font-size: 0.88rem;
   font-weight: 500;
   color: var(--color-text-primary);
+}
+
+/* Image Uploader Box */
+.image-uploader-box {
+  width: 100%;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.upload-dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.upload-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.image-preview-wrapper {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay-actions {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
 }
 </style>

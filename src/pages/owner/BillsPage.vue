@@ -451,7 +451,43 @@
                   </q-btn>
                 </div>
 
-                <!-- 3. COOKING / SEATED_NO_ORDER: Manage Bill -->
+                <!-- 3. SEATED_NO_ORDER: Cancel Session / Reset to Available & Manage -->
+                <div v-else-if="item.tableStatus === 'SEATED_NO_ORDER'" class="row q-gutter-xs">
+                  <q-btn
+                    unelevated
+                    no-caps
+                    color="negative"
+                    class="col action-main-btn action-main-btn--cancel"
+                    @click="promptCancelSession(item)"
+                    :loading="cancellingSessionId === item.session.id"
+                  >
+                    <q-icon name="person_remove" size="16px" class="q-mr-xs" />
+                    <span>ยกเลิกเซสชัน (คืนโต๊ะว่าง)</span>
+                  </q-btn>
+                  <q-btn
+                    outline
+                    no-caps
+                    color="primary"
+                    class="action-secondary-btn"
+                    @click="openBill(item.session.id)"
+                  >
+                    <q-icon name="receipt" size="15px" class="q-mr-xs" />
+                    <span>ดูบิล</span>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    color="grey-7"
+                    icon="qr_code_2"
+                    class="action-icon-btn"
+                    @click="showTableQR(item.table)"
+                  >
+                    <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <!-- 4. COOKING: Manage Bill -->
                 <div v-else class="row q-gutter-xs">
                   <q-btn
                     unelevated
@@ -652,6 +688,46 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Quick Confirm Cancel / Reset Seated Session Dialog -->
+      <q-dialog v-model="showConfirmCancelModal">
+        <q-card style="min-width: 320px; max-width: 400px" class="q-pa-md border-radius-lg">
+          <q-card-section class="text-center q-pb-xs">
+            <div class="cancel-confirm-icon-wrap q-mx-auto q-mb-sm">
+              <q-icon name="person_remove" size="32px" color="negative" />
+            </div>
+            <div class="text-h6 text-weight-bold">ยืนยันยกเลิกการเปิดโต๊ะ?</div>
+            <div class="text-body2 text-grey-8 q-mt-xs">
+              {{ tableToCancel?.table.name }} (ยังไม่มีรายการสั่งอาหาร)
+            </div>
+            <div class="text-caption text-grey-6 q-mt-xs">
+              การยกเลิกจะปิดเซสชันนี้ และเปลี่ยนสถานะกลับเป็น <strong>"โต๊ะว่าง"</strong> ทันที เพื่อให้ลูกค้ารายอื่นสามารถสแกนเปิดโต๊ะได้ใหม่
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-md">
+            <q-btn
+              unelevated
+              no-caps
+              rounded
+              color="negative"
+              label="ยืนยันยกเลิกเซสชัน (คืนโต๊ะว่าง)"
+              :loading="isCancellingDirect"
+              @click="handleConfirmCancelSession"
+              class="full-width"
+            />
+            <q-btn
+              flat
+              no-caps
+              rounded
+              color="grey-7"
+              label="ปิดหน้าต่าง"
+              v-close-popup
+              class="full-width"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -772,6 +848,12 @@ const showConfirmClearModal = ref(false);
 const tableToClear = ref<TableCardItem | null>(null);
 const isClearingDirect = ref(false);
 const clearingSessionId = ref<string | null>(null);
+
+// Cancel Seated Session Modal State
+const showConfirmCancelModal = ref(false);
+const tableToCancel = ref<TableCardItem | null>(null);
+const isCancellingDirect = ref(false);
+const cancellingSessionId = ref<string | null>(null);
 
 let realtimeSessions: RealtimeChannel | null = null;
 let realtimeOrders: RealtimeChannel | null = null;
@@ -1176,6 +1258,33 @@ async function handleConfirmClearTable() {
   } finally {
     isClearingDirect.value = false;
     clearingSessionId.value = null;
+  }
+}
+
+// Cancel seated session prompt & action
+function promptCancelSession(item: TableCardItem) {
+  tableToCancel.value = item;
+  showConfirmCancelModal.value = true;
+}
+
+async function handleConfirmCancelSession() {
+  if (!tableToCancel.value?.session) return;
+  const sessionId = tableToCancel.value.session.id;
+  const tableName = tableToCancel.value.table.name;
+
+  isCancellingDirect.value = true;
+  cancellingSessionId.value = sessionId;
+  try {
+    await closeTableSession(sessionId);
+    showConfirmCancelModal.value = false;
+    tableToCancel.value = null;
+    notifySuccess(`ยกเลิกการเปิด ${tableName} สำเร็จ โต๊ะกลับเป็นสถานะว่างแล้ว`);
+    await loadAllData();
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกเซสชันได้');
+  } finally {
+    isCancellingDirect.value = false;
+    cancellingSessionId.value = null;
   }
 }
 
@@ -1741,6 +1850,10 @@ function openDirectCustomerLink(table: TableWithQR) {
   box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
 }
 
+.action-main-btn--cancel {
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
 .action-secondary-btn {
   height: 38px;
   font-weight: 600;
@@ -1792,6 +1905,16 @@ function openDirectCustomerLink(table: TableWithQR) {
   height: 56px;
   border-radius: 50%;
   background: #f3e8ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cancel-confirm-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fee2e2;
   display: flex;
   align-items: center;
   justify-content: center;

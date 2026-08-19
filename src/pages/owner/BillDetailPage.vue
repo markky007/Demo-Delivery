@@ -122,8 +122,31 @@
 
         <!-- Action Controls for Owner (No Print) -->
         <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm no-print">
-          <!-- Cannot pay if not all served -->
-          <div v-if="!allServed" class="not-served-warning q-pa-md q-mb-xs">
+          <!-- 1. If no orders placed yet in this session -->
+          <div v-if="orders.length === 0" class="empty-orders-action-card q-pa-md text-center">
+            <div class="empty-orders-icon q-mx-auto q-mb-sm">
+              <q-icon name="touch_app" size="28px" color="cyan-9" />
+            </div>
+            <div class="text-subtitle2 text-weight-bold text-grey-9">โต๊ะนี้ยังไม่มีรายการสั่งอาหาร</div>
+            <p class="text-caption text-grey-7 q-mb-md q-mt-xs">
+              อยู่ในสถานะเปิดโต๊ะรอลูกค้าสั่ง หากลูกค้าไม่ต้องการสั่งอาหารแล้ว หรือสแกนโดยไม่ได้ตั้งใจ สามารถยกเลิกการเปิดโต๊ะเพื่อคืนสถานะเป็นโต๊ะว่างได้
+            </p>
+            <q-btn
+              unelevated
+              no-caps
+              rounded
+              color="negative"
+              size="md"
+              icon="person_remove"
+              label="ยกเลิกการเปิดโต๊ะ (คืนสถานะโต๊ะว่าง)"
+              :loading="isProcessing"
+              @click="handleCancelEmptySession"
+              class="q-px-lg"
+            />
+          </div>
+
+          <!-- 2. Orders exist: Cannot pay if not all served -->
+          <div v-else-if="!allServed" class="not-served-warning q-pa-md q-mb-xs">
             <div class="row items-center">
               <q-icon name="warning" size="20px" class="q-mr-xs text-amber-9" />
               <span class="text-weight-bold text-amber-10">ยังมีอาหารที่ยังไม่ได้เสิร์ฟ</span>
@@ -133,8 +156,9 @@
             </p>
           </div>
 
+          <!-- 3. Orders exist: Pay button -->
           <q-btn
-            v-if="!bill || bill.status !== 'PAID'"
+            v-if="orders.length > 0 && (!bill || bill.status !== 'PAID')"
             color="primary"
             unelevated
             no-caps
@@ -148,6 +172,7 @@
             <span>รับชำระเงินเรียบร้อย ({{ formatPrice(billTotal) }})</span>
           </q-btn>
 
+          <!-- 4. Paid: Close session button -->
           <q-btn
             v-if="bill?.status === 'PAID'"
             color="grey-8"
@@ -298,6 +323,20 @@ async function handleCloseSession() {
     isProcessing.value = false;
   }
 }
+
+async function handleCancelEmptySession() {
+  if (!session.value) return;
+  isProcessing.value = true;
+  try {
+    await closeTableSession(session.value.id);
+    notifySuccess('ยกเลิกการเปิดโต๊ะเรียบร้อยแล้ว คืนสถานะเป็นโต๊ะว่าง');
+    void router.push('/owner/bills');
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกการเปิดโต๊ะได้');
+  } finally {
+    isProcessing.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -309,6 +348,23 @@ async function handleCloseSession() {
 .bill-detail-container {
   max-width: 500px;
   margin: 0 auto;
+}
+
+.empty-orders-action-card {
+  background: #ffffff;
+  border: 1px solid #cffafe;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+}
+
+.empty-orders-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ecfeff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .quick-add-card {

@@ -76,7 +76,35 @@ BEGIN
 END;
 $$;
 
--- 4. Update create_order to validate active session (No expires_at constraint on QR)
+-- 4. Function to auto-calculate and update bill for a table session
+CREATE OR REPLACE FUNCTION calculate_and_update_bill(
+  p_table_session_id UUID
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_total INTEGER := 0;
+BEGIN
+  -- Calculate sum of non-cancelled orders for this table session
+  SELECT COALESCE(SUM(total_amount), 0)
+  INTO v_total
+  FROM orders
+  WHERE table_session_id = p_table_session_id
+    AND status != 'CANCELLED';
+
+  -- Upsert the bill record
+  INSERT INTO bills (table_session_id, total_amount, status)
+  VALUES (p_table_session_id, v_total, 'PENDING')
+  ON CONFLICT (table_session_id)
+  DO UPDATE SET
+    total_amount = EXCLUDED.total_amount
+    WHERE bills.status = 'PENDING';
+END;
+$$;
+
+-- 5. Update create_order to validate active session (No expires_at constraint on QR)
 CREATE OR REPLACE FUNCTION create_order(
   p_table_session_id UUID,
   p_guest_session_token TEXT,

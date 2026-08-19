@@ -22,7 +22,7 @@
           <div v-if="pageTitle" class="customer-page-name">{{ pageTitle }}</div>
           <div v-if="tableName" class="customer-table-pill">
             <q-icon name="table_restaurant" size="16px" class="q-mr-xs" />
-            <span>โต๊ะ {{ tableName }}</span>
+            <span>{{ tableName }}</span>
           </div>
         </q-toolbar-title>
 

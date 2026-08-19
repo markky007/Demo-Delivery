@@ -59,7 +59,6 @@ import { useCartStore } from 'src/stores/cartStore';
 import { resolveTableFromToken } from 'src/services/tableService';
 import { joinOrCreateSession, getOrCreateGuestToken } from 'src/services/sessionService';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
-import type { Restaurant } from 'src/types/database';
 import logoSvg from 'src/assets/logo.svg';
 
 const route = useRoute();
@@ -116,7 +115,7 @@ onMounted(async () => {
     const { tableSession, guestSession } = await joinOrCreateSession(result.table.id, guestToken);
 
     sessionStore.setContext(
-      result.restaurant as Restaurant,
+      result.restaurant,
       result.table,
       tableSession,
       guestSession,

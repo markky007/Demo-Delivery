@@ -11,6 +11,10 @@ export interface Restaurant {
   name: string;
   description: string | null;
   logo_url: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofence_radius_meters?: number;
+  is_geofence_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }

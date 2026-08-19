@@ -52,14 +52,10 @@
               ></canvas>
             </div>
             <div class="qr-scan-hint">{{ table.name }}</div>
-            <div v-if="table.active_qr?.expires_at" class="q-mt-xs">
-              <q-badge
-                :color="formatRemainingExpiry(table.active_qr.expires_at).color"
-                outline
-                class="q-px-sm"
-              >
-                <q-icon name="schedule" size="12px" class="q-mr-xs" />
-                <span>{{ formatRemainingExpiry(table.active_qr.expires_at).label }}</span>
+            <div class="q-mt-xs">
+              <q-badge color="positive" outline class="q-px-sm">
+                <q-icon name="verified" size="12px" class="q-mr-xs" />
+                <span>QR ถาวรประจำโต๊ะ</span>
               </q-badge>
             </div>
 
@@ -174,7 +170,6 @@ import {
 } from 'src/services/tableService';
 import { supabase } from 'src/services/supabase';
 import { getAppUrl } from 'src/utils/constants';
-import { formatRemainingExpiry } from 'src/utils/formatters';
 import QRCode from 'qrcode';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';

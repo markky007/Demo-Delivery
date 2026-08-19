@@ -136,6 +136,7 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
 import { formatPrice } from 'src/utils/formatters';
+import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
 import type { CreateOrderItemPayload } from 'src/types/cart';
@@ -144,7 +145,7 @@ const route = useRoute();
 const router = useRouter();
 const cartStore = useCartStore();
 const sessionStore = useSessionStore();
-const { notifySuccess, notifyError } = useNotify();
+const { notifySuccess, notifyError, notifyWarning } = useNotify();
 
 const publicToken = computed(() => route.params.publicToken as string);
 const isSubmitting = ref(false);
@@ -158,6 +159,42 @@ async function confirmOrder() {
   isSubmitting.value = true;
 
   try {
+    // 1. Geolocation verification if enabled by restaurant
+    const rest = sessionStore.restaurant;
+    if (
+      rest?.is_geofence_enabled &&
+      rest.latitude !== null &&
+      rest.latitude !== undefined &&
+      rest.longitude !== null &&
+      rest.longitude !== undefined
+    ) {
+      const posResult = await getCurrentPosition();
+
+      if (!posResult.success) {
+        notifyWarning(posResult.message);
+        isSubmitting.value = false;
+        return;
+      }
+
+      const distance = calculateDistanceMeters(
+        posResult.latitude,
+        posResult.longitude,
+        rest.latitude,
+        rest.longitude,
+      );
+
+      const maxAllowed = rest.geofence_radius_meters ?? 100;
+
+      if (distance > maxAllowed) {
+        notifyError(
+          `คุณอยู่นอกพื้นที่ร้านอาหาร (ห่างออกไป ${formatDistance(distance)}) จึงไม่สามารถสั่งอาหารได้ กรุณาสั่งอาหารขณะอยู่ที่ร้านเท่านั้น`,
+        );
+        isSubmitting.value = false;
+        return;
+      }
+    }
+
+    // 2. Prepare payload
     const items: CreateOrderItemPayload[] = cartStore.items.map((item) => ({
       menu_item_id: item.menu_item_id,
       quantity: item.quantity,
@@ -165,6 +202,7 @@ async function confirmOrder() {
       selected_option_ids: item.selected_options.map((o) => o.option_id),
     }));
 
+    // 3. Submit order
     await createOrder({
       table_session_id: sessionStore.tableSession.id,
       guest_session_token: sessionStore.guestSession.session_token,
@@ -175,9 +213,13 @@ async function confirmOrder() {
     notifySuccess('ส่งออเดอร์เรียบร้อยแล้ว!');
     void router.push(`/t/${publicToken.value}/orders`);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'ไม่สามารถส่งออเดอร์ได้ กรุณาลองใหม่อีกครั้ง';
-    notifyError(message);
+    const rawMsg = err instanceof Error ? err.message : '';
+    if (rawMsg.includes('session is not active') || rawMsg.includes('closed')) {
+      notifyError('รอบโต๊ะนี้ได้ทำการเช็คบิล/ปิดรอบไปแล้ว กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้ง');
+      void router.push(`/t/${publicToken.value}`);
+    } else {
+      notifyError(rawMsg || 'ไม่สามารถส่งออเดอร์ได้ กรุณาลองใหม่อีกครั้ง');
+    }
   } finally {
     isSubmitting.value = false;
   }

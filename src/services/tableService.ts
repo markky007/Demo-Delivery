@@ -2,14 +2,14 @@
  * Table service — Supabase queries for table and QR management.
  */
 import { supabase } from './supabase';
-import type { Table, TableQRToken, TableWithQR } from 'src/types/database';
+import type { Restaurant, Table, TableQRToken, TableWithQR } from 'src/types/database';
 
 export type ResolveTableResult =
   | {
       status: 'SUCCESS';
       qrToken: TableQRToken;
       table: Table;
-      restaurant: { id: string; name: string; description: string | null; logo_url: string | null };
+      restaurant: Restaurant;
     }
   | { status: 'EXPIRED' }
   | { status: 'INACTIVE' }
@@ -41,7 +41,11 @@ export async function resolveTableFromToken(publicToken: string): Promise<Resolv
           id,
           name,
           description,
-          logo_url
+          logo_url,
+          latitude,
+          longitude,
+          geofence_radius_meters,
+          is_geofence_enabled
         )
       )
     `,
@@ -58,14 +62,9 @@ export async function resolveTableFromToken(publicToken: string): Promise<Resolv
     return { status: 'EXPIRED' };
   }
 
-  // Check if token has expired based on expires_at
-  if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
-    return { status: 'EXPIRED' };
-  }
-
   // Validate table is active
   const tableData = data.table as unknown as Table & {
-    restaurant: { id: string; name: string; description: string | null; logo_url: string | null };
+    restaurant: Restaurant;
   };
   if (!tableData?.is_active) {
     return { status: 'INACTIVE' };
@@ -146,7 +145,7 @@ export async function updateTable(
 
 export async function generateQRToken(
   tableId: string,
-  expiresInHours: number = 24,
+  expiresInHours: number = 0,
 ): Promise<TableQRToken> {
   // Revoke existing active tokens
   await supabase

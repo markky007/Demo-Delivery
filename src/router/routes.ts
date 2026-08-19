@@ -115,6 +115,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/owner/SalesPage.vue'),
         meta: { title: 'ประวัติยอดขาย' },
       },
+      {
+        path: 'location',
+        name: 'owner-location',
+        component: () => import('@/pages/owner/LocationSettingsPage.vue'),
+        meta: { title: 'พิกัดร้าน & ขอบเขต' },
+      },
     ],
   },
 

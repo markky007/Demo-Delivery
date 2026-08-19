@@ -235,7 +235,7 @@
           >
             <q-icon name="schedule" size="16px" class="q-mr-xs text-light-blue-8" />
             <span
-              >รอเริ่มทำ: <strong>{{ queueStore.queuedOrders.length }}</strong></span
+              >รอรับ: <strong>{{ queueStore.queuedOrders.length }}</strong></span
             >
           </div>
           <div
@@ -247,10 +247,11 @@
           >
             <q-icon name="soup_kitchen" size="16px" class="q-mr-xs text-amber-9" />
             <span
-              >กำลังปรุง: <strong>{{ queueStore.preparingOrders.length }}</strong></span
+              >กำลังทำ: <strong>{{ queueStore.preparingOrders.length }}</strong></span
             >
           </div>
           <div
+            v-if="queueStore.preparedOrders.length > 0"
             class="stat-chip stat-chip--prepared"
             @click="
               focusFilter = 'prepared';
@@ -259,7 +260,7 @@
           >
             <q-icon name="check_circle" size="16px" class="q-mr-xs text-green-7" />
             <span
-              >พร้อมเสิร์ฟ: <strong>{{ queueStore.preparedOrders.length }}</strong></span
+              >พร้อมส่ง: <strong>{{ queueStore.preparedOrders.length }}</strong></span
             >
           </div>
           <div class="stat-chip stat-chip--fry" @click="viewMode = 'fry'">
@@ -315,7 +316,7 @@
                 @click="setFocusFilter('queued')"
               >
                 <q-badge color="light-blue-8" rounded class="q-mr-xs" />
-                รอเริ่มทำ ({{ queueStore.queuedOrders.length }})
+                รอรับออเดอร์ ({{ queueStore.queuedOrders.length }})
               </q-btn>
               <q-btn
                 unelevated
@@ -328,9 +329,10 @@
                 @click="setFocusFilter('preparing')"
               >
                 <q-badge color="amber-9" rounded class="q-mr-xs" />
-                กำลังปรุง ({{ queueStore.preparingOrders.length }})
+                กำลังทำ ({{ queueStore.preparingOrders.length }})
               </q-btn>
               <q-btn
+                v-if="queueStore.preparedOrders.length > 0"
                 unelevated
                 rounded
                 dense
@@ -341,7 +343,7 @@
                 @click="setFocusFilter('prepared')"
               >
                 <q-badge color="green-7" rounded class="q-mr-xs" />
-                พร้อมเสิร์ฟ ({{ queueStore.preparedOrders.length }})
+                พร้อมส่ง ({{ queueStore.preparedOrders.length }})
               </q-btn>
             </div>
 
@@ -585,9 +587,9 @@
                     </div>
                   </div>
 
-                  <!-- Slip Footer & Action Button -->
+                  <!-- Slip Footer & Action Button (Reduced 2-Step Flow: รับ order -> ส่ง order) -->
                   <div class="slip-footer">
-                    <!-- 1. QUEUED -> Start Preparing Button -->
+                    <!-- Step 1: QUEUED -> กดรับออเดอร์ (เริ่มทำ) -->
                     <q-btn
                       v-if="order.status === OrderStatus.QUEUED"
                       unelevated
@@ -597,45 +599,23 @@
                       @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
                     >
                       <q-icon name="soup_kitchen" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">🔥 เริ่มทำออเดอร์นี้</span>
+                      <span class="text-weight-bold">🍳 กดรับออเดอร์</span>
                     </q-btn>
 
-                    <!-- 2. PREPARING -> Prepared Button -->
+                    <!-- Step 2: PREPARING or PREPARED -> กดส่งออเดอร์ (เสร็จสิ้น) -->
                     <q-btn
-                      v-else-if="order.status === OrderStatus.PREPARING"
-                      unelevated
-                      no-caps
-                      size="md"
-                      class="full-width slip-action-btn slip-action-btn--done"
-                      @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARED)"
-                    >
-                      <q-icon name="check_circle" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">✅ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)</span>
-                    </q-btn>
-
-                    <!-- 3. PREPARED -> Confirm Served Button -->
-                    <q-btn
-                      v-else-if="order.status === OrderStatus.PREPARED"
-                      unelevated
-                      no-caps
-                      size="md"
-                      class="full-width slip-action-btn"
-                      :class="
-                        queueStore.canServe(order)
-                          ? 'slip-action-btn--serve'
-                          : 'slip-action-btn--disabled'
+                      v-else-if="
+                        order.status === OrderStatus.PREPARING ||
+                        order.status === OrderStatus.PREPARED
                       "
-                      :disable="!queueStore.canServe(order)"
+                      unelevated
+                      no-caps
+                      size="md"
+                      class="full-width slip-action-btn slip-action-btn--serve"
                       @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
                     >
                       <q-icon name="done_all" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">
-                        {{
-                          queueStore.canServe(order)
-                            ? '🍽️ ยืนยันว่าเสิร์ฟเรียบร้อย'
-                            : '⏳ รอเสิร์ฟตามลำดับคิว'
-                        }}
-                      </span>
+                      <span class="text-weight-bold">🍽️ กดส่งออเดอร์</span>
                     </q-btn>
                   </div>
 
@@ -1762,7 +1742,12 @@ let elapsedInterval: ReturnType<typeof setInterval>;
 // Active kitchen orders (QUEUED + PREPARING + PREPARED)
 const activeKitchenOrders = computed(() => {
   return queueStore.orders
-    .filter((o) => o.status === OrderStatus.QUEUED || o.status === OrderStatus.PREPARING)
+    .filter(
+      (o) =>
+        o.status === OrderStatus.QUEUED ||
+        o.status === OrderStatus.PREPARING ||
+        o.status === OrderStatus.PREPARED,
+    )
     .sort((a, b) => a.queue_number - b.queue_number);
 });
 
@@ -1777,15 +1762,8 @@ const filteredFocusOrders = computed<OrderWithItems[]>(() => {
   if (focusFilter.value === 'prepared') {
     return queueStore.preparedOrders;
   }
-  // 'all': show queued + preparing, or prepared if no active cooking
-  const active = queueStore.orders
-    .filter((o) => o.status === OrderStatus.QUEUED || o.status === OrderStatus.PREPARING)
-    .sort((a, b) => a.queue_number - b.queue_number);
-
-  if (active.length === 0 && queueStore.preparedOrders.length > 0) {
-    return queueStore.preparedOrders;
-  }
-  return active;
+  // 'all': show all active kitchen orders
+  return activeKitchenOrders.value;
 });
 
 // Group filtered focus orders into pages of up to 3 orders
@@ -1906,13 +1884,13 @@ function getTotalDishesCount(order: OrderWithItems): number {
 function getStatusLabel(status: OrderStatus): string {
   switch (status) {
     case OrderStatus.QUEUED:
-      return 'รอเริ่มเตรียมอาหาร';
+      return 'รอรับออเดอร์';
     case OrderStatus.PREPARING:
       return 'กำลังปรุงอาหาร';
     case OrderStatus.PREPARED:
-      return 'เตรียมเสร็จแล้ว (พร้อมเสิร์ฟ)';
+      return 'เตรียมเสร็จแล้ว';
     case OrderStatus.SERVED:
-      return 'เสิร์ฟครบแล้ว';
+      return 'ส่งออเดอร์แล้ว';
     default:
       return status;
   }
@@ -2257,9 +2235,9 @@ async function advanceStatus(orderId: string, newStatus: OrderStatus) {
   try {
     await advanceOrderStatus(orderId, newStatus);
     const labelMap: Record<string, string> = {
-      [OrderStatus.PREPARING]: 'เริ่มเตรียมอาหารแล้ว 🔥',
-      [OrderStatus.PREPARED]: 'เตรียมเสร็จเรียบร้อย ✅',
-      [OrderStatus.SERVED]: 'ยืนยันการเสิร์ฟสำเร็จ 🍽️',
+      [OrderStatus.PREPARING]: 'รับออเดอร์แล้ว กำลังปรุงอาหาร 🔥',
+      [OrderStatus.PREPARED]: 'เตรียมอาหารเสร็จเรียบร้อย ✅',
+      [OrderStatus.SERVED]: 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
     };
     notifySuccess(labelMap[newStatus] || 'อัปเดตสถานะสำเร็จ');
   } catch (err) {

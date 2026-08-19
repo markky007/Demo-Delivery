@@ -48,15 +48,10 @@ export const useQueueStore = defineStore('queue', () => {
   });
 
   /**
-   * Check if an order can be served (FIFO gate).
-   * An order can be served only if it is PREPARED and all orders
-   * with lower queue_number are already SERVED.
+   * Check if an order can be served.
    */
   function canServe(order: OrderWithItems): boolean {
-    if (order.status !== OrderStatus.PREPARED) return false;
-    const lowestUnserved = lowestUnservedQueueNumber.value;
-    if (lowestUnserved === null) return true;
-    return order.queue_number <= lowestUnserved;
+    return order.status === OrderStatus.PREPARED || order.status === OrderStatus.PREPARING;
   }
 
   // ─── Actions ─────────────────────────────────────────

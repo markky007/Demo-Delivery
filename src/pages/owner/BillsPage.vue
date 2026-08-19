@@ -397,16 +397,27 @@
             <div class="qr-preview-box">
               <canvas ref="qrCanvasRef" class="qr-canvas-element"></canvas>
             </div>
-            <div class="text-caption text-grey-6 q-mt-sm">
+            <div v-if="selectedTable?.active_qr?.expires_at" class="q-mt-sm">
+              <q-badge
+                :color="formatRemainingExpiry(selectedTable.active_qr.expires_at).color"
+                outline
+                class="q-px-sm"
+              >
+                <q-icon name="schedule" size="13px" class="q-mr-xs" />
+                <span>{{ formatRemainingExpiry(selectedTable.active_qr.expires_at).label }}</span>
+              </q-badge>
+            </div>
+            <div class="text-caption text-grey-6 q-mt-xs">
               {{ selectedTableUrl }}
             </div>
           </q-card-section>
 
-          <q-card-actions align="center" class="q-gutter-sm">
+          <q-card-actions align="center" class="q-gutter-xs">
             <q-btn
               outline
               no-caps
               rounded
+              size="sm"
               color="primary"
               icon="content_copy"
               label="คัดลอกลิงก์"
@@ -416,10 +427,21 @@
               unelevated
               no-caps
               rounded
+              size="sm"
               color="primary"
               icon="open_in_new"
               label="เปิดหน้าลูกค้า"
               @click="openSelectedTableLink"
+            />
+            <q-btn
+              flat
+              no-caps
+              rounded
+              size="sm"
+              color="warning"
+              icon="refresh"
+              label="สร้าง QR ใหม่"
+              @click="handleRegenerateQRFromModal"
             />
           </q-card-actions>
         </q-card>
@@ -432,8 +454,13 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from 'src/services/supabase';
-import { fetchTables } from 'src/services/tableService';
-import { formatPrice, formatTime, formatElapsed } from 'src/utils/formatters';
+import { fetchTables, generateQRToken } from 'src/services/tableService';
+import {
+  formatPrice,
+  formatTime,
+  formatElapsed,
+  formatRemainingExpiry,
+} from 'src/utils/formatters';
 import { getAppUrl } from 'src/utils/constants';
 import { useNotify } from 'src/composables/useNotify';
 import QRCode from 'qrcode';
@@ -443,7 +470,7 @@ import { OrderStatus } from 'src/types/enums';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const router = useRouter();
-const { notifySuccess, notifyInfo } = useNotify();
+const { notifySuccess, notifyInfo, notifyError } = useNotify();
 
 interface RawSessionOrder {
   id: string;
@@ -748,6 +775,24 @@ function copyTableLink() {
 function openSelectedTableLink() {
   if (!selectedTableUrl.value) return;
   window.open(selectedTableUrl.value, '_blank');
+}
+
+async function handleRegenerateQRFromModal() {
+  if (!selectedTable.value) return;
+  try {
+    const newQr = await generateQRToken(selectedTable.value.id);
+    selectedTable.value.active_qr = newQr;
+    const baseUrl = getAppUrl();
+    selectedTableUrl.value = `${baseUrl}/t/${newQr.public_token}`;
+    await nextTick();
+    if (qrCanvasRef.value && selectedTableUrl.value) {
+      void QRCode.toCanvas(qrCanvasRef.value, selectedTableUrl.value, { width: 180, margin: 2 });
+    }
+    await loadAllData();
+    notifySuccess('สร้าง QR Code ใหม่เรียบร้อยแล้ว (QR เดิมถูกยกเลิก)');
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'สร้าง QR ใหม่ไม่สำเร็จ');
+  }
 }
 
 function openDirectCustomerLink(table: TableWithQR) {

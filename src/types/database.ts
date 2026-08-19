@@ -33,6 +33,7 @@ export interface TableQRToken {
   public_token: string;
   is_active: boolean;
   generated_at: string;
+  expires_at?: string | null;
   revoked_at: string | null;
 }
 

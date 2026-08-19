@@ -4,11 +4,22 @@
 import { supabase } from './supabase';
 import type { Table, TableQRToken, TableWithQR } from 'src/types/database';
 
+export type ResolveTableResult =
+  | {
+      status: 'SUCCESS';
+      qrToken: TableQRToken;
+      table: Table;
+      restaurant: { id: string; name: string; description: string | null; logo_url: string | null };
+    }
+  | { status: 'EXPIRED' }
+  | { status: 'INACTIVE' }
+  | { status: 'NOT_FOUND' };
+
 /**
  * Resolve a public QR token to a table + restaurant context.
- * Returns null if the token is invalid, revoked, or the table is inactive.
+ * Validates token existence, active status, expiration timestamp, and table availability.
  */
-export async function resolveTableFromToken(publicToken: string) {
+export async function resolveTableFromToken(publicToken: string): Promise<ResolveTableResult> {
   const { data, error } = await supabase
     .from('table_qr_tokens')
     .select(
@@ -18,6 +29,7 @@ export async function resolveTableFromToken(publicToken: string) {
       public_token,
       is_active,
       generated_at,
+      expires_at,
       revoked_at,
       table:tables (
         id,
@@ -35,18 +47,32 @@ export async function resolveTableFromToken(publicToken: string) {
     `,
     )
     .eq('public_token', publicToken)
-    .eq('is_active', true)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    return { status: 'NOT_FOUND' };
+  }
+
+  // Check if token was revoked or marked inactive
+  if (!data.is_active) {
+    return { status: 'EXPIRED' };
+  }
+
+  // Check if token has expired based on expires_at
+  if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
+    return { status: 'EXPIRED' };
+  }
 
   // Validate table is active
   const tableData = data.table as unknown as Table & {
     restaurant: { id: string; name: string; description: string | null; logo_url: string | null };
   };
-  if (!tableData?.is_active) return null;
+  if (!tableData?.is_active) {
+    return { status: 'INACTIVE' };
+  }
 
   return {
+    status: 'SUCCESS',
     qrToken: data as unknown as TableQRToken,
     table: tableData,
     restaurant: tableData.restaurant,
@@ -118,7 +144,10 @@ export async function updateTable(
   return data as Table;
 }
 
-export async function generateQRToken(tableId: string): Promise<TableQRToken> {
+export async function generateQRToken(
+  tableId: string,
+  expiresInHours: number = 24,
+): Promise<TableQRToken> {
   // Revoke existing active tokens
   await supabase
     .from('table_qr_tokens')
@@ -128,6 +157,8 @@ export async function generateQRToken(tableId: string): Promise<TableQRToken> {
 
   // Generate new token
   const token = generatePublicToken();
+  const expiresAt =
+    expiresInHours > 0 ? new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString() : null;
 
   const { data, error } = await supabase
     .from('table_qr_tokens')
@@ -136,6 +167,7 @@ export async function generateQRToken(tableId: string): Promise<TableQRToken> {
       public_token: token,
       is_active: true,
       generated_at: new Date().toISOString(),
+      expires_at: expiresAt,
     })
     .select()
     .single();

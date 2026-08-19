@@ -106,6 +106,26 @@ export async function getActiveSession(tableId: string): Promise<TableSession | 
 }
 
 /**
+ * Open a table session explicitly (Owner or Staff action).
+ */
+export async function openTableSession(tableId: string): Promise<TableSession> {
+  const existing = await getActiveSession(tableId);
+  if (existing) return existing;
+
+  const { data, error } = await supabase
+    .from('table_sessions')
+    .insert({
+      table_id: tableId,
+      status: SessionStatus.ACTIVE,
+    })
+    .select()
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? 'Failed to open table session');
+  return data as TableSession;
+}
+
+/**
  * Close a table session (Owner action).
  * Validates all orders are served and bill is paid.
  */

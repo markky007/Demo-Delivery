@@ -9,10 +9,10 @@
       class="column items-center q-gutter-md text-center welcome-card q-pa-xl"
     >
       <div class="welcome-icon-wrap welcome-icon-wrap--error">
-        <q-icon name="error_outline" size="48px" color="negative" />
+        <q-icon :name="errorIcon" size="48px" color="negative" />
       </div>
       <h5 class="q-my-sm text-weight-bold">{{ errorMessage }}</h5>
-      <p class="text-grey-7">กรุณาสแกน QR Code ที่ตั้งอยู่บนโต๊ะของคุณใหม่อีกครั้ง</p>
+      <p class="text-grey-7">{{ errorDescription }}</p>
     </div>
 
     <!-- Welcome state -->
@@ -70,12 +70,16 @@ const cartStore = useCartStore();
 const isLoading = ref(true);
 const isJoining = ref(false);
 const errorMessage = ref('');
+const errorDescription = ref('');
+const errorIcon = ref('error_outline');
 
 onMounted(async () => {
   const publicToken = route.params.publicToken as string;
 
   if (!publicToken) {
     errorMessage.value = 'QR Code ไม่ถูกต้อง';
+    errorDescription.value = 'ไม่พบรหัส QR Code สำหรับโต๊ะอาหาร';
+    errorIcon.value = 'qr_code_scanner';
     isLoading.value = false;
     return;
   }
@@ -83,8 +87,27 @@ onMounted(async () => {
   try {
     const result = await resolveTableFromToken(publicToken);
 
-    if (!result) {
+    if (result.status === 'EXPIRED') {
+      errorMessage.value = 'QR Code นี้หมดอายุแล้ว';
+      errorDescription.value =
+        'โต๊ะนี้ได้ทำการปิดรอบบริการหรือ QR Code หมดอายุแล้ว กรุณาสแกน QR Code ใหม่ที่โต๊ะ หรือติดต่อพนักงาน';
+      errorIcon.value = 'timer_off';
+      isLoading.value = false;
+      return;
+    }
+
+    if (result.status === 'INACTIVE') {
       errorMessage.value = 'โต๊ะนี้ยังไม่เปิดให้บริการ';
+      errorDescription.value = 'โต๊ะนี้อยู่ในสถานะปิดบริการชั่วคราว กรุณาติดต่อพนักงานประจำร้าน';
+      errorIcon.value = 'block';
+      isLoading.value = false;
+      return;
+    }
+
+    if (result.status === 'NOT_FOUND') {
+      errorMessage.value = 'ไม่พบข้อมูล QR Code';
+      errorDescription.value = 'รหัส QR Code นี้ไม่ถูกต้องหรือถูกยกเลิกแล้ว กรุณาสแกนใหม่อีกครั้ง';
+      errorIcon.value = 'search_off';
       isLoading.value = false;
       return;
     }
@@ -102,7 +125,9 @@ onMounted(async () => {
 
     cartStore.initForSession(tableSession.id);
   } catch (err) {
-    errorMessage.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาสแกนใหม่อีกครั้ง';
+    errorMessage.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+    errorDescription.value = 'ไม่สามารถโหลดข้อมูลโต๊ะอาหารได้ กรุณาสแกนใหม่อีกครั้ง';
+    errorIcon.value = 'error_outline';
     console.error('Welcome page error:', err);
   } finally {
     isLoading.value = false;

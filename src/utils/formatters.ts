@@ -74,3 +74,32 @@ export function formatElapsed(dateStr: string): string {
 export function formatQueueNumber(num: number): string {
   return `#${String(num).padStart(3, '0')}`;
 }
+
+/**
+ * Format remaining time until expiration or show expired status.
+ * @param expiresAt - ISO date string of expiration
+ */
+export function formatRemainingExpiry(expiresAt: string | null | undefined): {
+  label: string;
+  isExpired: boolean;
+  color: string;
+} {
+  if (!expiresAt) {
+    return { label: 'ไม่มีกำหนดหมดอายุ', isExpired: false, color: 'grey-7' };
+  }
+
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  if (diffMs <= 0) {
+    return { label: 'QR หมดอายุแล้ว', isExpired: true, color: 'negative' };
+  }
+
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 60) {
+    return { label: `หมดอายุใน ${diffMin} นาที`, isExpired: false, color: 'warning' };
+  }
+
+  const hours = Math.floor(diffMin / 60);
+  const mins = diffMin % 60;
+  const text = mins > 0 ? `${hours} ชม. ${mins} น.` : `${hours} ชม.`;
+  return { label: `ใช้ได้อีก ${text}`, isExpired: false, color: 'positive' };
+}

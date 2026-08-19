@@ -53,6 +53,25 @@
                 <StatusBadge :status="order.status" mode="customer" />
               </div>
 
+              <!-- Queue Position & Queues Ahead Banner -->
+              <div class="order-queue-status-box q-my-sm">
+                <div class="row items-center justify-between">
+                  <div class="row items-center q-gutter-x-sm">
+                    <span class="queue-rank-badge" :class="getQueueRankClass(order)">
+                      <q-icon :name="getQueueIcon(order)" size="14px" class="q-mr-xs" />
+                      <span>{{ getQueueRankLabel(order) }}</span>
+                    </span>
+                    <span class="queues-ahead-text">
+                      {{ getQueuesAheadLabel(order) }}
+                    </span>
+                  </div>
+                  <div class="row items-center text-caption text-grey-6 live-indicator">
+                    <span class="pulse-dot q-mr-xs"></span>
+                    <span class="live-text">สด</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Dish items breakdown -->
               <div class="order-items-list q-my-sm">
                 <div v-for="item in order.items" :key="item.id" class="order-item-row q-py-xs">
@@ -232,7 +251,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
-import { fetchSessionOrders } from 'src/services/orderService';
+import {
+  fetchSessionOrders,
+  fetchActiveKitchenOrders,
+  calculateQueuePosition,
+  type ActiveKitchenOrder,
+} from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
 import {
   formatPrice,
@@ -253,6 +277,7 @@ const router = useRouter();
 const sessionStore = useSessionStore();
 
 const allOrders = ref<OrderWithItems[]>([]);
+const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
 const isLoading = ref(true);
 let realtimeChannel: RealtimeChannel | null = null;
 
@@ -276,6 +301,61 @@ function openOrder(orderId: string) {
   void router.push(`/t/${publicToken.value}/orders/${orderId}`);
 }
 
+function getQueueInfo(order: OrderWithItems) {
+  return calculateQueuePosition(order.queue_number, order.status, activeKitchenOrders.value);
+}
+
+function getQueueRankLabel(order: OrderWithItems): string {
+  const info = getQueueInfo(order);
+  if (order.status === OrderStatus.PREPARED) return 'พร้อมเสิร์ฟ';
+  if (order.status === OrderStatus.PREPARING && info.queuesAhead === 0) return 'กำลังปรุง';
+  if (info.queuePosition > 0) return `คิวที่ ${info.queuePosition}`;
+  return 'อยู่ในคิว';
+}
+
+function getQueuesAheadLabel(order: OrderWithItems): string {
+  const info = getQueueInfo(order);
+  if (order.status === OrderStatus.PREPARED) {
+    return 'อาหารเสร็จแล้ว รอเสิร์ฟที่โต๊ะ';
+  }
+  if (info.queuesAhead === 0) {
+    if (order.status === OrderStatus.PREPARING) {
+      return 'กำลังปรุงอาหารของคุณอยู่';
+    }
+    return 'เป็นคิวถัดไป ครัวกำลังจะเริ่มทำ';
+  }
+  return `รออีก ${info.queuesAhead} คิวก่อนหน้า`;
+}
+
+function getQueueIcon(order: OrderWithItems): string {
+  if (order.status === OrderStatus.PREPARED) return 'check_circle';
+  if (order.status === OrderStatus.PREPARING) return 'soup_kitchen';
+  return 'schedule';
+}
+
+function getQueueRankClass(order: OrderWithItems): string {
+  const info = getQueueInfo(order);
+  if (order.status === OrderStatus.PREPARED) return 'queue-rank--prepared';
+  if (order.status === OrderStatus.PREPARING || info.queuesAhead === 0)
+    return 'queue-rank--preparing';
+  return 'queue-rank--queued';
+}
+
+async function refreshData() {
+  if (sessionStore.tableSession) {
+    try {
+      const [sessOrders, kitchenOrders] = await Promise.all([
+        fetchSessionOrders(sessionStore.tableSession.id),
+        fetchActiveKitchenOrders(),
+      ]);
+      allOrders.value = sessOrders;
+      activeKitchenOrders.value = kitchenOrders;
+    } catch {
+      // Ignore background refresh errors
+    }
+  }
+}
+
 onMounted(async () => {
   if (!sessionStore.tableSession) {
     void router.replace(`/t/${publicToken.value}`);
@@ -283,27 +363,28 @@ onMounted(async () => {
   }
 
   try {
-    allOrders.value = await fetchSessionOrders(sessionStore.tableSession.id);
+    const [sessOrders, kitchenOrders] = await Promise.all([
+      fetchSessionOrders(sessionStore.tableSession.id),
+      fetchActiveKitchenOrders(),
+    ]);
+    allOrders.value = sessOrders;
+    activeKitchenOrders.value = kitchenOrders;
   } finally {
     isLoading.value = false;
   }
 
+  // Subscribe to realtime changes on orders table to update queue counts across all tables
   realtimeChannel = supabase
-    .channel(`orders:session:${sessionStore.tableSession.id}`)
+    .channel('customer-orders-live-queue')
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
         table: 'orders',
-        filter: `table_session_id=eq.${sessionStore.tableSession.id}`,
       },
       () => {
-        void (async () => {
-          if (sessionStore.tableSession) {
-            allOrders.value = await fetchSessionOrders(sessionStore.tableSession.id);
-          }
-        })();
+        void refreshData();
       },
     )
     .subscribe();
@@ -426,5 +507,73 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   margin-top: 2px;
+}
+
+/* Queue Status Box */
+.order-queue-status-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.queue-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.queue-rank--queued {
+  background: var(--color-status-queued-bg);
+  color: var(--color-status-queued);
+}
+
+.queue-rank--preparing {
+  background: var(--color-status-preparing-bg);
+  color: var(--color-status-preparing);
+}
+
+.queue-rank--prepared {
+  background: var(--color-status-prepared-bg);
+  color: var(--color-status-prepared);
+}
+
+.queues-ahead-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.live-indicator {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
 }
 </style>

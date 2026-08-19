@@ -4,7 +4,7 @@
 import { supabase } from './supabase';
 import type { Order, OrderWithItems } from 'src/types/database';
 import type { CreateOrderPayload, UpdateOrderPayload } from 'src/types/cart';
-import type { OrderStatus } from 'src/types/enums';
+import { OrderStatus } from 'src/types/enums';
 
 /**
  * Create a new order via server-side RPC.
@@ -140,4 +140,87 @@ export async function fetchOrder(orderId: string): Promise<OrderWithItems | null
 
   if (error) return null;
   return data as OrderWithItems;
+}
+
+export interface ActiveKitchenOrder {
+  id: string;
+  queue_number: number;
+  status: OrderStatus;
+  created_at: string;
+}
+
+export interface QueuePositionResult {
+  queuesAhead: number;
+  queuePosition: number;
+  totalActive: number;
+  statusText: string;
+  isCurrentOrNext: boolean;
+}
+
+/**
+ * Fetch all unserved orders in the kitchen (for customer queue calculation).
+ */
+export async function fetchActiveKitchenOrders(): Promise<ActiveKitchenOrder[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id, queue_number, status, created_at')
+    .neq('status', 'SERVED')
+    .order('queue_number');
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Calculate queue position and queues ahead for a customer order.
+ */
+export function calculateQueuePosition(
+  targetQueueNumber: number,
+  targetStatus: OrderStatus,
+  activeKitchenOrders: ActiveKitchenOrder[],
+): QueuePositionResult {
+  if (targetStatus === OrderStatus.SERVED) {
+    return {
+      queuesAhead: 0,
+      queuePosition: 0,
+      totalActive: activeKitchenOrders.length,
+      statusText: 'เสิร์ฟอาหารเรียบร้อยแล้ว',
+      isCurrentOrNext: false,
+    };
+  }
+
+  if (targetStatus === OrderStatus.PREPARED) {
+    return {
+      queuesAhead: 0,
+      queuePosition: 1,
+      totalActive: activeKitchenOrders.length,
+      statusText: 'ปรุงเสร็จแล้ว กำลังนำไปเสิร์ฟ',
+      isCurrentOrNext: true,
+    };
+  }
+
+  const ordersAhead = activeKitchenOrders.filter(
+    (o) => o.queue_number < targetQueueNumber && o.status !== OrderStatus.SERVED,
+  );
+  const queuesAhead = ordersAhead.length;
+  const queuePosition = queuesAhead + 1;
+
+  let statusText: string;
+  if (queuesAhead === 0) {
+    if (targetStatus === OrderStatus.PREPARING) {
+      statusText = 'กำลังปรุงอาหาร (คิวปัจจุบัน)';
+    } else {
+      statusText = 'เป็นคิวถัดไป ครัวกำลังจะเริ่มทำ';
+    }
+  } else {
+    statusText = `รออีก ${queuesAhead} คิวก่อนหน้า`;
+  }
+
+  return {
+    queuesAhead,
+    queuePosition,
+    totalActive: activeKitchenOrders.length,
+    statusText,
+    isCurrentOrNext: queuesAhead === 0,
+  };
 }

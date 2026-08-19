@@ -23,6 +23,109 @@
           </div>
         </div>
 
+        <!-- Live Queue Tracking Card -->
+        <div class="queue-hero-card q-mb-md">
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="row items-center q-gutter-x-xs">
+              <q-icon name="schedule" size="18px" color="primary" />
+              <span class="text-weight-bold text-subtitle2 text-dark">ข้อมูลลำดับคิวในครัว</span>
+            </div>
+            <div class="row items-center text-caption live-badge">
+              <span class="pulse-dot q-mr-xs"></span>
+              <span>อัปเดตสด</span>
+            </div>
+          </div>
+
+          <!-- 2 Main Stat Metric Boxes -->
+          <div class="row q-col-gutter-sm q-mb-sm">
+            <!-- Metric 1: Queue Position -->
+            <div class="col-6">
+              <div
+                class="queue-metric-box"
+                :class="{
+                  'queue-metric-box--highlight':
+                    order.status === OrderStatus.PREPARING ||
+                    (order.status === OrderStatus.QUEUED && queueInfo.queuesAhead === 0),
+                  'queue-metric-box--prepared': order.status === OrderStatus.PREPARED,
+                  'queue-metric-box--served': order.status === OrderStatus.SERVED,
+                }"
+              >
+                <div class="metric-label">ลำดับคิวของคุณ</div>
+                <div class="metric-value">
+                  <template v-if="order.status === OrderStatus.SERVED">
+                    <span class="text-grey-7">เสิร์ฟแล้ว</span>
+                  </template>
+                  <template v-else-if="order.status === OrderStatus.PREPARED">
+                    <span class="text-green-8">พร้อมเสิร์ฟ</span>
+                  </template>
+                  <template v-else-if="queueInfo.queuePosition > 0">
+                    <span class="text-primary">คิวที่ {{ queueInfo.queuePosition }}</span>
+                  </template>
+                  <template v-else>
+                    <span>-</span>
+                  </template>
+                </div>
+                <div class="metric-sub">
+                  <template v-if="order.status === OrderStatus.SERVED">
+                    เสร็จสิ้นเรียบร้อย
+                  </template>
+                  <template v-else-if="order.status === OrderStatus.PREPARED">
+                    กำลังนำมาเสิร์ฟ
+                  </template>
+                  <template v-else-if="queueInfo.queuesAhead === 0"> คิวปัจจุบัน </template>
+                  <template v-else> จาก {{ queueInfo.totalActive }} คิวในครัว </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metric 2: Queues Ahead -->
+            <div class="col-6">
+              <div
+                class="queue-metric-box"
+                :class="{
+                  'queue-metric-box--highlight':
+                    order.status === OrderStatus.PREPARING ||
+                    (order.status === OrderStatus.QUEUED && queueInfo.queuesAhead === 0),
+                  'queue-metric-box--prepared': order.status === OrderStatus.PREPARED,
+                  'queue-metric-box--served': order.status === OrderStatus.SERVED,
+                }"
+              >
+                <div class="metric-label">ต้องรออีก</div>
+                <div class="metric-value">
+                  <template v-if="order.status === OrderStatus.SERVED">
+                    <span class="text-grey-7">0 คิว</span>
+                  </template>
+                  <template v-else-if="order.status === OrderStatus.PREPARED">
+                    <span class="text-green-8">0 คิว</span>
+                  </template>
+                  <template v-else-if="queueInfo.queuesAhead === 0">
+                    <span class="text-amber-9">0 คิว</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-primary">{{ queueInfo.queuesAhead }} คิว</span>
+                  </template>
+                </div>
+                <div class="metric-sub">
+                  <template v-if="order.status === OrderStatus.SERVED"> ได้รับอาหารแล้ว </template>
+                  <template v-else-if="order.status === OrderStatus.PREPARED">
+                    รอพนักงานเสิร์ฟ
+                  </template>
+                  <template v-else-if="queueInfo.queuesAhead === 0">
+                    {{ order.status === OrderStatus.PREPARING ? 'กำลังทำอยู่' : 'คิวถัดไป' }}
+                  </template>
+                  <template v-else> คิวก่อนหน้าคุณ </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Message Banner -->
+          <div class="queue-status-banner" :class="statusBannerClass">
+            <q-icon :name="statusBannerIcon" size="18px" class="q-mr-xs flex-shrink-0" />
+            <span>{{ statusBannerMessage }}</span>
+          </div>
+        </div>
+
         <!-- Status Progress Stepper -->
         <div class="status-tracker-card q-mb-md">
           <div class="text-weight-bold text-subtitle2 q-mb-md">สถานะการทำอาหาร</div>
@@ -131,9 +234,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { fetchOrder } from 'src/services/orderService';
+import {
+  fetchOrder,
+  fetchActiveKitchenOrders,
+  calculateQueuePosition,
+  type ActiveKitchenOrder,
+} from 'src/services/orderService';
+import { supabase } from 'src/services/supabase';
 import {
   formatPrice,
   formatDateTime,
@@ -144,11 +253,69 @@ import { OrderStatus } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { OrderWithItems } from 'src/types/database';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const route = useRoute();
 
 const order = ref<OrderWithItems | null>(null);
+const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
 const isLoading = ref(true);
+let realtimeChannel: RealtimeChannel | null = null;
+
+const queueInfo = computed(() => {
+  if (!order.value) {
+    return {
+      queuesAhead: 0,
+      queuePosition: 0,
+      totalActive: 0,
+      statusText: '',
+      isCurrentOrNext: false,
+    };
+  }
+  return calculateQueuePosition(
+    order.value.queue_number,
+    order.value.status,
+    activeKitchenOrders.value,
+  );
+});
+
+const statusBannerMessage = computed(() => {
+  if (!order.value) return '';
+
+  if (order.value.status === OrderStatus.SERVED) {
+    return 'อาหารเสิร์ฟถึงโต๊ะเรียบร้อยแล้ว ขอให้อร่อยกับมื้ออาหารครับ';
+  }
+  if (order.value.status === OrderStatus.PREPARED) {
+    return 'อาหารปรุงเสร็จเรียบร้อยแล้ว! พนักงานกำลังนำมาเสิร์ฟที่โต๊ะของคุณ';
+  }
+  if (order.value.status === OrderStatus.PREPARING) {
+    if (queueInfo.value.queuesAhead === 0) {
+      return 'เชฟกำลังปรุงอาหารออเดอร์นี้ของคุณอยู่ครับ';
+    }
+    return `ครัวเริ่มเตรียมออเดอร์นี้แล้ว (มีอีก ${queueInfo.value.queuesAhead} คิวก่อนหน้ากำลังทำ)`;
+  }
+  // OrderStatus.QUEUED
+  if (queueInfo.value.queuesAhead === 0) {
+    return 'ถึงคิวของคุณแล้ว! ครัวกำลังจะเริ่มปรุงอาหารในลำดับถัดไป';
+  }
+  return `ออเดอร์อยู่ในคิวรอทำ โดยมีอีก ${queueInfo.value.queuesAhead} คิวก่อนหน้า ครัวกำลังทยอยทำตามลำดับครับ`;
+});
+
+const statusBannerIcon = computed(() => {
+  if (!order.value) return 'info';
+  if (order.value.status === OrderStatus.SERVED) return 'done_all';
+  if (order.value.status === OrderStatus.PREPARED) return 'check_circle';
+  if (order.value.status === OrderStatus.PREPARING) return 'soup_kitchen';
+  return 'schedule';
+});
+
+const statusBannerClass = computed(() => {
+  if (!order.value) return '';
+  if (order.value.status === OrderStatus.SERVED) return 'queue-status-banner--served';
+  if (order.value.status === OrderStatus.PREPARED) return 'queue-status-banner--prepared';
+  if (order.value.status === OrderStatus.PREPARING) return 'queue-status-banner--preparing';
+  return 'queue-status-banner--queued';
+});
 
 function isStepActive(step: number): boolean {
   if (!order.value) return false;
@@ -176,10 +343,54 @@ function isStepCompleted(step: number): boolean {
   return false;
 }
 
+async function refreshOrderData() {
+  const orderId = route.params.orderId as string;
+  try {
+    const [fetchedOrder, kitchenOrders] = await Promise.all([
+      fetchOrder(orderId),
+      fetchActiveKitchenOrders(),
+    ]);
+    order.value = fetchedOrder;
+    activeKitchenOrders.value = kitchenOrders;
+  } catch {
+    // Ignore background refresh errors
+  }
+}
+
 onMounted(async () => {
   const orderId = route.params.orderId as string;
-  order.value = await fetchOrder(orderId);
-  isLoading.value = false;
+  try {
+    const [fetchedOrder, kitchenOrders] = await Promise.all([
+      fetchOrder(orderId),
+      fetchActiveKitchenOrders(),
+    ]);
+    order.value = fetchedOrder;
+    activeKitchenOrders.value = kitchenOrders;
+  } finally {
+    isLoading.value = false;
+  }
+
+  // Subscribe to live changes on orders table
+  realtimeChannel = supabase
+    .channel(`order-detail-live-queue-${orderId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+      },
+      () => {
+        void refreshOrderData();
+      },
+    )
+    .subscribe();
+});
+
+onUnmounted(() => {
+  if (realtimeChannel) {
+    void supabase.removeChannel(realtimeChannel);
+  }
 });
 </script>
 
@@ -205,6 +416,118 @@ onMounted(async () => {
 .order-number {
   color: var(--color-primary);
   line-height: 1.2;
+}
+
+/* Queue Hero Card */
+.queue-hero-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 16px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.live-badge {
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.queue-metric-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.queue-metric-box--highlight {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.queue-metric-box--prepared {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.queue-metric-box--served {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.metric-sub {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.queue-status-banner {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.queue-status-banner--queued {
+  background-color: var(--color-status-queued-bg);
+  color: #0369a1;
+}
+
+.queue-status-banner--preparing {
+  background-color: var(--color-status-preparing-bg);
+  color: #b45309;
+}
+
+.queue-status-banner--prepared {
+  background-color: var(--color-status-prepared-bg);
+  color: #15803d;
+}
+
+.queue-status-banner--served {
+  background-color: var(--color-status-served-bg);
+  color: #475569;
 }
 
 /* Status Tracker */

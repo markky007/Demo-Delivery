@@ -71,6 +71,16 @@ export interface MenuCategory {
   updated_at: string;
 }
 
+// ─── Fry Configuration ─────────────────────────────────────────
+export interface FryConfig {
+  is_fried: boolean;
+  fry_name?: string;
+  fry_qty?: number;
+  special_fry_name?: string;
+  special_fry_qty?: number;
+  unit?: string;
+}
+
 // ─── Menu Item ───────────────────────────────────────────────
 export interface MenuItem {
   id: string;
@@ -82,6 +92,7 @@ export interface MenuItem {
   is_active: boolean;
   is_available: boolean;
   sort_order: number;
+  fry_config?: FryConfig | null;
   created_at: string;
   updated_at: string;
 }
@@ -110,6 +121,7 @@ export interface Option {
   is_active: boolean;
   is_available: boolean;
   sort_order: number;
+  fry_config?: FryConfig | null;
   created_at: string;
   updated_at: string;
 }

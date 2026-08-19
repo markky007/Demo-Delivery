@@ -55,29 +55,41 @@
 
               <!-- Dish items breakdown -->
               <div class="order-items-list q-my-sm">
-                <div
-                  v-for="item in order.items"
-                  :key="item.id"
-                  class="order-item-row q-py-xs"
-                >
+                <div v-for="item in order.items" :key="item.id" class="order-item-row q-py-xs">
                   <div class="row justify-between items-center text-body2">
                     <div class="row items-center">
                       <span class="text-weight-medium text-dark">{{ item.snapshot_name }}</span>
-                      <span class="text-weight-bold text-primary q-ml-xs">x{{ item.quantity }}</span>
+                      <span class="text-weight-bold text-primary q-ml-xs"
+                        >x{{ item.quantity }}</span
+                      >
                     </div>
                     <span class="text-weight-bold text-dark">{{ formatPrice(item.subtotal) }}</span>
                   </div>
 
                   <!-- Selected Options Chips -->
-                  <div v-if="item.options && getVisibleOptions(item.options).length > 0" class="row items-center q-gutter-xs q-mt-none">
+                  <div
+                    v-if="item.options && getVisibleOptions(item.options).length > 0"
+                    class="row items-center q-gutter-xs q-mt-none"
+                  >
                     <span
                       v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="order-opt-chip"
-                      :class="{ 'order-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name) }"
+                      :class="{
+                        'order-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
+                      }"
                     >
-                      <q-icon v-if="isTakeawayOption(opt.snapshot_option_name)" name="shopping_bag" size="12px" class="q-mr-xs" />
-                      {{ isTakeawayOption(opt.snapshot_option_name) ? opt.snapshot_option_name : `+ ${opt.snapshot_option_name}` }}
+                      <q-icon
+                        v-if="isTakeawayOption(opt.snapshot_option_name)"
+                        name="shopping_bag"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
+                      {{
+                        isTakeawayOption(opt.snapshot_option_name)
+                          ? opt.snapshot_option_name
+                          : `+ ${opt.snapshot_option_name}`
+                      }}
                       <template v-if="opt.snapshot_price_adjustment > 0">
                         (+{{ formatPrice(opt.snapshot_price_adjustment) }})
                       </template>
@@ -135,29 +147,41 @@
 
               <!-- History Dish items breakdown -->
               <div class="order-items-list q-my-sm">
-                <div
-                  v-for="item in order.items"
-                  :key="item.id"
-                  class="order-item-row q-py-xs"
-                >
+                <div v-for="item in order.items" :key="item.id" class="order-item-row q-py-xs">
                   <div class="row justify-between items-center text-body2">
                     <div class="row items-center">
                       <span class="text-weight-medium text-grey-8">{{ item.snapshot_name }}</span>
                       <span class="text-grey-6 q-ml-xs">x{{ item.quantity }}</span>
                     </div>
-                    <span class="text-weight-bold text-grey-8">{{ formatPrice(item.subtotal) }}</span>
+                    <span class="text-weight-bold text-grey-8">{{
+                      formatPrice(item.subtotal)
+                    }}</span>
                   </div>
 
                   <!-- Selected Options Chips -->
-                  <div v-if="item.options && getVisibleOptions(item.options).length > 0" class="row items-center q-gutter-xs q-mt-none">
+                  <div
+                    v-if="item.options && getVisibleOptions(item.options).length > 0"
+                    class="row items-center q-gutter-xs q-mt-none"
+                  >
                     <span
                       v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="order-opt-chip"
-                      :class="{ 'order-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name) }"
+                      :class="{
+                        'order-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
+                      }"
                     >
-                      <q-icon v-if="isTakeawayOption(opt.snapshot_option_name)" name="shopping_bag" size="12px" class="q-mr-xs" />
-                      {{ isTakeawayOption(opt.snapshot_option_name) ? opt.snapshot_option_name : `+ ${opt.snapshot_option_name}` }}
+                      <q-icon
+                        v-if="isTakeawayOption(opt.snapshot_option_name)"
+                        name="shopping_bag"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
+                      {{
+                        isTakeawayOption(opt.snapshot_option_name)
+                          ? opt.snapshot_option_name
+                          : `+ ${opt.snapshot_option_name}`
+                      }}
                       <template v-if="opt.snapshot_price_adjustment > 0">
                         (+{{ formatPrice(opt.snapshot_price_adjustment) }})
                       </template>
@@ -165,7 +189,10 @@
                   </div>
 
                   <!-- Special Note -->
-                  <div v-if="item.special_instruction" class="order-note-text text-grey-6 q-mt-none">
+                  <div
+                    v-if="item.special_instruction"
+                    class="order-note-text text-grey-6 q-mt-none"
+                  >
                     <q-icon name="edit_note" size="14px" class="q-mr-xs" />
                     <span>{{ item.special_instruction }}</span>
                   </div>

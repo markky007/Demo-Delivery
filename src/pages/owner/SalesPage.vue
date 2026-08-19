@@ -282,7 +282,10 @@ async function loadSales() {
     const rawTableName = b.table_session?.table?.name ?? 'โต๊ะ';
     const custName = b.table_session?.customer_name;
     let displayName = rawTableName;
-    if (custName && (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))) {
+    if (
+      custName &&
+      (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))
+    ) {
       displayName = `สั่งกลับบ้าน (${custName})`;
     } else if (custName) {
       displayName = `${rawTableName} (${custName})`;

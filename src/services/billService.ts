@@ -209,16 +209,14 @@ export async function ownerAddQuickItem(
     0,
   );
 
-  await supabase
-    .from('bills')
-    .upsert(
-      {
-        table_session_id: tableSessionId,
-        total_amount: newTotal,
-        status: 'PENDING',
-      },
-      { onConflict: 'table_session_id' },
-    );
+  await supabase.from('bills').upsert(
+    {
+      table_session_id: tableSessionId,
+      total_amount: newTotal,
+      status: 'PENDING',
+    },
+    { onConflict: 'table_session_id' },
+  );
 }
 
 /**
@@ -267,4 +265,3 @@ export async function fetchBillWithDetails(billId: string): Promise<{
     orders: (ordersData ?? []) as OrderWithItems[],
   };
 }
-

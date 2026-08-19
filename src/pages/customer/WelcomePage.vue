@@ -30,7 +30,11 @@
         class="welcome-table-badge q-my-md"
         :class="{ 'welcome-table-badge--takeaway': isTakeaway }"
       >
-        <q-icon :name="isTakeaway ? 'shopping_bag' : 'table_restaurant'" size="20px" class="q-mr-xs" />
+        <q-icon
+          :name="isTakeaway ? 'shopping_bag' : 'table_restaurant'"
+          size="20px"
+          class="q-mr-xs"
+        />
         <span>{{ isTakeaway ? 'สั่งกลับบ้าน (Takeaway)' : sessionStore.tableName }}</span>
       </div>
 
@@ -72,7 +76,10 @@
       </div>
 
       <!-- Existing Active Session Notice if any -->
-      <div v-if="hasActiveGuestSession && isTakeaway" class="active-session-hint q-mb-md full-width">
+      <div
+        v-if="hasActiveGuestSession && isTakeaway"
+        class="active-session-hint q-mb-md full-width"
+      >
         <q-icon name="history" size="18px" color="orange-9" class="q-mr-xs" />
         <span class="text-caption text-orange-9">
           คุณมีรายการสั่งในชื่อ <strong>{{ activeSessionCustomerName }}</strong> กำลังดำเนินการอยู่

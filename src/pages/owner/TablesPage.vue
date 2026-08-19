@@ -22,7 +22,9 @@
             :disable="tablesWithQR.length === 0"
             class="action-btn"
           >
-            <q-tooltip>พิมพ์แผ่นรวม QR ทุกโต๊ะรวมสั่งกลับบ้านในขนาด A4 พร้อมเส้นประสำหรับตัดแปะ</q-tooltip>
+            <q-tooltip
+              >พิมพ์แผ่นรวม QR ทุกโต๊ะรวมสั่งกลับบ้านในขนาด A4 พร้อมเส้นประสำหรับตัดแปะ</q-tooltip
+            >
           </q-btn>
 
           <q-btn
@@ -65,13 +67,16 @@
                 <q-icon name="shopping_bag" size="22px" color="orange-9" />
               </div>
               <div>
-                <span class="text-h6 text-weight-bold text-grey-9">QR Code สั่งกลับบ้าน (Takeaway)</span>
+                <span class="text-h6 text-weight-bold text-grey-9"
+                  >QR Code สั่งกลับบ้าน (Takeaway)</span
+                >
                 <span class="takeaway-badge-pill q-ml-sm">เฉพาะสั่งกลับบ้าน</span>
               </div>
             </div>
           </div>
           <p class="text-caption text-grey-7 q-mb-md">
-            วาง QR Code นี้ไว้ที่เคาน์เตอร์ชำระเงินหรือหน้าร้าน เพื่อให้ลูกค้าสแกนสั่งกลับบ้านได้ทันที (กรณีโต๊ะเต็มหรือไม่ต้องการนั่งทานที่ร้าน)
+            วาง QR Code นี้ไว้ที่เคาน์เตอร์ชำระเงินหรือหน้าร้าน
+            เพื่อให้ลูกค้าสแกนสั่งกลับบ้านได้ทันที (กรณีโต๊ะเต็มหรือไม่ต้องการนั่งทานที่ร้าน)
           </p>
 
           <div v-if="takeawayTable" class="takeaway-card">
@@ -152,8 +157,18 @@
             <!-- No Active QR State -->
             <div v-else class="no-qr-state text-center q-pa-lg">
               <q-icon name="qr_code_2" size="44px" color="grey-4" class="q-mb-xs" />
-              <div class="text-caption text-grey-6 q-mb-md">ยังไม่มี QR Code สำหรับสั่งกลับบ้าน</div>
-              <q-btn unelevated no-caps rounded color="warning" text-color="dark" size="sm" @click="generateQR(takeawayTable)">
+              <div class="text-caption text-grey-6 q-mb-md">
+                ยังไม่มี QR Code สำหรับสั่งกลับบ้าน
+              </div>
+              <q-btn
+                unelevated
+                no-caps
+                rounded
+                color="warning"
+                text-color="dark"
+                size="sm"
+                @click="generateQR(takeawayTable)"
+              >
                 สร้าง QR Code
               </q-btn>
             </div>
@@ -183,7 +198,9 @@
             <div class="table-icon-wrap q-mr-sm">
               <q-icon name="table_restaurant" size="20px" color="primary" />
             </div>
-            <span class="text-h6 text-weight-bold text-grey-9">โต๊ะอาหารภายในร้าน (Dine-in Tables)</span>
+            <span class="text-h6 text-weight-bold text-grey-9"
+              >โต๊ะอาหารภายในร้าน (Dine-in Tables)</span
+            >
             <span class="text-caption text-grey-6 q-ml-sm">({{ diningTables.length }} โต๊ะ)</span>
           </div>
         </div>
@@ -263,7 +280,14 @@
             <div v-else class="no-qr-state text-center q-pa-lg">
               <q-icon name="qr_code_2" size="44px" color="grey-4" class="q-mb-xs" />
               <div class="text-caption text-grey-6 q-mb-md">ยังไม่มี QR Code สำหรับโต๊ะนี้</div>
-              <q-btn unelevated no-caps rounded color="primary" size="sm" @click="generateQR(table)">
+              <q-btn
+                unelevated
+                no-caps
+                rounded
+                color="primary"
+                size="sm"
+                @click="generateQR(table)"
+              >
                 สร้าง QR Code
               </q-btn>
             </div>

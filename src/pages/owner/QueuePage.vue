@@ -66,6 +66,22 @@
                 <q-icon name="view_kanban" size="18px" class="q-mr-xs" />
                 <span class="text-weight-bold">ดูภาพรวม</span>
               </q-btn>
+
+              <q-btn
+                no-caps
+                :unelevated="viewMode === 'fry'"
+                :flat="viewMode !== 'fry'"
+                :color="viewMode === 'fry' ? 'deep-orange-8' : 'grey-3'"
+                :text-color="viewMode === 'fry' ? 'white' : 'grey-8'"
+                class="view-toggle-btn"
+                @click="viewMode = 'fry'"
+              >
+                <q-icon name="local_fire_department" size="18px" class="q-mr-xs" />
+                <span class="text-weight-bold">คิวของทอด</span>
+                <q-badge v-if="pendingFryCount > 0" color="deep-orange-9" floating rounded>
+                  {{ pendingFryCount }}
+                </q-badge>
+              </q-btn>
             </q-btn-group>
           </div>
         </div>
@@ -106,6 +122,12 @@
             <q-icon name="check_circle" size="16px" class="q-mr-xs text-green-7" />
             <span
               >พร้อมเสิร์ฟ: <strong>{{ queueStore.preparedOrders.length }}</strong></span
+            >
+          </div>
+          <div class="stat-chip stat-chip--fry" @click="viewMode = 'fry'">
+            <q-icon name="local_fire_department" size="16px" class="q-mr-xs text-deep-orange-8" />
+            <span
+              >ของทอดรอทำ: <strong>{{ pendingFryCount }}</strong> ชิ้น</span
             >
           </div>
           <div class="stat-chip stat-chip--served" @click="viewMode = 'overview'">
@@ -292,10 +314,16 @@
 
                       <div
                         class="chef-table-badge"
-                        :class="{ 'chef-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                        :class="{
+                          'chef-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                        }"
                       >
                         <q-icon
-                          :name="isTakeawayName(getTableName(order)) ? 'shopping_bag' : 'table_restaurant'"
+                          :name="
+                            isTakeawayName(getTableName(order))
+                              ? 'shopping_bag'
+                              : 'table_restaurant'
+                          "
                           size="20px"
                           class="q-mr-xs"
                           :color="isTakeawayName(getTableName(order)) ? 'orange-9' : 'primary'"
@@ -516,7 +544,7 @@
       <!-- ========================================================================= -->
       <!-- VIEW 2: OVERVIEW KANBAN 4 COLUMNS MODE (แบบภาพรวมเดิม) -->
       <!-- ========================================================================= -->
-      <div v-else class="overview-mode-container animate-fade-in">
+      <div v-else-if="viewMode === 'overview'" class="overview-mode-container animate-fade-in">
         <!-- Quick Banner to Jump into Focus Mode -->
         <div v-if="activeKitchenOrders.length > 0" class="overview-focus-banner q-mb-md">
           <div class="row items-center justify-between wrap q-gutter-sm">
@@ -571,7 +599,9 @@
                     }}</span>
                     <span
                       class="queue-table-badge"
-                      :class="{ 'queue-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                      :class="{
+                        'queue-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                      }"
                     >
                       <q-icon
                         v-if="isTakeawayName(getTableName(order))"
@@ -679,7 +709,9 @@
                     }}</span>
                     <span
                       class="queue-table-badge"
-                      :class="{ 'queue-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                      :class="{
+                        'queue-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                      }"
                     >
                       <q-icon
                         v-if="isTakeawayName(getTableName(order))"
@@ -795,7 +827,9 @@
                     }}</span>
                     <span
                       class="queue-table-badge"
-                      :class="{ 'queue-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                      :class="{
+                        'queue-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                      }"
                     >
                       <q-icon
                         v-if="isTakeawayName(getTableName(order))"
@@ -947,6 +981,268 @@
           </div>
         </div>
       </div>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 3: FRY STATION QUEUE MODE (มุมมองคิวของทอด / เตรียมวัตถุดิบทอด) -->
+      <!-- ========================================================================= -->
+      <div v-else-if="viewMode === 'fry'" class="fry-mode-container animate-fade-in">
+        <!-- Station Banner / Top Controls -->
+        <div class="fry-top-card q-pa-md q-mb-md">
+          <div class="row items-center justify-between wrap q-gutter-md">
+            <div class="row items-center">
+              <div class="fry-hero-icon-box q-mr-md">
+                <q-icon name="local_fire_department" size="32px" color="white" />
+              </div>
+              <div>
+                <div class="row items-center q-gutter-xs">
+                  <h6 class="q-my-none text-weight-bold fry-page-title">
+                    เตาทอด & เตรียมของทอด (Fry Station)
+                  </h6>
+                  <q-badge color="deep-orange-9" rounded class="q-px-sm">
+                    <span>รอทอด {{ pendingFryCount }} ชิ้น</span>
+                  </q-badge>
+                </div>
+                <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
+                  รายการของทอดที่ต้องเตรียมจากออเดอร์ในครัว ติ๊กเพื่อจำสถานะทอดเสร็จแล้ว
+                </p>
+              </div>
+            </div>
+
+            <div class="row items-center q-gutter-sm">
+              <q-btn
+                v-if="completedFryItemIds.size > 0"
+                outline
+                dense
+                no-caps
+                color="grey-7"
+                icon="refresh"
+                label="ล้างที่ติ๊กเสร็จแล้ว"
+                @click="clearCompletedFryItems"
+                class="q-px-sm"
+              />
+              <q-btn
+                unelevated
+                no-caps
+                color="deep-orange-8"
+                icon="view_carousel"
+                label="สลับไปโหมดโฟกัสทำอาหาร"
+                class="text-weight-bold"
+                @click="viewMode = 'focus'"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Live Fry Summary KPI Cards -->
+        <div class="q-mb-md">
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-weight-bold text-subtitle2 row items-center text-grey-9">
+              <q-icon name="analytics" size="18px" color="deep-orange-8" class="q-mr-xs" />
+              <span>สรุปรวมของทอดทั้งหมดที่ต้องเตรียม (Live Summary)</span>
+            </div>
+            <div class="text-caption text-grey-6">คำนวณจากทุกออเดอร์ที่ยังไม่เสิร์ฟในครัว</div>
+          </div>
+
+          <div v-if="frySummaryList.length > 0" class="fry-summary-grid">
+            <div
+              v-for="sum in frySummaryList"
+              :key="sum.fryName"
+              class="fry-summary-card"
+              :class="{ 'fry-summary-card--all-done': sum.pendingQuantity === 0 }"
+            >
+              <div class="row items-center justify-between no-wrap">
+                <span class="text-weight-bold text-body2 fry-sum-name ellipsis">{{
+                  sum.fryName
+                }}</span>
+                <span
+                  class="fry-sum-badge"
+                  :class="
+                    sum.pendingQuantity === 0 ? 'fry-sum-badge--done' : 'fry-sum-badge--pending'
+                  "
+                >
+                  {{
+                    sum.pendingQuantity === 0
+                      ? 'ทอดครบแล้ว'
+                      : `รอ ${sum.pendingQuantity} ${sum.unit}`
+                  }}
+                </span>
+              </div>
+              <div class="row items-baseline justify-between q-mt-xs">
+                <div class="text-caption text-grey-6">
+                  ยอดรวม: <strong>{{ sum.totalQuantity }}</strong> {{ sum.unit }}
+                </div>
+                <div class="text-caption text-green-7 text-weight-medium">
+                  เสร็จแล้ว {{ sum.completedQuantity }}/{{ sum.totalQuantity }}
+                </div>
+              </div>
+              <q-linear-progress
+                :value="sum.totalQuantity > 0 ? sum.completedQuantity / sum.totalQuantity : 0"
+                color="deep-orange-8"
+                track-color="orange-1"
+                class="q-mt-xs rounded-borders"
+                size="4px"
+              />
+            </div>
+          </div>
+
+          <div v-else class="fry-summary-empty q-pa-md text-center">
+            <q-icon name="check_circle" size="28px" color="green-6" class="q-mr-xs" />
+            <span class="text-weight-medium text-grey-8"
+              >ไม่มีรายการของทอดที่ต้องเตรียมในขณะนี้</span
+            >
+          </div>
+        </div>
+
+        <!-- 2. Filter Tabs for Orders -->
+        <div class="row items-center justify-between q-mb-md">
+          <div class="row items-center q-gutter-xs">
+            <q-btn
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              class="q-px-md filter-tab-btn"
+              :class="{ 'filter-tab-btn--active': fryFilter === 'all' }"
+              @click="fryFilter = 'all'"
+            >
+              ทั้งหมด ({{ allFryRequirements.length }})
+            </q-btn>
+            <q-btn
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              class="q-px-md filter-tab-btn"
+              :class="{ 'filter-tab-btn--active': fryFilter === 'pending' }"
+              @click="fryFilter = 'pending'"
+            >
+              <q-badge color="deep-orange-8" rounded class="q-mr-xs" />
+              รอทอด ({{ pendingFryRequirements.length }})
+            </q-btn>
+            <q-btn
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              class="q-px-md filter-tab-btn"
+              :class="{ 'filter-tab-btn--active': fryFilter === 'completed' }"
+              @click="fryFilter = 'completed'"
+            >
+              <q-badge color="green-7" rounded class="q-mr-xs" />
+              ทอดเสร็จแล้ว ({{ completedFryRequirements.length }})
+            </q-btn>
+          </div>
+        </div>
+
+        <!-- 3. Order-by-Order Fry Cards Grid -->
+        <div v-if="groupedFryOrders.length > 0" class="fry-orders-grid">
+          <div
+            v-for="orderGroup in groupedFryOrders"
+            :key="orderGroup.orderId"
+            class="fry-order-card"
+            :class="{ 'fry-order-card--all-done': orderGroup.allCompleted }"
+          >
+            <!-- Order Header -->
+            <div class="row items-center justify-between q-pb-sm fry-order-header">
+              <div class="row items-center q-gutter-xs">
+                <span class="fry-order-queue-badge">
+                  #{{ formatQueueNumber(orderGroup.queueNumber) }}
+                </span>
+                <span class="fry-order-table-title text-weight-bold">
+                  {{ orderGroup.tableName }}
+                </span>
+                <span v-if="orderGroup.customerName" class="text-caption text-grey-7">
+                  ({{ orderGroup.customerName }})
+                </span>
+              </div>
+
+              <div class="row items-center q-gutter-xs">
+                <span class="fry-order-time-badge">
+                  {{ formatElapsed(orderGroup.queuedAt) }}
+                </span>
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  :color="orderGroup.allCompleted ? 'grey-6' : 'deep-orange-9'"
+                  :label="orderGroup.allCompleted ? 'ยกเลิกติ๊ก' : 'เสร็จทั้งหมด'"
+                  @click="toggleOrderAllFryItems(orderGroup.orderId)"
+                  class="fry-check-all-btn"
+                />
+              </div>
+            </div>
+
+            <!-- Items List -->
+            <div class="fry-items-checklist q-mt-sm q-gutter-y-xs">
+              <div
+                v-for="req in orderGroup.items"
+                :key="req.id"
+                class="fry-item-row"
+                :class="{ 'fry-item-row--done': completedFryItemIds.has(req.id) }"
+                @click="toggleFryItem(req.id)"
+              >
+                <div class="row items-center justify-between no-wrap">
+                  <div class="row items-center no-wrap col">
+                    <q-checkbox
+                      :model-value="completedFryItemIds.has(req.id)"
+                      @update:model-value="toggleFryItem(req.id)"
+                      color="deep-orange-8"
+                      dense
+                      class="q-mr-sm"
+                      @click.stop
+                    />
+                    <div class="col ellipsis">
+                      <div class="row items-center q-gutter-xs">
+                        <span
+                          class="text-weight-bold fry-item-name"
+                          :class="{ 'text-strike text-grey-6': completedFryItemIds.has(req.id) }"
+                        >
+                          {{ req.fryName }}
+                        </span>
+                        <q-badge v-if="req.isSpecial" color="amber-9" rounded class="q-px-xs">
+                          พิเศษ
+                        </q-badge>
+                        <q-badge v-if="req.isAddon" color="purple-7" rounded class="q-px-xs">
+                          เพิ่ม
+                        </q-badge>
+                      </div>
+                      <div class="text-caption text-grey-6 ellipsis q-mt-xs">
+                        สำหรับ: {{ req.dishName }}
+                        <span
+                          v-if="req.specialInstruction"
+                          class="text-deep-orange-9 text-weight-medium q-ml-xs"
+                        >
+                          ({{ req.specialInstruction }})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="fry-qty-box text-right q-ml-sm">
+                    <span class="text-weight-bolder fry-qty-num">{{ req.quantity }}</span>
+                    <span class="text-caption text-grey-6 q-ml-xs">{{ req.unit }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State for Orders -->
+        <div v-else class="fry-all-empty-card text-center q-pa-xl">
+          <div class="fry-empty-icon-wrap q-mx-auto q-mb-md">
+            <q-icon name="local_fire_department" size="48px" color="deep-orange-5" />
+          </div>
+          <div class="text-weight-bold text-h6 text-grey-8">ไม่มีรายการของทอดที่ต้องเตรียม</div>
+          <div class="text-caption text-grey-6 q-mt-xs">
+            ออเดอร์ในครัวขณะนี้ไม่มีเมนูของทอด หรือของทอดทั้งหมดถูกเตรียมเรียบร้อยแล้ว
+          </div>
+        </div>
+      </div>
     </template>
   </q-page>
 </template>
@@ -954,6 +1250,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useQueueStore } from 'src/stores/queueStore';
+import { useMenuStore } from 'src/stores/menuStore';
 import { useNotify } from 'src/composables/useNotify';
 import { fetchTodayOrders, advanceOrderStatus } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
@@ -965,6 +1262,12 @@ import {
   isTakeawayOption,
 } from 'src/utils/formatters';
 import { isTakeawayName } from 'src/services/tableService';
+import {
+  extractFryRequirementsFromOrders,
+  aggregateFrySummary,
+  type FryRequirement,
+  type FrySummaryItem,
+} from 'src/utils/fryHelper';
 import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems } from 'src/types/database';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
@@ -977,13 +1280,26 @@ import {
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const queueStore = useQueueStore();
+const menuStore = useMenuStore();
 const { notifySuccess, notifyError, notifyWarning } = useNotify();
 
 const isLoading = ref(true);
-const viewMode = ref<'focus' | 'overview'>('focus');
+const viewMode = ref<'focus' | 'overview' | 'fry'>('focus');
 const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
+const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
 const currentSlideId = ref<string>('');
 const soundEnabled = ref<boolean>(isSoundEnabled());
+
+function loadPersistedFryCompletedIds(): string[] {
+  try {
+    const raw = localStorage.getItem('demo_delivery_completed_fry_ids');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+const completedFryItemIds = ref<Set<string>>(new Set(loadPersistedFryCompletedIds()));
 
 let realtimeChannel: RealtimeChannel | null = null;
 let elapsedInterval: ReturnType<typeof setInterval>;
@@ -1137,6 +1453,115 @@ function getTimerColorClass(createdAtStr: string): string {
   return 'chef-timer-pill--normal';
 }
 
+// Fry Station Computeds & Handlers
+const menuItemsMap = computed(() => new Map(menuStore.items.map((i) => [i.id, i])));
+
+const allFryRequirements = computed<FryRequirement[]>(() => {
+  return extractFryRequirementsFromOrders(queueStore.orders, menuItemsMap.value);
+});
+
+const pendingFryRequirements = computed(() =>
+  allFryRequirements.value.filter((r) => !completedFryItemIds.value.has(r.id)),
+);
+
+const completedFryRequirements = computed(() =>
+  allFryRequirements.value.filter((r) => completedFryItemIds.value.has(r.id)),
+);
+
+const pendingFryCount = computed(() =>
+  pendingFryRequirements.value.reduce((sum, r) => sum + r.quantity, 0),
+);
+
+const frySummaryList = computed<FrySummaryItem[]>(() => {
+  return aggregateFrySummary(allFryRequirements.value, completedFryItemIds.value);
+});
+
+const groupedFryOrders = computed(() => {
+  const list =
+    fryFilter.value === 'pending'
+      ? pendingFryRequirements.value
+      : fryFilter.value === 'completed'
+        ? completedFryRequirements.value
+        : allFryRequirements.value;
+
+  const map = new Map<
+    string,
+    {
+      orderId: string;
+      queueNumber: number;
+      tableName: string;
+      customerName?: string | null | undefined;
+      orderStatus: string;
+      queuedAt: string;
+      items: FryRequirement[];
+      allCompleted: boolean;
+    }
+  >();
+
+  for (const req of list) {
+    if (!map.has(req.orderId)) {
+      map.set(req.orderId, {
+        orderId: req.orderId,
+        queueNumber: req.queueNumber,
+        tableName: req.tableName,
+        customerName: req.customerName,
+        orderStatus: req.orderStatus,
+        queuedAt: req.queuedAt,
+        items: [],
+        allCompleted: true,
+      });
+    }
+    const group = map.get(req.orderId)!;
+    group.items.push(req);
+    if (!completedFryItemIds.value.has(req.id)) {
+      group.allCompleted = false;
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.queueNumber - b.queueNumber);
+});
+
+function persistFryCompletedIds() {
+  try {
+    localStorage.setItem(
+      'demo_delivery_completed_fry_ids',
+      JSON.stringify([...completedFryItemIds.value]),
+    );
+  } catch (e) {
+    console.error('Failed to save fry completed ids:', e);
+  }
+}
+
+function toggleFryItem(reqId: string) {
+  if (completedFryItemIds.value.has(reqId)) {
+    completedFryItemIds.value.delete(reqId);
+  } else {
+    completedFryItemIds.value.add(reqId);
+  }
+  completedFryItemIds.value = new Set(completedFryItemIds.value);
+  persistFryCompletedIds();
+}
+
+function toggleOrderAllFryItems(orderId: string) {
+  const orderReqs = allFryRequirements.value.filter((r) => r.orderId === orderId);
+  const allDone = orderReqs.every((r) => completedFryItemIds.value.has(r.id));
+  for (const req of orderReqs) {
+    if (allDone) {
+      completedFryItemIds.value.delete(req.id);
+    } else {
+      completedFryItemIds.value.add(req.id);
+    }
+  }
+  completedFryItemIds.value = new Set(completedFryItemIds.value);
+  persistFryCompletedIds();
+}
+
+function clearCompletedFryItems() {
+  completedFryItemIds.value = new Set();
+  persistFryCompletedIds();
+  notifySuccess('ล้างรายการที่ติ๊กเสร็จแล้วเรียบร้อย');
+}
+
 // Keyboard shortcuts for kitchen navigation (Left/Right to slide)
 function handleKeydown(e: KeyboardEvent) {
   if (viewMode.value !== 'focus') return;
@@ -1149,6 +1574,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 onMounted(async () => {
   window.addEventListener('keydown', handleKeydown);
+  void menuStore.loadMenu();
 
   try {
     const orders = await fetchTodayOrders();
@@ -2015,5 +2441,207 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   50% {
     opacity: 0.65;
   }
+}
+
+/* ========================================================================= */
+/* Fry Station Styles */
+/* ========================================================================= */
+.stat-chip--fry {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
+
+.stat-chip--fry:hover {
+  background: #ffedd5;
+}
+
+.fry-mode-container {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.fry-top-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.fry-hero-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
+.fry-page-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+/* Fry Summary Grid */
+.fry-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.fry-summary-card {
+  background: #ffffff;
+  border: 1.5px solid #fed7aa;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s ease;
+}
+
+.fry-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.fry-summary-card--all-done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  opacity: 0.85;
+}
+
+.fry-sum-name {
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.fry-sum-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.fry-sum-badge--pending {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.fry-sum-badge--done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.fry-summary-empty {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fry Orders Grid */
+.fry-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.fry-order-card {
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.fry-order-card--all-done {
+  border-color: #86efac;
+  background: #f8fafc;
+  opacity: 0.8;
+}
+
+.fry-order-header {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fry-order-queue-badge {
+  background: #ffedd5;
+  color: #c2410c;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.fry-order-table-title {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.fry-order-time-badge {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.fry-check-all-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 6px;
+}
+
+.fry-item-row {
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fry-item-row:hover {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.fry-item-row--done {
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+  opacity: 0.75;
+}
+
+.fry-item-name {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.fry-qty-box {
+  flex-shrink: 0;
+}
+
+.fry-qty-num {
+  font-size: 1.15rem;
+  color: #ea580c;
+}
+
+.fry-all-empty-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--color-border);
+  box-shadow: var(--shadow-subtle);
+}
+
+.fry-empty-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

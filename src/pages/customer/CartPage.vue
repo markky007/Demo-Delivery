@@ -55,14 +55,22 @@
                 </div>
 
                 <!-- Selected Options -->
-                <div v-if="getVisibleOptions(item.selected_options).length > 0" class="cart-item-options q-mt-xs">
+                <div
+                  v-if="getVisibleOptions(item.selected_options).length > 0"
+                  class="cart-item-options q-mt-xs"
+                >
                   <span
                     v-for="opt in getVisibleOptions(item.selected_options)"
                     :key="opt.option_id"
                     class="option-chip"
                     :class="{ 'option-chip--takeaway': isTakeawayOption(opt.name) }"
                   >
-                    <q-icon v-if="isTakeawayOption(opt.name)" name="shopping_bag" size="12px" class="q-mr-xs" />
+                    <q-icon
+                      v-if="isTakeawayOption(opt.name)"
+                      name="shopping_bag"
+                      size="12px"
+                      class="q-mr-xs"
+                    />
                     {{ opt.name }}
                     <template v-if="opt.price_adjustment > 0"
                       >+{{ formatPrice(opt.price_adjustment) }}</template

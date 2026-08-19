@@ -248,4 +248,3 @@ function generatePublicToken(): string {
   crypto.getRandomValues(arr);
   return Array.from(arr, (b) => chars[b % chars.length]).join('');
 }
-

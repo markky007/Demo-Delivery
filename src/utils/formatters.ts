@@ -150,5 +150,3 @@ export function getVisibleOptions<T extends { name?: string; snapshot_option_nam
     return !isDefaultOptionName(name);
   });
 }
-
-

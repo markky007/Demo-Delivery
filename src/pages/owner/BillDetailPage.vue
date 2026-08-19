@@ -42,7 +42,9 @@
           <div class="row items-center justify-between q-mb-xs">
             <div class="row items-center">
               <q-icon name="local_bar" size="20px" color="primary" class="q-mr-xs" />
-              <span class="text-weight-bold text-subtitle2">เพิ่มเครื่องดื่มท้ายบิล (Quick Add)</span>
+              <span class="text-weight-bold text-subtitle2"
+                >เพิ่มเครื่องดื่มท้ายบิล (Quick Add)</span
+              >
             </div>
             <span class="text-caption text-grey-7">กดเพื่อบวกเพิ่มเข้าบิลทันที</span>
           </div>
@@ -52,9 +54,7 @@
             <div class="col-6">
               <div class="drink-item-card column justify-between q-pa-sm full-height">
                 <div class="row items-center no-wrap q-mb-xs">
-                  <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">
-                    🥤
-                  </div>
+                  <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">🥤</div>
                   <div class="col ellipsis">
                     <div class="text-weight-bold text-body2 ellipsis">น้ำอัดลมกระป๋อง</div>
                     <div class="text-caption text-primary text-weight-bold font-mono">
@@ -82,9 +82,7 @@
             <div class="col-6">
               <div class="drink-item-card column justify-between q-pa-sm full-height">
                 <div class="row items-center no-wrap q-mb-xs">
-                  <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">
-                    💧
-                  </div>
+                  <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">💧</div>
                   <div class="col ellipsis">
                     <div class="text-weight-bold text-body2 ellipsis">น้ำขวด</div>
                     <div class="text-caption text-primary text-weight-bold font-mono">
@@ -112,12 +110,7 @@
 
         <!-- Receipt Slip View -->
         <div class="receipt-wrapper q-mb-lg">
-          <ReceiptSlip
-            :bill="bill"
-            :table-name="tableName"
-            :orders="orders"
-            :show-actions="true"
-          />
+          <ReceiptSlip :bill="bill" :table-name="tableName" :orders="orders" :show-actions="true" />
         </div>
 
         <!-- Action Controls for Owner (No Print) -->
@@ -127,9 +120,12 @@
             <div class="empty-orders-icon q-mx-auto q-mb-sm">
               <q-icon name="touch_app" size="28px" color="cyan-9" />
             </div>
-            <div class="text-subtitle2 text-weight-bold text-grey-9">โต๊ะนี้ยังไม่มีรายการสั่งอาหาร</div>
+            <div class="text-subtitle2 text-weight-bold text-grey-9">
+              โต๊ะนี้ยังไม่มีรายการสั่งอาหาร
+            </div>
             <p class="text-caption text-grey-7 q-mb-md q-mt-xs">
-              อยู่ในสถานะเปิดโต๊ะรอลูกค้าสั่ง หากลูกค้าไม่ต้องการสั่งอาหารแล้ว หรือสแกนโดยไม่ได้ตั้งใจ สามารถยกเลิกการเปิดโต๊ะเพื่อคืนสถานะเป็นโต๊ะว่างได้
+              อยู่ในสถานะเปิดโต๊ะรอลูกค้าสั่ง หากลูกค้าไม่ต้องการสั่งอาหารแล้ว
+              หรือสแกนโดยไม่ได้ตั้งใจ สามารถยกเลิกการเปิดโต๊ะเพื่อคืนสถานะเป็นโต๊ะว่างได้
             </p>
             <q-btn
               unelevated
@@ -260,9 +256,13 @@ async function loadData() {
 
   if (sessionData) {
     session.value = sessionData;
-    const rawTableName = (sessionData as unknown as { table: { name: string } }).table?.name ?? 'โต๊ะ';
+    const rawTableName =
+      (sessionData as unknown as { table: { name: string } }).table?.name ?? 'โต๊ะ';
     const custName = (sessionData as unknown as { customer_name?: string }).customer_name;
-    if (custName && (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))) {
+    if (
+      custName &&
+      (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))
+    ) {
       tableName.value = `สั่งกลับบ้าน (${custName})`;
     } else if (custName) {
       tableName.value = `${rawTableName} (${custName})`;

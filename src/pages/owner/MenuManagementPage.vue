@@ -134,6 +134,15 @@
                       :custom-label="item.is_available ? 'พร้อมขาย' : 'หมดชั่วคราว'"
                     />
                     <q-badge v-if="!item.is_active" color="grey-5" label="ปิดการใช้งาน" />
+                    <q-badge
+                      v-if="isItemFried(item)"
+                      color="deep-orange-8"
+                      rounded
+                      class="q-px-xs fry-indicator-badge"
+                    >
+                      <q-icon name="local_fire_department" size="12px" class="q-mr-xs" />
+                      <span>ต้องทอด ({{ getFryLabel(item) }})</span>
+                    </q-badge>
                   </div>
 
                   <!-- Option Groups preview tags on card -->
@@ -403,6 +412,118 @@
               />
             </div>
 
+            <!-- Fry Settings Section (การตั้งค่าของทอด) -->
+            <div class="fry-settings-box q-pa-md">
+              <div class="row items-center justify-between">
+                <div class="row items-center">
+                  <div class="fry-icon-circle q-mr-sm">
+                    <q-icon name="local_fire_department" size="20px" color="deep-orange-9" />
+                  </div>
+                  <div>
+                    <div class="text-weight-bold text-subtitle2 text-deep-orange-10">
+                      การตั้งค่าของทอด (Fry Station)
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      เปิดเพื่อส่งรายการของทอดเข้าสู่ "คิวของทอด" ให้คนทอดเตรียมอัตโนมัติ
+                    </div>
+                  </div>
+                </div>
+                <q-toggle v-model="itemFryConfig.is_fried" color="deep-orange-8" />
+              </div>
+
+              <!-- Fry Details Form when toggle is active -->
+              <div v-if="itemFryConfig.is_fried" class="q-mt-md q-pt-sm fry-details-content">
+                <!-- Preset chips -->
+                <div class="row items-center q-gutter-xs q-mb-sm">
+                  <span class="text-caption text-grey-7">เทมเพลตด่วน:</span>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('ไก่ทอด', 'ชิ้น', 'ไก่ทอดพิเศษ')"
+                  >
+                    ไก่ทอด
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('เอ็นไก่ทอด', 'ที่', 'เอ็นไก่ทอดพิเศษ')"
+                  >
+                    เอ็นไก่ทอด
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('ปีกไก่ทอด (2 ปีก)', 'ชุด', 'ปีกไก่ทอดพิเศษ (3 ปีก)')"
+                  >
+                    ปีกไก่
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('สามชั้นทอด', 'ที่', 'สามชั้นทอดพิเศษ')"
+                  >
+                    สามชั้นทอด
+                  </q-chip>
+                </div>
+
+                <div class="row q-col-gutter-sm">
+                  <div class="col-12 col-sm-8">
+                    <div class="field-label q-mb-xs">ชื่อของทอด (ขนาดธรรมดา)</div>
+                    <q-input
+                      v-model="itemFryConfig.fry_name"
+                      outlined
+                      dense
+                      placeholder="เช่น ไก่ทอด, เอ็นไก่ทอด, ปีกไก่ 2 ปีก"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-4">
+                    <div class="field-label q-mb-xs">จำนวน (ธรรมดา)</div>
+                    <q-input
+                      v-model.number="itemFryConfig.fry_qty"
+                      type="number"
+                      min="1"
+                      outlined
+                      dense
+                    />
+                  </div>
+                </div>
+
+                <div class="row q-col-gutter-sm q-mt-xs">
+                  <div class="col-12 col-sm-8">
+                    <div class="field-label q-mb-xs">ชื่อของทอด (เมื่อสั่งพิเศษ)</div>
+                    <q-input
+                      v-model="itemFryConfig.special_fry_name"
+                      outlined
+                      dense
+                      placeholder="เช่น ไก่ทอดพิเศษ, เอ็นไก่ทอดพิเศษ (เว้นว่างได้)"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-4">
+                    <div class="field-label q-mb-xs">จำนวน (พิเศษ)</div>
+                    <q-input
+                      v-model.number="itemFryConfig.special_fry_qty"
+                      type="number"
+                      min="1"
+                      outlined
+                      dense
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Option Groups Selector Section -->
             <div class="option-groups-section">
               <div class="row items-center justify-between q-mb-xs">
@@ -553,9 +674,10 @@ import { useNotify } from 'src/composables/useNotify';
 import { supabase } from 'src/services/supabase';
 import { uploadMenuImage, createLocalPreviewUrl } from 'src/services/storageService';
 import { formatPrice } from 'src/utils/formatters';
+import { inferFryConfigFromName } from 'src/utils/fryHelper';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
-import type { MenuCategory, MenuItem, OptionGroup, Option } from 'src/types/database';
+import type { MenuCategory, MenuItem, OptionGroup, Option, FryConfig } from 'src/types/database';
 
 export interface OptionGroupWithSubOptions extends OptionGroup {
   options: Option[];
@@ -580,6 +702,16 @@ const itemOptionGroupMap = ref<Record<string, string[]>>({});
 const selectedOptionGroupIds = ref<string[]>([]);
 const isLoadingOptionGroups = ref(false);
 
+// Fry Config Form State
+const itemFryConfig = reactive<FryConfig>({
+  is_fried: false,
+  fry_name: '',
+  fry_qty: 1,
+  special_fry_name: '',
+  special_fry_qty: 1,
+  unit: 'ชิ้น',
+});
+
 // File input refs for image upload
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const pendingImageFile = ref<File | null>(null);
@@ -601,6 +733,31 @@ const itemForm = reactive({
   is_active: true,
   is_available: true,
 });
+
+function isItemFried(item: MenuItem): boolean {
+  if (item.fry_config && typeof item.fry_config.is_fried === 'boolean') {
+    return item.fry_config.is_fried;
+  }
+  const inferred = inferFryConfigFromName(item.name);
+  return Boolean(inferred?.is_fried);
+}
+
+function getFryLabel(item: MenuItem): string {
+  if (item.fry_config?.fry_name) {
+    return item.fry_config.fry_name;
+  }
+  const inferred = inferFryConfigFromName(item.name);
+  return inferred?.fry_name || item.name;
+}
+
+function applyFryPreset(name: string, unit = 'ชิ้น', specialName?: string) {
+  itemFryConfig.is_fried = true;
+  itemFryConfig.fry_name = name;
+  itemFryConfig.unit = unit;
+  itemFryConfig.fry_qty = 1;
+  itemFryConfig.special_fry_name = specialName || `${name}พิเศษ`;
+  itemFryConfig.special_fry_qty = 1;
+}
 
 const categoryOptions = computed(() =>
   menuStore.categories.map((c) => ({ label: c.name, value: c.id })),
@@ -824,6 +981,33 @@ function editItem(item: MenuItem) {
   itemForm.is_active = item.is_active;
   itemForm.is_available = item.is_available;
 
+  // Populate Fry Configuration
+  if (item.fry_config && typeof item.fry_config.is_fried === 'boolean') {
+    itemFryConfig.is_fried = item.fry_config.is_fried;
+    itemFryConfig.fry_name = item.fry_config.fry_name || item.name;
+    itemFryConfig.fry_qty = item.fry_config.fry_qty || 1;
+    itemFryConfig.special_fry_name = item.fry_config.special_fry_name || '';
+    itemFryConfig.special_fry_qty = item.fry_config.special_fry_qty || 1;
+    itemFryConfig.unit = item.fry_config.unit || 'ชิ้น';
+  } else {
+    const inferred = inferFryConfigFromName(item.name);
+    if (inferred) {
+      itemFryConfig.is_fried = inferred.is_fried;
+      itemFryConfig.fry_name = inferred.fry_name || item.name;
+      itemFryConfig.fry_qty = inferred.fry_qty || 1;
+      itemFryConfig.special_fry_name = inferred.special_fry_name || '';
+      itemFryConfig.special_fry_qty = inferred.special_fry_qty || 1;
+      itemFryConfig.unit = inferred.unit || 'ชิ้น';
+    } else {
+      itemFryConfig.is_fried = false;
+      itemFryConfig.fry_name = item.name;
+      itemFryConfig.fry_qty = 1;
+      itemFryConfig.special_fry_name = '';
+      itemFryConfig.special_fry_qty = 1;
+      itemFryConfig.unit = 'ชิ้น';
+    }
+  }
+
   pendingImageFile.value = null;
   previewImageUrl.value = item.image_url ?? '';
 
@@ -854,7 +1038,18 @@ async function saveItem() {
       }
     }
 
-    const payload = {
+    const fryConfigPayload: FryConfig = {
+      is_fried: Boolean(itemFryConfig.is_fried),
+      fry_name: itemFryConfig.fry_name?.trim() || itemForm.name.trim(),
+      fry_qty: itemFryConfig.fry_qty || 1,
+      special_fry_name:
+        itemFryConfig.special_fry_name?.trim() ||
+        `${itemFryConfig.fry_name || itemForm.name.trim()}พิเศษ`,
+      special_fry_qty: itemFryConfig.special_fry_qty || 1,
+      unit: itemFryConfig.unit || 'ชิ้น',
+    };
+
+    const payload: Record<string, unknown> = {
       name: itemForm.name.trim(),
       description: itemForm.description || null,
       base_price: itemForm.base_price,
@@ -862,6 +1057,7 @@ async function saveItem() {
       category_id: itemForm.category_id,
       is_active: itemForm.is_active,
       is_available: itemForm.is_available,
+      fry_config: itemFryConfig.is_fried ? fryConfigPayload : { is_fried: false },
       updated_at: new Date().toISOString(),
     };
 
@@ -922,6 +1118,12 @@ function resetItemForm() {
   itemForm.category_id = '';
   itemForm.is_active = true;
   itemForm.is_available = true;
+  itemFryConfig.is_fried = false;
+  itemFryConfig.fry_name = '';
+  itemFryConfig.fry_qty = 1;
+  itemFryConfig.special_fry_name = '';
+  itemFryConfig.special_fry_qty = 1;
+  itemFryConfig.unit = 'ชิ้น';
   pendingImageFile.value = null;
   previewImageUrl.value = '';
   selectedOptionGroupIds.value = [];
@@ -1057,27 +1259,36 @@ async function toggleAvailability(item: MenuItem) {
 /* Items Grid */
 .items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
 
 .item-card {
   background: #ffffff;
   border-radius: var(--radius-md);
+  padding: 16px;
   border: 1px solid var(--color-border);
-  padding: 14px;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
 }
 
 .item-thumb {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-sm);
-  overflow: hidden;
   background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   flex-shrink: 0;
 }
 
@@ -1088,19 +1299,18 @@ async function toggleAvailability(item: MenuItem) {
 }
 
 .item-title {
-  font-size: 0.96rem;
+  font-size: 1rem;
   color: var(--color-text-primary);
   line-height: 1.3;
 }
 
 .item-price {
-  font-weight: 700;
+  font-size: 0.94rem;
+  font-weight: 600;
   color: var(--color-primary);
-  font-size: 1rem;
 }
 
 .quick-toggle-btn {
-  border-radius: var(--radius-pill);
   font-size: 0.76rem;
   font-weight: 600;
   padding: 3px 8px;

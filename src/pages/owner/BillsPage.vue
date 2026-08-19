@@ -154,18 +154,26 @@
               <q-icon name="payments" size="24px" color="primary" />
             </div>
             <div>
-              <div class="text-caption text-grey-7">ยอดรวมบิลที่เปิดอยู่ทั้งหมด ({{ activeCount }} โต๊ะ)</div>
+              <div class="text-caption text-grey-7">
+                ยอดรวมบิลที่เปิดอยู่ทั้งหมด ({{ activeCount }} โต๊ะ)
+              </div>
               <div class="text-h6 text-weight-bolder text-primary">
                 {{ formatPrice(totalActiveAmount) }}
               </div>
             </div>
           </div>
           <div class="row items-center q-gutter-x-sm text-caption text-grey-6 gt-xs">
-            <span>🟢 รอเช็กบิล: <strong>{{ readyToPayCount }}</strong></span>
+            <span
+              >🟢 รอเช็กบิล: <strong>{{ readyToPayCount }}</strong></span
+            >
             <span>•</span>
-            <span>🟠 อยู่ในครัว: <strong>{{ cookingCount }}</strong></span>
+            <span
+              >🟠 อยู่ในครัว: <strong>{{ cookingCount }}</strong></span
+            >
             <span>•</span>
-            <span>🟣 ชำระแล้ว: <strong>{{ paidCount }}</strong></span>
+            <span
+              >🟣 ชำระแล้ว: <strong>{{ paidCount }}</strong></span
+            >
           </div>
         </div>
 
@@ -254,15 +262,19 @@
             <!-- Card Header -->
             <div class="card-top-bar">
               <div class="row items-center">
-                <div
-                  class="table-icon-avatar"
-                  :class="item.avatarClass"
-                >
-                  <q-icon :name="item.isTakeaway ? 'shopping_bag' : 'table_restaurant'" size="20px" />
+                <div class="table-icon-avatar" :class="item.avatarClass">
+                  <q-icon
+                    :name="item.isTakeaway ? 'shopping_bag' : 'table_restaurant'"
+                    size="20px"
+                  />
                 </div>
                 <div class="q-ml-sm">
                   <div class="row items-center q-gutter-xs">
-                    <span class="table-card-title">{{ item.isTakeaway && item.session?.customer_name ? `สั่งกลับบ้าน (${item.session.customer_name})` : item.table.name }}</span>
+                    <span class="table-card-title">{{
+                      item.isTakeaway && item.session?.customer_name
+                        ? `สั่งกลับบ้าน (${item.session.customer_name})`
+                        : item.table.name
+                    }}</span>
                     <q-badge
                       v-if="item.isTakeaway"
                       color="orange-9"
@@ -294,10 +306,7 @@
 
               <!-- Status Badge (High Visibility & Clear Meaning) -->
               <div class="status-badge-container">
-                <div
-                  class="table-main-status-badge"
-                  :class="item.statusBadge.badgeClass"
-                >
+                <div class="table-main-status-badge" :class="item.statusBadge.badgeClass">
                   <span
                     v-if="item.statusBadge.isPulse"
                     class="live-status-dot"
@@ -357,11 +366,17 @@
                   </div>
 
                   <!-- Kitchen stage breakdown badges -->
-                  <div v-if="item.orderCount > 0" class="row items-center q-gutter-x-xs q-mt-xs text-caption">
+                  <div
+                    v-if="item.orderCount > 0"
+                    class="row items-center q-gutter-x-xs q-mt-xs text-caption"
+                  >
                     <span v-if="item.servedOrdersCount > 0" class="stage-tag stage-tag--served">
                       เสิร์ฟครบ {{ item.servedOrdersCount }}
                     </span>
-                    <span v-if="item.preparingOrdersCount > 0" class="stage-tag stage-tag--preparing">
+                    <span
+                      v-if="item.preparingOrdersCount > 0"
+                      class="stage-tag stage-tag--preparing"
+                    >
                       กำลังทำ {{ item.preparingOrdersCount }}
                     </span>
                     <span v-if="item.queuedOrdersCount > 0" class="stage-tag stage-tag--queued">
@@ -390,7 +405,13 @@
                     </div>
                     <span
                       class="text-h6 text-weight-bolder"
-                      :class="item.isPaid ? 'text-purple-9' : item.isReadyToPay ? 'text-green-8' : 'text-primary'"
+                      :class="
+                        item.isPaid
+                          ? 'text-purple-9'
+                          : item.isReadyToPay
+                            ? 'text-green-8'
+                            : 'text-primary'
+                      "
                     >
                       {{ formatPrice(item.totalAmount) }}
                     </span>
@@ -521,7 +542,9 @@
                 <div class="empty-table-icon-circle q-mx-auto q-mb-sm">
                   <q-icon name="chair_alt" size="30px" color="grey-6" />
                 </div>
-                <div class="text-subtitle2 font-weight-600 text-grey-8">โต๊ะว่าง พร้อมให้บริการ</div>
+                <div class="text-subtitle2 font-weight-600 text-grey-8">
+                  โต๊ะว่าง พร้อมให้บริการ
+                </div>
                 <div class="text-caption text-grey-5 font-size-11 q-mt-xs">
                   เมื่อลูกค้าสแกน QR หรือเปิดสั่งอาหาร ระบบจะเปิดบิลและนับเวลาอัตโนมัติ
                 </div>
@@ -596,7 +619,10 @@
 
       <!-- Quick QR Code Dialog -->
       <q-dialog v-model="showQRModal">
-        <q-card style="min-width: 320px; max-width: 380px" class="q-pa-md text-center border-radius-lg">
+        <q-card
+          style="min-width: 320px; max-width: 380px"
+          class="q-pa-md text-center border-radius-lg"
+        >
           <q-card-section class="q-pb-none">
             <div class="row items-center justify-between">
               <span class="text-h6 text-weight-bold">{{ selectedTable?.name }}</span>
@@ -661,7 +687,8 @@
               {{ tableToClear?.table.name }} ชำระเงินเรียบร้อยแล้ว
             </div>
             <div class="text-caption text-grey-6 q-mt-xs">
-              การเคลียร์โต๊ะจะปิดบิลเซสชันนี้ และเปลี่ยนสถานะกลับเป็น <strong>"โต๊ะว่าง"</strong> เพื่อพร้อมรับลูกค้ารายถัดไป
+              การเคลียร์โต๊ะจะปิดบิลเซสชันนี้ และเปลี่ยนสถานะกลับเป็น
+              <strong>"โต๊ะว่าง"</strong> เพื่อพร้อมรับลูกค้ารายถัดไป
             </div>
           </q-card-section>
 
@@ -701,7 +728,8 @@
               {{ tableToCancel?.table.name }} (ยังไม่มีรายการสั่งอาหาร)
             </div>
             <div class="text-caption text-grey-6 q-mt-xs">
-              การยกเลิกจะปิดเซสชันนี้ และเปลี่ยนสถานะกลับเป็น <strong>"โต๊ะว่าง"</strong> ทันที เพื่อให้ลูกค้ารายอื่นสามารถสแกนเปิดโต๊ะได้ใหม่
+              การยกเลิกจะปิดเซสชันนี้ และเปลี่ยนสถานะกลับเป็น <strong>"โต๊ะว่าง"</strong> ทันที
+              เพื่อให้ลูกค้ารายอื่นสามารถสแกนเปิดโต๊ะได้ใหม่
             </div>
           </q-card-section>
 
@@ -738,11 +766,7 @@ import { useRouter } from 'vue-router';
 import { supabase } from 'src/services/supabase';
 import { fetchTables, generateQRToken, isTakeawayName } from 'src/services/tableService';
 import { closeTableSession } from 'src/services/sessionService';
-import {
-  formatPrice,
-  formatTime,
-  formatElapsed,
-} from 'src/utils/formatters';
+import { formatPrice, formatTime, formatElapsed } from 'src/utils/formatters';
 import { getAppUrl } from 'src/utils/constants';
 import { useNotify } from 'src/composables/useNotify';
 import QRCode from 'qrcode';
@@ -834,7 +858,9 @@ const activeSessions = ref<RawSession[]>([]);
 const isLoading = ref(true);
 const isRefreshing = ref(false);
 
-const selectedFilter = ref<'ALL' | 'COOKING' | 'READY_TO_PAY' | 'PAID' | 'SEATED_NO_ORDER' | 'AVAILABLE'>('ALL');
+const selectedFilter = ref<
+  'ALL' | 'COOKING' | 'READY_TO_PAY' | 'PAID' | 'SEATED_NO_ORDER' | 'AVAILABLE'
+>('ALL');
 const searchQuery = ref('');
 
 // QR Dialog State
@@ -1161,11 +1187,19 @@ const tableCards = computed<TableCardItem[]>(() => {
 
 // Top Overview Stats Computed
 const activeCount = computed(() => tableCards.value.filter((c) => c.session !== null).length);
-const cookingCount = computed(() => tableCards.value.filter((c) => c.tableStatus === 'COOKING').length);
-const readyToPayCount = computed(() => tableCards.value.filter((c) => c.tableStatus === 'READY_TO_PAY').length);
+const cookingCount = computed(
+  () => tableCards.value.filter((c) => c.tableStatus === 'COOKING').length,
+);
+const readyToPayCount = computed(
+  () => tableCards.value.filter((c) => c.tableStatus === 'READY_TO_PAY').length,
+);
 const paidCount = computed(() => tableCards.value.filter((c) => c.tableStatus === 'PAID').length);
-const seatedNoOrderCount = computed(() => tableCards.value.filter((c) => c.tableStatus === 'SEATED_NO_ORDER').length);
-const availableCount = computed(() => tableCards.value.filter((c) => c.tableStatus === 'AVAILABLE').length);
+const seatedNoOrderCount = computed(
+  () => tableCards.value.filter((c) => c.tableStatus === 'SEATED_NO_ORDER').length,
+);
+const availableCount = computed(
+  () => tableCards.value.filter((c) => c.tableStatus === 'AVAILABLE').length,
+);
 const totalActiveAmount = computed(() =>
   tableCards.value.reduce((sum, c) => sum + (c.session && !c.isPaid ? c.totalAmount : 0), 0),
 );
@@ -1562,11 +1596,21 @@ function openDirectCustomerLink(table: TableWithQR) {
   display: inline-block;
 }
 
-.dot-amber { background-color: #f59e0b; }
-.dot-green { background-color: #10b981; }
-.dot-purple { background-color: #9333ea; }
-.dot-cyan { background-color: #06b6d4; }
-.dot-grey { background-color: #9ca3af; }
+.dot-amber {
+  background-color: #f59e0b;
+}
+.dot-green {
+  background-color: #10b981;
+}
+.dot-purple {
+  background-color: #9333ea;
+}
+.dot-cyan {
+  background-color: #06b6d4;
+}
+.dot-grey {
+  background-color: #9ca3af;
+}
 
 .search-input :deep(.q-field__control) {
   border-radius: var(--radius-pill);
@@ -1733,21 +1777,39 @@ function openDirectCustomerLink(table: TableWithQR) {
 }
 
 @keyframes pulse-ring-amber {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
-  70% { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
 }
 
 @keyframes pulse-ring-purple {
-  0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); }
-  70% { box-shadow: 0 0 0 5px rgba(147, 51, 234, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(147, 51, 234, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+  }
 }
 
 @keyframes pulse-ring-cyan {
-  0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
-  70% { box-shadow: 0 0 0 5px rgba(6, 182, 212, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(6, 182, 212, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+  }
 }
 
 /* Card Body Active */

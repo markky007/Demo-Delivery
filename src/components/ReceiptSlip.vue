@@ -35,7 +35,9 @@
       <div class="receipt-divider"></div>
 
       <!-- Column Header -->
-      <div class="receipt-table-header row justify-between text-caption text-weight-bold text-grey-8 q-py-xs">
+      <div
+        class="receipt-table-header row justify-between text-caption text-weight-bold text-grey-8 q-py-xs"
+      >
         <span class="col-6">รายการ</span>
         <span class="col-2 text-center">จำนวน</span>
         <span class="col-4 text-right">จำนวนเงิน</span>
@@ -49,23 +51,19 @@
           <!-- Order Queue Subtitle (if multiple orders) -->
           <div v-if="orders.length > 1" class="receipt-queue-badge q-mb-xs">
             <span>คิวที่ {{ formatQueueNumber(order.queue_number) }}</span>
-            <span class="text-caption text-grey-6 q-ml-xs">({{ formatTime(order.created_at) }})</span>
+            <span class="text-caption text-grey-6 q-ml-xs"
+              >({{ formatTime(order.created_at) }})</span
+            >
           </div>
 
-          <div
-            v-for="item in order.items"
-            :key="item.id"
-            class="receipt-item-row q-py-xs"
-          >
+          <div v-for="item in order.items" :key="item.id" class="receipt-item-row q-py-xs">
             <div class="row justify-between items-start">
               <!-- Dish Name -->
               <div class="col-6 receipt-item-name">
                 <span class="text-weight-bold">{{ item.snapshot_name }}</span>
               </div>
               <!-- Quantity -->
-              <div class="col-2 text-center text-weight-medium">
-                x{{ item.quantity }}
-              </div>
+              <div class="col-2 text-center text-weight-medium">x{{ item.quantity }}</div>
               <!-- Subtotal -->
               <div class="col-4 text-right text-weight-bold font-mono">
                 {{ formatPrice(item.subtotal) }}
@@ -83,7 +81,10 @@
                 class="receipt-opt-item text-caption text-grey-7"
               >
                 <span>• {{ opt.snapshot_option_name }}</span>
-                <span v-if="opt.snapshot_price_adjustment > 0" class="q-ml-xs font-mono text-grey-8">
+                <span
+                  v-if="opt.snapshot_price_adjustment > 0"
+                  class="q-ml-xs font-mono text-grey-8"
+                >
                   (+{{ formatPrice(opt.snapshot_price_adjustment) }})
                 </span>
               </div>
@@ -142,7 +143,11 @@
           </div>
         </div>
         <div v-else class="pending-stamp">
-          <q-badge color="warning" text-color="dark" class="q-px-md q-py-xs text-subtitle2 text-weight-bold">
+          <q-badge
+            color="warning"
+            text-color="dark"
+            class="q-px-md q-py-xs text-subtitle2 text-weight-bold"
+          >
             <q-icon name="schedule" size="16px" class="q-mr-xs" />
             รอชำระเงิน
           </q-badge>
@@ -158,7 +163,10 @@
     </div>
 
     <!-- Actions Toolbar (Hidden during print) -->
-    <div v-if="showActions" class="receipt-actions-toolbar row justify-center q-gutter-sm q-mt-md no-print">
+    <div
+      v-if="showActions"
+      class="receipt-actions-toolbar row justify-center q-gutter-sm q-mt-md no-print"
+    >
       <q-btn
         outline
         rounded
@@ -187,7 +195,13 @@
 import { computed, ref } from 'vue';
 import type { Bill, OrderWithItems } from 'src/types/database';
 import { BillStatus } from 'src/types/enums';
-import { formatPrice, formatDateTime, formatTime, formatQueueNumber, getVisibleOptions } from 'src/utils/formatters';
+import {
+  formatPrice,
+  formatDateTime,
+  formatTime,
+  formatQueueNumber,
+  getVisibleOptions,
+} from 'src/utils/formatters';
 import { useNotify } from 'src/composables/useNotify';
 
 const props = withDefaults(
@@ -221,7 +235,9 @@ const totalItemsCount = computed(() =>
   props.orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0),
 );
 
-const dateSource = computed(() => props.bill?.paid_at || props.bill?.created_at || new Date().toISOString());
+const dateSource = computed(
+  () => props.bill?.paid_at || props.bill?.created_at || new Date().toISOString(),
+);
 
 const formattedDate = computed(() => {
   try {

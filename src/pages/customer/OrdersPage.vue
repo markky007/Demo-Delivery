@@ -291,6 +291,7 @@ const allOrders = ref<OrderWithItems[]>([]);
 const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
 const isLoading = ref(true);
 let realtimeChannel: RealtimeChannel | null = null;
+let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const publicToken = computed(() => route.params.publicToken as string);
 
@@ -367,6 +368,14 @@ async function refreshData() {
   }
 }
 
+/** Debounced refresh to prevent race conditions during order updates */
+function debouncedRefresh() {
+  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+  refreshDebounceTimer = setTimeout(() => {
+    void refreshData();
+  }, 500);
+}
+
 onMounted(async () => {
   if (!sessionStore.tableSession) {
     void router.replace(`/t/${publicToken.value}`);
@@ -395,7 +404,7 @@ onMounted(async () => {
         table: 'orders',
       },
       () => {
-        void refreshData();
+        debouncedRefresh();
       },
     )
     .subscribe();
@@ -405,6 +414,7 @@ onUnmounted(() => {
   if (realtimeChannel) {
     void supabase.removeChannel(realtimeChannel);
   }
+  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
 });
 </script>
 

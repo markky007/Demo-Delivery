@@ -7,11 +7,16 @@ import { ref, computed } from 'vue';
 import type { MenuCategory, MenuItem, MenuItemWithOptions } from 'src/types/database';
 import { supabase } from 'src/services/supabase';
 
+/** In-memory cache for fetchItemWithOptions results */
+const itemWithOptionsCache = new Map<string, { data: MenuItemWithOptions; ts: number }>();
+const ITEM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export const useMenuStore = defineStore('menu', () => {
   // ─── State ───────────────────────────────────────────
   const categories = ref<MenuCategory[]>([]);
   const items = ref<MenuItem[]>([]);
   const isLoading = ref(false);
+  const isLoaded = ref(false);
   const error = ref<string | null>(null);
 
   // ─── Getters ─────────────────────────────────────────
@@ -23,8 +28,19 @@ export const useMenuStore = defineStore('menu', () => {
     items.value.filter((i) => i.is_active).sort((a, b) => a.sort_order - b.sort_order),
   );
 
+  /** Pre-computed Map for O(1) category lookups instead of filtering per call */
+  const itemsByCategoryMap = computed(() => {
+    const map = new Map<string, MenuItem[]>();
+    for (const item of activeItems.value) {
+      const list = map.get(item.category_id) || [];
+      list.push(item);
+      map.set(item.category_id, list);
+    }
+    return map;
+  });
+
   function itemsByCategory(categoryId: string): MenuItem[] {
-    return activeItems.value.filter((i) => i.category_id === categoryId);
+    return itemsByCategoryMap.value.get(categoryId) || [];
   }
 
   // ─── Actions ─────────────────────────────────────────
@@ -52,7 +68,18 @@ export const useMenuStore = defineStore('menu', () => {
     items.value = data ?? [];
   }
 
-  async function fetchItemWithOptions(itemId: string): Promise<MenuItemWithOptions | null> {
+  async function fetchItemWithOptions(
+    itemId: string,
+    skipCache = false,
+  ): Promise<MenuItemWithOptions | null> {
+    // Check in-memory cache first
+    if (!skipCache) {
+      const cached = itemWithOptionsCache.get(itemId);
+      if (cached && Date.now() - cached.ts < ITEM_CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
+
     // Fetch the menu item
     const { data: item, error: itemErr } = await supabase
       .from('menu_items')
@@ -125,16 +152,29 @@ export const useMenuStore = defineStore('menu', () => {
         return aOrder - bOrder;
       });
 
-    return { ...item, option_groups: optionGroups } as MenuItemWithOptions;
+    const result = { ...item, option_groups: optionGroups } as MenuItemWithOptions;
+    itemWithOptionsCache.set(itemId, { data: result, ts: Date.now() });
+    return result;
   }
 
-  async function loadMenu() {
+  async function loadMenu(forceReload = false) {
+    if (isLoaded.value && !forceReload) return;
     isLoading.value = true;
     error.value = null;
     try {
       await Promise.all([fetchCategories(), fetchItems()]);
+      isLoaded.value = true;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /** Invalidate item options cache (e.g., after owner edits menu) */
+  function invalidateItemCache(itemId?: string) {
+    if (itemId) {
+      itemWithOptionsCache.delete(itemId);
+    } else {
+      itemWithOptionsCache.clear();
     }
   }
 
@@ -143,15 +183,18 @@ export const useMenuStore = defineStore('menu', () => {
     categories,
     items,
     isLoading,
+    isLoaded,
     error,
     // Getters
     activeCategories,
     activeItems,
+    itemsByCategoryMap,
     itemsByCategory,
     // Actions
     fetchCategories,
     fetchItems,
     fetchItemWithOptions,
     loadMenu,
+    invalidateItemCache,
   };
 });

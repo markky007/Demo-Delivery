@@ -270,7 +270,7 @@
           v-if="order"
           v-model="showEditModal"
           :order="order"
-          @saved="refreshOrderData"
+          @saved="onOrderSaved"
         />
       </div>
     </template>
@@ -307,6 +307,7 @@ const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
 const isLoading = ref(true);
 const showEditModal = ref(false);
 let realtimeChannel: RealtimeChannel | null = null;
+let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const isEditable = computed(() => !!order.value && EditableStatuses.includes(order.value.status));
 
@@ -405,6 +406,20 @@ async function refreshOrderData() {
   }
 }
 
+/** Called after EditOrderModal saves — adds a small delay for RPC transaction to commit */
+async function onOrderSaved() {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  await refreshOrderData();
+}
+
+/** Debounced refresh to prevent race conditions from rapid realtime events */
+function debouncedRefresh() {
+  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+  refreshDebounceTimer = setTimeout(() => {
+    void refreshOrderData();
+  }, 500);
+}
+
 onMounted(async () => {
   const orderId = route.params.orderId as string;
   try {
@@ -429,7 +444,7 @@ onMounted(async () => {
         table: 'orders',
       },
       () => {
-        void refreshOrderData();
+        debouncedRefresh();
       },
     )
     .subscribe();
@@ -439,6 +454,7 @@ onUnmounted(() => {
   if (realtimeChannel) {
     void supabase.removeChannel(realtimeChannel);
   }
+  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
 });
 </script>
 

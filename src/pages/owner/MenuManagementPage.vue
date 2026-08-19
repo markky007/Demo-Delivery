@@ -873,7 +873,7 @@ const filteredItems = computed(() => {
 onMounted(async () => {
   const { data } = await supabase.from('restaurants').select('id').limit(1).single();
   if (data) restaurantId = data.id;
-  await Promise.all([menuStore.loadMenu(), loadOptionGroups(), loadItemOptionGroups()]);
+  await Promise.all([menuStore.loadMenu(true), loadOptionGroups(), loadItemOptionGroups()]);
 });
 
 // Image Upload Helpers
@@ -951,7 +951,7 @@ async function saveCategory() {
       });
     }
     showCatDialog.value = false;
-    await menuStore.loadMenu();
+    await menuStore.loadMenu(true);
     notifySuccess('บันทึกหมวดหมู่เรียบร้อยแล้ว');
   } catch (err) {
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกหมวดหมู่ได้');
@@ -1102,7 +1102,7 @@ async function saveItem() {
     }
 
     showItemDialog.value = false;
-    await Promise.all([menuStore.loadMenu(), loadItemOptionGroups()]);
+    await Promise.all([menuStore.loadMenu(true), loadItemOptionGroups()]);
     notifySuccess('บันทึกรายการอาหารเรียบร้อยแล้ว');
   } catch (err) {
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกรายการอาหารได้');
@@ -1140,7 +1140,7 @@ async function toggleAvailability(item: MenuItem) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', item.id);
-    await menuStore.loadMenu();
+    await menuStore.loadMenu(true);
     notifySuccess(
       `ปรับสถานะ "${item.name}" เป็น ${item.is_available ? 'หมดชั่วคราว' : 'พร้อมขาย'} แล้ว`,
     );

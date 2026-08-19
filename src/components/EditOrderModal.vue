@@ -692,6 +692,9 @@ async function saveOrderChanges() {
     }
 
     notifySuccess('บันทึกการแก้ไขออเดอร์เรียบร้อยแล้ว');
+    // Small delay to ensure RPC transaction has fully committed
+    // before parent refetches data (prevents stale reads / duplicate queues)
+    await new Promise((resolve) => setTimeout(resolve, 300));
     emit('saved');
     emit('update:modelValue', false);
   } catch (err) {

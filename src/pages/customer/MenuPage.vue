@@ -6,26 +6,62 @@
     </div>
 
     <template v-else>
-      <!-- Sticky Category Pills -->
+      <!-- Sticky Category Pills + Search -->
       <div class="category-tabs-wrapper">
         <div class="category-pills-container">
           <button
             v-for="cat in menuStore.activeCategories"
             :key="cat.id"
             class="category-pill"
-            :class="{ 'category-pill--active': activeCategory === cat.id }"
-            @click="activeCategory = cat.id"
+            :class="{
+              'category-pill--active': !isSearching && activeCategory === cat.id,
+            }"
+            @click="selectCategory(cat.id)"
           >
             {{ cat.name }}
           </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar-wrapper">
+          <div class="search-input-container">
+            <q-icon name="search" size="18px" class="search-icon" />
+            <input
+              v-model="searchInput"
+              type="text"
+              class="search-input"
+              placeholder="ค้นหาเมนูอาหาร..."
+              @input="onSearchInput"
+            />
+            <button
+              v-if="searchInput"
+              class="search-clear-btn"
+              @click="clearSearch"
+              aria-label="ล้างการค้นหา"
+            >
+              <q-icon name="close" size="16px" />
+            </button>
+          </div>
+          <div v-if="isSearching" class="search-result-meta">
+            พบ <strong>{{ currentItems.length }}</strong> เมนูที่ตรงกับ
+            "{{ searchQuery }}"
+          </div>
         </div>
       </div>
 
       <!-- Menu Items Grid -->
       <div class="menu-items-container q-pa-md">
-        <!-- Empty State -->
+        <!-- Empty State: search -->
         <EmptyState
-          v-if="currentItems.length === 0"
+          v-if="isSearching && currentItems.length === 0"
+          icon="search_off"
+          title="ไม่พบเมนูที่ค้นหา"
+          :description="`ไม่พบเมนูที่ตรงกับ '${searchQuery}' ลองเปลี่ยนคำค้นหาดู`"
+        />
+
+        <!-- Empty State: category -->
+        <EmptyState
+          v-else-if="!isSearching && currentItems.length === 0"
           icon="restaurant_menu"
           title="ยังไม่มีเมนูในหมวดหมู่นี้"
           description="กรุณาเลือกดูเมนูจากหมวดหมู่อื่นๆ ด้านบน"
@@ -47,6 +83,7 @@
                 :src="item.image_url"
                 :alt="item.name"
                 loading="lazy"
+                decoding="async"
                 class="menu-item-img"
               />
               <div v-else class="menu-item-placeholder">
@@ -82,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useSessionStore } from 'src/stores/sessionStore';
@@ -97,6 +134,11 @@ const menuStore = useMenuStore();
 const sessionStore = useSessionStore();
 
 const activeCategory = ref('');
+const searchInput = ref('');
+const searchQuery = ref('');
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const isSearching = computed(() => searchQuery.value.trim().length > 0);
 
 onMounted(async () => {
   if (!sessionStore.hasSession) {
@@ -112,6 +154,10 @@ onMounted(async () => {
   }
 });
 
+onUnmounted(() => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+});
+
 watch(
   () => menuStore.activeCategories,
   (cats) => {
@@ -121,9 +167,38 @@ watch(
   },
 );
 
-const currentItems = computed(() =>
-  activeCategory.value ? menuStore.itemsByCategory(activeCategory.value) : [],
-);
+// Search across all categories with debounce
+function onSearchInput() {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    searchQuery.value = searchInput.value.trim();
+  }, 300);
+}
+
+function clearSearch() {
+  searchInput.value = '';
+  searchQuery.value = '';
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+}
+
+function selectCategory(catId: string) {
+  activeCategory.value = catId;
+  // Clear search when switching categories
+  clearSearch();
+}
+
+const currentItems = computed(() => {
+  if (isSearching.value) {
+    // Search across all active items regardless of category
+    const query = searchQuery.value.toLowerCase();
+    return menuStore.activeItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) ||
+        (item.description && item.description.toLowerCase().includes(query)),
+    );
+  }
+  return activeCategory.value ? menuStore.itemsByCategory(activeCategory.value) : [];
+});
 
 function openItem(item: MenuItem) {
   const publicToken = route.params.publicToken as string;
@@ -137,7 +212,7 @@ function openItem(item: MenuItem) {
   min-height: 100vh;
 }
 
-/* Category Pills */
+/* Category Pills + Search Sticky Header */
 .category-tabs-wrapper {
   position: sticky;
   top: 54px;
@@ -185,6 +260,77 @@ function openItem(item: MenuItem) {
   border-color: var(--color-primary);
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(224, 88, 54, 0.25);
+}
+
+/* Search Bar */
+.search-bar-wrapper {
+  margin-top: 8px;
+}
+
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 0 12px;
+  height: 38px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input-container:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(224, 88, 54, 0.1);
+}
+
+.search-icon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--app-font-family);
+  font-size: 0.88rem;
+  color: var(--color-text-primary);
+  padding: 0;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.search-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: var(--color-surface-subtle);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  margin-left: 4px;
+  transition: background 0.15s ease;
+}
+
+.search-clear-btn:hover {
+  background: var(--color-border);
+}
+
+.search-result-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+  padding: 0 4px;
 }
 
 /* Menu Items */

@@ -139,11 +139,35 @@ export async function ownerAddQuickItem(
 
   const nextQueueNum = (latestOrder?.queue_number ?? 0) + 1;
 
+  // Find or create guest_session_id for the table session
+  const { data: existingGuestSession } = await supabase
+    .from('guest_sessions')
+    .select('id')
+    .eq('table_session_id', tableSessionId)
+    .limit(1)
+    .maybeSingle();
+
+  let guestSessionId = existingGuestSession?.id;
+
+  if (!guestSessionId) {
+    const { data: newGuestSession } = await supabase
+      .from('guest_sessions')
+      .insert({
+        table_session_id: tableSessionId,
+        session_token: `owner-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      })
+      .select('id')
+      .maybeSingle();
+
+    guestSessionId = newGuestSession?.id;
+  }
+
   // 2. Create order with SERVED status
   const { data: newOrder, error: orderErr } = await supabase
     .from('orders')
     .insert({
       table_session_id: tableSessionId,
+      guest_session_id: guestSessionId,
       queue_number: nextQueueNum,
       status: 'SERVED',
       total_amount: subtotal,

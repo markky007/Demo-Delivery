@@ -55,9 +55,9 @@
                 </div>
 
                 <!-- Selected Options -->
-                <div v-if="item.selected_options.length > 0" class="cart-item-options q-mt-xs">
+                <div v-if="getVisibleOptions(item.selected_options).length > 0" class="cart-item-options q-mt-xs">
                   <span
-                    v-for="opt in item.selected_options"
+                    v-for="opt in getVisibleOptions(item.selected_options)"
                     :key="opt.option_id"
                     class="option-chip"
                   >
@@ -135,7 +135,7 @@ import { useCartStore } from 'src/stores/cartStore';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
-import { formatPrice } from 'src/utils/formatters';
+import { formatPrice, getVisibleOptions } from 'src/utils/formatters';
 import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';
 import QuantityStepper from 'src/components/QuantityStepper.vue';

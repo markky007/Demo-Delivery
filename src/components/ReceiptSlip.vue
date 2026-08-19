@@ -74,11 +74,11 @@
 
             <!-- Options Breakdown -->
             <div
-              v-if="item.options && item.options.length > 0"
+              v-if="item.options && getVisibleOptions(item.options).length > 0"
               class="receipt-options-list q-pl-xs q-mt-xs"
             >
               <div
-                v-for="opt in item.options"
+                v-for="opt in getVisibleOptions(item.options)"
                 :key="opt.id"
                 class="receipt-opt-item text-caption text-grey-7"
               >
@@ -187,7 +187,7 @@
 import { computed, ref } from 'vue';
 import type { Bill, OrderWithItems } from 'src/types/database';
 import { BillStatus } from 'src/types/enums';
-import { formatPrice, formatDateTime, formatTime, formatQueueNumber } from 'src/utils/formatters';
+import { formatPrice, formatDateTime, formatTime, formatQueueNumber, getVisibleOptions } from 'src/utils/formatters';
 import { useNotify } from 'src/composables/useNotify';
 
 const props = withDefaults(
@@ -254,8 +254,9 @@ async function copyReceiptSummary() {
   for (const order of props.orders) {
     for (const item of order.items) {
       summary += `${item.snapshot_name} x${item.quantity} = ${formatPrice(item.subtotal)}\n`;
-      if (item.options && item.options.length > 0) {
-        for (const opt of item.options) {
+      const visibleOpts = getVisibleOptions(item.options);
+      if (visibleOpts.length > 0) {
+        for (const opt of visibleOpts) {
           summary += `  + ${opt.snapshot_option_name}${opt.snapshot_price_adjustment > 0 ? ` (+${formatPrice(opt.snapshot_price_adjustment)})` : ''}\n`;
         }
       }

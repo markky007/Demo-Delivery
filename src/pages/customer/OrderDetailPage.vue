@@ -85,8 +85,8 @@
                   <div class="dish-name text-weight-bold">{{ item.snapshot_name }}</div>
 
                   <!-- Options -->
-                  <div v-if="item.options.length > 0" class="dish-options q-mt-xs">
-                    <span v-for="opt in item.options" :key="opt.id" class="opt-tag">
+                  <div v-if="getVisibleOptions(item.options).length > 0" class="dish-options q-mt-xs">
+                    <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="opt-tag">
                       {{ opt.snapshot_option_name }}
                       <template v-if="opt.snapshot_price_adjustment > 0">
                         (+{{ formatPrice(opt.snapshot_price_adjustment) }})
@@ -127,7 +127,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { fetchOrder } from 'src/services/orderService';
-import { formatPrice, formatDateTime, formatQueueNumber } from 'src/utils/formatters';
+import { formatPrice, formatDateTime, formatQueueNumber, getVisibleOptions } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';

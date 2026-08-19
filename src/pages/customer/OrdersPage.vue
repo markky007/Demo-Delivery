@@ -69,9 +69,9 @@
                   </div>
 
                   <!-- Selected Options Chips -->
-                  <div v-if="item.options && item.options.length > 0" class="row items-center q-gutter-xs q-mt-none">
+                  <div v-if="item.options && getVisibleOptions(item.options).length > 0" class="row items-center q-gutter-xs q-mt-none">
                     <span
-                      v-for="opt in item.options"
+                      v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="order-opt-chip"
                     >
@@ -147,9 +147,9 @@
                   </div>
 
                   <!-- Selected Options Chips -->
-                  <div v-if="item.options && item.options.length > 0" class="row items-center q-gutter-xs q-mt-none">
+                  <div v-if="item.options && getVisibleOptions(item.options).length > 0" class="row items-center q-gutter-xs q-mt-none">
                     <span
-                      v-for="opt in item.options"
+                      v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="order-opt-chip"
                     >
@@ -203,7 +203,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { fetchSessionOrders } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
-import { formatPrice, formatTime, formatQueueNumber } from 'src/utils/formatters';
+import { formatPrice, formatTime, formatQueueNumber, getVisibleOptions } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import EmptyState from 'src/components/EmptyState.vue';

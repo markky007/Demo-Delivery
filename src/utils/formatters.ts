@@ -103,3 +103,35 @@ export function formatRemainingExpiry(expiresAt: string | null | undefined): {
   const text = mins > 0 ? `${hours} ชม. ${mins} น.` : `${hours} ชม.`;
   return { label: `ใช้ได้อีก ${text}`, isExpired: false, color: 'positive' };
 }
+
+/**
+ * Check whether an option is a default/regular portion option that should be omitted from display.
+ * (e.g. "ธรรมดา", "ปกติ", "ขนาดธรรมดา")
+ */
+export function isDefaultOptionName(name?: string | null): boolean {
+  if (!name) return false;
+  const trimmed = name.trim();
+  return (
+    trimmed === 'ธรรมดา' ||
+    trimmed === 'ปกติ' ||
+    trimmed === 'ธรรมดา (ปกติ)' ||
+    trimmed === 'ปกติ (ธรรมดา)' ||
+    trimmed === 'ขนาดธรรมดา' ||
+    trimmed === 'ไซส์ธรรมดา' ||
+    trimmed === 'จานธรรมดา'
+  );
+}
+
+/**
+ * Filter out default options (like "ธรรมดา") so that only special / non-default options are displayed.
+ */
+export function getVisibleOptions<T extends { name?: string; snapshot_option_name?: string }>(
+  options?: T[] | null,
+): T[] {
+  if (!options || !Array.isArray(options)) return [];
+  return options.filter((opt) => {
+    const name = opt.snapshot_option_name ?? opt.name;
+    return !isDefaultOptionName(name);
+  });
+}
+

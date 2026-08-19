@@ -362,11 +362,11 @@
 
                           <!-- Options / Addons List -->
                           <div
-                            v-if="item.options && item.options.length > 0"
+                            v-if="item.options && getVisibleOptions(item.options).length > 0"
                             class="chef-options-wrap q-mt-xs"
                           >
                             <span
-                              v-for="opt in item.options"
+                              v-for="opt in getVisibleOptions(item.options)"
                               :key="opt.id"
                               class="chef-option-chip"
                             >
@@ -562,10 +562,10 @@
                     </div>
                     <!-- Options -->
                     <div
-                      v-if="item.options && item.options.length > 0"
+                      v-if="item.options && getVisibleOptions(item.options).length > 0"
                       class="dish-options-line text-grey-7"
                     >
-                      <span v-for="opt in item.options" :key="opt.id" class="q-mr-xs">
+                      <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="q-mr-xs">
                         +{{ opt.snapshot_option_name }}
                       </span>
                     </div>
@@ -648,10 +648,10 @@
                     </div>
                     <!-- Options -->
                     <div
-                      v-if="item.options && item.options.length > 0"
+                      v-if="item.options && getVisibleOptions(item.options).length > 0"
                       class="dish-options-line text-grey-7"
                     >
-                      <span v-for="opt in item.options" :key="opt.id" class="q-mr-xs">
+                      <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="q-mr-xs">
                         +{{ opt.snapshot_option_name }}
                       </span>
                     </div>
@@ -730,10 +730,10 @@
                     </div>
                     <!-- Options -->
                     <div
-                      v-if="item.options && item.options.length > 0"
+                      v-if="item.options && getVisibleOptions(item.options).length > 0"
                       class="dish-options-line text-grey-7"
                     >
-                      <span v-for="opt in item.options" :key="opt.id" class="q-mr-xs">
+                      <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="q-mr-xs">
                         +{{ opt.snapshot_option_name }}
                       </span>
                     </div>
@@ -833,7 +833,7 @@ import { useQueueStore } from 'src/stores/queueStore';
 import { useNotify } from 'src/composables/useNotify';
 import { fetchTodayOrders, advanceOrderStatus } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
-import { formatQueueNumber, formatElapsed, formatTime } from 'src/utils/formatters';
+import { formatQueueNumber, formatElapsed, formatTime, getVisibleOptions } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems } from 'src/types/database';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';

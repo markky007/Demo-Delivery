@@ -49,14 +49,14 @@
 
           <div class="row q-col-gutter-sm q-mt-xs">
             <!-- Canned Soft Drink -->
-            <div class="col-12 col-sm-6">
-              <div class="drink-item-card row items-center justify-between q-pa-sm">
-                <div class="row items-center">
+            <div class="col-6">
+              <div class="drink-item-card column justify-between q-pa-sm full-height">
+                <div class="row items-center no-wrap q-mb-xs">
                   <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">
                     🥤
                   </div>
-                  <div>
-                    <div class="text-weight-bold text-body2">น้ำอัดลมกระป๋อง</div>
+                  <div class="col ellipsis">
+                    <div class="text-weight-bold text-body2 ellipsis">น้ำอัดลมกระป๋อง</div>
                     <div class="text-caption text-primary text-weight-bold font-mono">
                       {{ formatPrice(20) }}
                     </div>
@@ -70,23 +70,23 @@
                   size="sm"
                   color="primary"
                   icon="add"
-                  label="เพิ่ม 1 กป."
+                  label="+ เพิ่ม 1 กป."
                   :loading="isAddingDrink === 'can'"
                   @click="addDrinkItem('น้ำอัดลมกระป๋อง', 20, 'can')"
-                  class="q-px-sm"
+                  class="full-width q-py-xs q-mt-xs"
                 />
               </div>
             </div>
 
             <!-- Bottled Water -->
-            <div class="col-12 col-sm-6">
-              <div class="drink-item-card row items-center justify-between q-pa-sm">
-                <div class="row items-center">
+            <div class="col-6">
+              <div class="drink-item-card column justify-between q-pa-sm full-height">
+                <div class="row items-center no-wrap q-mb-xs">
                   <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">
                     💧
                   </div>
-                  <div>
-                    <div class="text-weight-bold text-body2">น้ำดื่มขวด</div>
+                  <div class="col ellipsis">
+                    <div class="text-weight-bold text-body2 ellipsis">น้ำขวด</div>
                     <div class="text-caption text-primary text-weight-bold font-mono">
                       {{ formatPrice(25) }}
                     </div>
@@ -100,10 +100,10 @@
                   size="sm"
                   color="primary"
                   icon="add"
-                  label="เพิ่ม 1 ขวด"
+                  label="+ เพิ่ม 1 ขวด"
                   :loading="isAddingDrink === 'water'"
-                  @click="addDrinkItem('น้ำดื่มขวด', 25, 'water')"
-                  class="q-px-sm"
+                  @click="addDrinkItem('น้ำขวด', 25, 'water')"
+                  class="full-width q-py-xs q-mt-xs"
                 />
               </div>
             </div>
@@ -314,12 +314,16 @@ async function handleCloseSession() {
 .drink-item-card {
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
-  transition: border-color 0.15s ease;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  min-height: 95px;
+  transition: all 0.15s ease;
 }
 
 .drink-item-card:hover {
   border-color: var(--color-primary);
+  background: #ffffff;
+  box-shadow: var(--shadow-subtle);
 }
 
 .drink-icon-wrap {

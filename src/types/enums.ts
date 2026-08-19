@@ -44,5 +44,6 @@ export const OrderTransitions: Record<OrderStatus, OrderStatus | null> = {
   [OrderStatus.SERVED]: null,
 };
 
-/** Which order statuses allow customer editing */
-export const EditableStatuses: OrderStatus[] = [OrderStatus.QUEUED, OrderStatus.PREPARING];
+/** Which order statuses allow customer editing (only before restaurant starts) */
+export const EditableStatuses: OrderStatus[] = [OrderStatus.QUEUED];
+

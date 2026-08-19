@@ -180,7 +180,43 @@
 
         <!-- Order Items Breakdown -->
         <div class="order-items-card q-mb-md">
-          <div class="text-weight-bold text-subtitle2 q-mb-sm">รายการอาหารที่สั่ง</div>
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-weight-bold text-subtitle2">รายการอาหารที่สั่ง</div>
+            <q-btn
+              v-if="isEditable"
+              unelevated
+              no-caps
+              rounded
+              color="primary"
+              size="sm"
+              class="edit-order-btn"
+              @click="showEditModal = true"
+            >
+              <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+              <span>แก้ไขออเดอร์</span>
+            </q-btn>
+          </div>
+
+          <!-- Editable Notice Banner when shop hasn't started -->
+          <div v-if="isEditable" class="editable-hint-banner q-mb-sm">
+            <div class="row items-center justify-between full-width">
+              <div class="row items-center text-caption text-primary">
+                <q-icon name="edit_note" size="16px" class="q-mr-xs flex-shrink-0" />
+                <span>ร้านยังไม่เริ่มทำ สามารถแก้ไขรายการได้</span>
+              </div>
+              <q-btn
+                flat
+                dense
+                no-caps
+                color="primary"
+                size="sm"
+                label="กดแก้ไข"
+                class="q-ml-xs text-weight-bold"
+                @click="showEditModal = true"
+              />
+            </div>
+          </div>
+
           <div class="items-list">
             <div v-for="item in order.items" :key="item.id" class="order-dish-row q-py-sm">
               <div class="row justify-between items-start">
@@ -228,6 +264,14 @@
             </span>
           </div>
         </div>
+
+        <!-- Edit Order Modal Dialog -->
+        <EditOrderModal
+          v-if="order"
+          v-model="showEditModal"
+          :order="order"
+          @saved="refreshOrderData"
+        />
       </div>
     </template>
   </q-page>
@@ -249,9 +293,10 @@ import {
   formatQueueNumber,
   getVisibleOptions,
 } from 'src/utils/formatters';
-import { OrderStatus } from 'src/types/enums';
+import { OrderStatus, EditableStatuses } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import EditOrderModal from 'src/components/EditOrderModal.vue';
 import type { OrderWithItems } from 'src/types/database';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -260,7 +305,12 @@ const route = useRoute();
 const order = ref<OrderWithItems | null>(null);
 const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
 const isLoading = ref(true);
+const showEditModal = ref(false);
 let realtimeChannel: RealtimeChannel | null = null;
+
+const isEditable = computed(
+  () => !!order.value && EditableStatuses.includes(order.value.status),
+);
 
 const queueInfo = computed(() => {
   if (!order.value) {
@@ -651,5 +701,17 @@ onUnmounted(() => {
 .dish-price {
   font-size: 0.95rem;
   color: var(--color-text-primary);
+}
+
+.edit-order-btn {
+  font-weight: 600;
+  padding: 4px 12px;
+}
+
+.editable-hint-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 6px 10px;
 }
 </style>

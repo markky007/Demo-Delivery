@@ -126,7 +126,18 @@
               <q-separator class="q-my-xs" />
 
               <div class="row items-center justify-between q-mt-xs text-caption">
-                <span class="text-grey-6">{{ formatTime(order.created_at) }}</span>
+                <div class="row items-center q-gutter-x-xs">
+                  <span class="text-grey-6">{{ formatTime(order.created_at) }}</span>
+                  <q-badge
+                    v-if="order.status === OrderStatus.QUEUED"
+                    outline
+                    color="primary"
+                    class="q-ml-xs"
+                  >
+                    <q-icon name="edit_note" size="12px" class="q-mr-xs" />
+                    แก้ไขได้
+                  </q-badge>
+                </div>
                 <div class="row items-center">
                   <span class="text-grey-7 q-mr-xs">รวมออเดอร์นี้:</span>
                   <span class="text-weight-bold text-subtitle2 text-primary">{{

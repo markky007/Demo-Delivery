@@ -235,7 +235,15 @@ async function loadData() {
 
   if (sessionData) {
     session.value = sessionData;
-    tableName.value = (sessionData as unknown as { table: { name: string } }).table?.name ?? 'โต๊ะ';
+    const rawTableName = (sessionData as unknown as { table: { name: string } }).table?.name ?? 'โต๊ะ';
+    const custName = (sessionData as unknown as { customer_name?: string }).customer_name;
+    if (custName && (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))) {
+      tableName.value = `สั่งกลับบ้าน (${custName})`;
+    } else if (custName) {
+      tableName.value = `${rawTableName} (${custName})`;
+    } else {
+      tableName.value = rawTableName;
+    }
   }
   orders.value = (ordersData ?? []) as OrderWithItems[];
 

@@ -24,9 +24,18 @@ export const useSessionStore = defineStore('session', () => {
 
   const tableName = computed(() => table.value?.name ?? '');
 
+  const customerName = computed(() => tableSession.value?.customer_name ?? '');
+
   const restaurantName = computed(() => restaurant.value?.name ?? '');
 
   // ─── Actions ─────────────────────────────────────────
+  function setTableContext(rest: Restaurant, tbl: Table, token: string) {
+    restaurant.value = rest;
+    table.value = tbl;
+    publicToken.value = token;
+    error.value = null;
+  }
+
   function setContext(
     rest: Restaurant,
     tbl: Table,
@@ -72,8 +81,10 @@ export const useSessionStore = defineStore('session', () => {
     isSessionActive,
     hasSession,
     tableName,
+    customerName,
     restaurantName,
     // Actions
+    setTableContext,
     setContext,
     clearSession,
     setError,

@@ -67,16 +67,16 @@
                 'option-row--selected': selectedOptions[group.id] === opt.id,
                 'option-row--disabled': !opt.is_available,
               }"
-              @click="opt.is_available && (selectedOptions[group.id] = opt.id)"
+              @click="toggleSingleOption(group, opt.id, opt.is_available)"
             >
               <div class="row items-center">
                 <q-radio
-                  v-model="selectedOptions[group.id]"
+                  :model-value="selectedOptions[group.id]"
                   :val="opt.id"
                   :disable="!opt.is_available"
                   color="primary"
                   dense
-                  class="q-mr-sm"
+                  class="q-mr-sm pointer-events-none"
                 />
                 <span class="option-name">{{ opt.name }}</span>
               </div>
@@ -110,8 +110,7 @@
             >
               <div class="row items-center">
                 <q-checkbox
-                  v-model="multiSelectedOptions[group.id]"
-                  :val="opt.id"
+                  :model-value="multiSelectedOptions[group.id]?.includes(opt.id)"
                   :disable="
                     !opt.is_available ||
                     (group.max_selections !== null &&
@@ -120,7 +119,7 @@
                   "
                   color="primary"
                   dense
-                  class="q-mr-sm"
+                  class="q-mr-sm pointer-events-none"
                 />
                 <span class="option-name">{{ opt.name }}</span>
               </div>
@@ -255,6 +254,22 @@ onMounted(async () => {
     }
   }
 });
+
+function toggleSingleOption(
+  group: { id: string; is_required: boolean },
+  optId: string,
+  isAvailable: boolean,
+) {
+  if (!isAvailable) return;
+
+  if (selectedOptions[group.id] === optId) {
+    if (!group.is_required) {
+      delete selectedOptions[group.id];
+    }
+  } else {
+    selectedOptions[group.id] = optId;
+  }
+}
 
 function toggleMultiOption(
   groupId: string,
@@ -507,6 +522,11 @@ function addToCart() {
 .option-row--disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.option-row :deep(.q-radio),
+.option-row :deep(.q-checkbox) {
+  pointer-events: none;
 }
 
 .option-name {

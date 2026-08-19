@@ -1081,8 +1081,17 @@ function toggleSound() {
 }
 
 function getTableName(order: OrderWithItems): string {
-  if (order.table_session?.table?.name) {
-    return order.table_session.table.name;
+  const rawName = order.table_session?.table?.name;
+  const customerName = order.table_session?.customer_name;
+
+  if (rawName) {
+    if (isTakeawayName(rawName) && customerName) {
+      return `สั่งกลับบ้าน (${customerName})`;
+    }
+    return rawName;
+  }
+  if (customerName) {
+    return `สั่งกลับบ้าน (${customerName})`;
   }
   return 'หน้าร้าน / กลับบ้าน';
 }

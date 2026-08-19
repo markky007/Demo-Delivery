@@ -30,7 +30,7 @@
               size="16px"
               class="q-mr-xs"
             />
-            <span>{{ tableName }}</span>
+            <span>{{ displayTableName }}</span>
           </div>
         </q-toolbar-title>
 
@@ -106,6 +106,15 @@ const publicToken = computed(
 );
 
 const tableName = computed(() => sessionStore.tableName || '');
+
+const displayTableName = computed(() => {
+  if (isTakeawayName(sessionStore.tableName)) {
+    return sessionStore.customerName
+      ? `สั่งกลับบ้าน • ${sessionStore.customerName}`
+      : 'สั่งกลับบ้าน (Takeaway)';
+  }
+  return sessionStore.tableName || '';
+});
 
 const pageTitle = computed(() => {
   if (route.name === 'customer-welcome') return '';

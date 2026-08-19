@@ -45,6 +45,7 @@ export interface TableQRToken {
 export interface TableSession {
   id: string;
   table_id: string;
+  customer_name?: string | null;
   status: SessionStatus;
   created_at: string;
   closed_at: string | null;
@@ -183,6 +184,7 @@ export interface MenuItemWithOptions extends MenuItem {
 export interface OrderWithItems extends Order {
   table_session?: {
     id: string;
+    customer_name?: string | null;
     table?: {
       id: string;
       name: string;

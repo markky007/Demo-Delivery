@@ -247,7 +247,7 @@
         <div v-if="filteredTableCards.length > 0" class="cards-grid">
           <div
             v-for="item in filteredTableCards"
-            :key="item.table.id"
+            :key="item.session?.id || item.table.id"
             class="table-status-card"
             :class="`table-status-card--${item.tableStatus.toLowerCase().replace(/_/g, '-')}`"
           >
@@ -262,7 +262,7 @@
                 </div>
                 <div class="q-ml-sm">
                   <div class="row items-center q-gutter-xs">
-                    <span class="table-card-title">{{ item.table.name }}</span>
+                    <span class="table-card-title">{{ item.isTakeaway && item.session?.customer_name ? `สั่งกลับบ้าน (${item.session.customer_name})` : item.table.name }}</span>
                     <q-badge
                       v-if="item.isTakeaway"
                       color="orange-9"
@@ -270,6 +270,14 @@
                       class="q-px-xs text-caption text-weight-medium"
                     >
                       กลับบ้าน
+                    </q-badge>
+                    <q-badge
+                      v-if="item.session?.customer_name"
+                      color="amber-9"
+                      rounded
+                      class="q-px-xs text-caption text-weight-bold"
+                    >
+                      {{ item.session.customer_name }}
                     </q-badge>
                   </div>
                   <div class="text-caption text-grey-6">
@@ -652,7 +660,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from 'src/services/supabase';
-import { fetchTables, generateQRToken } from 'src/services/tableService';
+import { fetchTables, generateQRToken, isTakeawayName } from 'src/services/tableService';
 import { closeTableSession } from 'src/services/sessionService';
 import {
   formatPrice,
@@ -703,6 +711,7 @@ interface RawSessionBill {
 interface RawSession {
   id: string;
   table_id: string;
+  customer_name?: string | null;
   status: string;
   created_at: string;
   table: { id: string; name: string } | null;
@@ -795,6 +804,7 @@ async function loadAllData() {
           `
           id,
           table_id,
+          customer_name,
           status,
           created_at,
           table:tables(id, name),
@@ -849,198 +859,222 @@ function setupRealtime() {
     .subscribe();
 }
 
-// Table cards mapped data with clear and rich statuses
-const tableCards = computed<TableCardItem[]>(() => {
-  return tables.value.map((table) => {
-    const isTakeaway = table.name.includes('สั่งกลับบ้าน') || table.name.toLowerCase().includes('takeaway');
-    const session = activeSessions.value.find((s) => s.table_id === table.id) ?? null;
-
-    if (!session) {
-      return {
-        table,
-        session: null,
-        tableStatus: 'AVAILABLE',
-        statusBadge: {
-          label: 'โต๊ะว่าง',
-          subLabel: 'พร้อมรับลูกค้า',
-          icon: 'chair_alt',
-          badgeClass: 'badge-status--available',
-          isPulse: false,
-          dotColor: 'grey',
-        },
-        orderCount: 0,
-        totalItemCount: 0,
-        totalAmount: 0,
-        isPaid: false,
-        isReadyToPay: false,
-        servedOrdersCount: 0,
-        preparingOrdersCount: 0,
-        queuedOrdersCount: 0,
-        servingPercentage: 0,
-        kitchenText: 'โต๊ะว่าง',
-        kitchenTextColor: 'text-grey-7',
-        kitchenIcon: 'chair_alt',
-        kitchenIconColor: 'text-grey-6',
-        progressBarColorClass: 'bg-grey-4',
-        elapsedTime: '',
-        startedAtTime: '',
-        avatarClass: 'bg-grey-2 text-grey-7',
-        isTakeaway,
-      };
-    }
-
-    const orders = session.orders || [];
-    const bill = session.bill?.[0] ?? null;
-    const orderCount = orders.length;
-
-    let totalItemCount = 0;
-    let totalOrdersAmount = 0;
-    let servedOrdersCount = 0;
-    let preparingOrdersCount = 0;
-    let queuedOrdersCount = 0;
-
-    for (const order of orders) {
-      totalOrdersAmount += order.total_amount || 0;
-      if (order.status === OrderStatus.SERVED) {
-        servedOrdersCount++;
-      } else if (order.status === OrderStatus.PREPARING || order.status === OrderStatus.PREPARED) {
-        preparingOrdersCount++;
-      } else if (order.status === OrderStatus.QUEUED) {
-        queuedOrdersCount++;
-      }
-
-      if (order.items) {
-        for (const item of order.items) {
-          totalItemCount += item.quantity || 1;
-        }
-      }
-    }
-
-    const totalAmount = bill?.total_amount || totalOrdersAmount;
-    const isPaid = bill?.status === 'PAID';
-    const allServed = orderCount > 0 && servedOrdersCount === orderCount;
-    const isReadyToPay = allServed && !isPaid;
-    const isCooking = orderCount > 0 && !allServed && !isPaid;
-    const isSeatedNoOrder = orderCount === 0 && !isPaid;
-
-    const servingPercentage = orderCount > 0 ? Math.round((servedOrdersCount / orderCount) * 100) : 0;
-
-    let tableStatus: TableOperationalStatus = 'AVAILABLE';
-    let statusBadge: StatusBadgeInfo = {
-      label: 'โต๊ะว่าง',
-      subLabel: 'พร้อมรับลูกค้า',
-      icon: 'chair_alt',
-      badgeClass: 'badge-status--available',
-      isPulse: false,
-      dotColor: 'grey',
-    };
-    let kitchenText = 'ยังไม่ได้สั่งอาหาร';
-    let kitchenTextColor = 'text-grey-7';
-    let kitchenIcon = 'pending';
-    let kitchenIconColor = 'text-grey-6';
-    let progressBarColorClass = 'bg-primary';
-    let avatarClass = 'bg-primary-soft text-primary';
-
-    if (isPaid) {
-      tableStatus = 'PAID';
-      statusBadge = {
-        label: 'ชำระแล้ว • รอเคลียร์โต๊ะ',
-        subLabel: 'พร้อมเปิดรับลูกค้าใหม่',
-        icon: 'task_alt',
-        badgeClass: 'badge-status--paid',
-        isPulse: true,
-        dotColor: 'purple',
-      };
-      kitchenText = 'ชำระเงินแล้ว (พร้อมเคลียร์โต๊ะ)';
-      kitchenTextColor = 'text-purple-9';
-      kitchenIcon = 'check_circle';
-      kitchenIconColor = 'text-purple-8';
-      progressBarColorClass = 'bg-purple-8';
-      avatarClass = 'bg-purple-1 text-purple-9';
-    } else if (isReadyToPay) {
-      tableStatus = 'READY_TO_PAY';
-      statusBadge = {
-        label: 'เสิร์ฟครบ • รอเช็กบิล',
-        subLabel: 'พร้อมรับชำระเงิน',
-        icon: 'receipt_long',
-        badgeClass: 'badge-status--ready-pay',
-        isPulse: true,
-        dotColor: 'green',
-      };
-      kitchenText = 'เสิร์ฟครบทุกรายการแล้ว';
-      kitchenTextColor = 'text-green-9';
-      kitchenIcon = 'done_all';
-      kitchenIconColor = 'text-green-8';
-      progressBarColorClass = 'bg-green-8';
-      avatarClass = 'bg-green-1 text-green-9';
-    } else if (isCooking) {
-      tableStatus = 'COOKING';
-      statusBadge = {
-        label: `กำลังทำอาหาร (${servedOrdersCount}/${orderCount})`,
-        subLabel: 'มีรายการกำลังปรุงในครัว',
-        icon: 'soup_kitchen',
-        badgeClass: 'badge-status--cooking',
-        isPulse: true,
-        dotColor: 'amber',
-      };
-
-      if (preparingOrdersCount > 0) {
-        kitchenText = `กำลังปรุงอาหารในครัว (${preparingOrdersCount} คิว)`;
-        kitchenTextColor = 'text-amber-10';
-        kitchenIcon = 'soup_kitchen';
-        kitchenIconColor = 'text-amber-9';
-        progressBarColorClass = 'bg-amber-8';
-      } else {
-        kitchenText = `มีออเดอร์ใหม่รอเริ่มทำ (${queuedOrdersCount} คิว)`;
-        kitchenTextColor = 'text-cyan-10';
-        kitchenIcon = 'schedule';
-        kitchenIconColor = 'text-cyan-8';
-        progressBarColorClass = 'bg-cyan-8';
-      }
-      avatarClass = 'bg-amber-1 text-amber-9';
-    } else if (isSeatedNoOrder) {
-      tableStatus = 'SEATED_NO_ORDER';
-      statusBadge = {
-        label: 'เปิดโต๊ะแล้ว • รอลูกค้าสั่ง',
-        subLabel: 'ลูกค้ากำลังเลือกเมนู',
-        icon: 'touch_app',
-        badgeClass: 'badge-status--seated',
-        isPulse: true,
-        dotColor: 'cyan',
-      };
-      kitchenText = 'ยังไม่มีรายการสั่งอาหาร';
-      kitchenTextColor = 'text-cyan-9';
-      kitchenIcon = 'touch_app';
-      kitchenIconColor = 'text-cyan-8';
-      progressBarColorClass = 'bg-cyan-8';
-      avatarClass = 'bg-cyan-1 text-cyan-9';
-    }
-
+function buildTableCardItem(
+  table: TableWithQR,
+  session: RawSession | null,
+  isTakeaway: boolean,
+): TableCardItem {
+  if (!session) {
     return {
       table,
-      session,
-      tableStatus,
-      statusBadge,
-      orderCount,
-      totalItemCount,
-      totalAmount,
-      isPaid,
-      isReadyToPay,
-      servedOrdersCount,
-      preparingOrdersCount,
-      queuedOrdersCount,
-      servingPercentage,
-      kitchenText,
-      kitchenTextColor,
-      kitchenIcon,
-      kitchenIconColor,
-      progressBarColorClass,
-      elapsedTime: formatElapsed(session.created_at),
-      startedAtTime: formatTime(session.created_at),
-      avatarClass,
+      session: null,
+      tableStatus: 'AVAILABLE',
+      statusBadge: {
+        label: isTakeaway ? 'พร้อมรับสั่งกลับบ้าน' : 'โต๊ะว่าง',
+        subLabel: 'พร้อมรับลูกค้า',
+        icon: isTakeaway ? 'shopping_bag' : 'chair_alt',
+        badgeClass: 'badge-status--available',
+        isPulse: false,
+        dotColor: 'grey',
+      },
+      orderCount: 0,
+      totalItemCount: 0,
+      totalAmount: 0,
+      isPaid: false,
+      isReadyToPay: false,
+      servedOrdersCount: 0,
+      preparingOrdersCount: 0,
+      queuedOrdersCount: 0,
+      servingPercentage: 0,
+      kitchenText: isTakeaway ? 'ยังไม่มีออเดอร์กลับบ้าน' : 'โต๊ะว่าง',
+      kitchenTextColor: 'text-grey-7',
+      kitchenIcon: isTakeaway ? 'shopping_bag' : 'chair_alt',
+      kitchenIconColor: 'text-grey-6',
+      progressBarColorClass: 'bg-grey-4',
+      elapsedTime: '',
+      startedAtTime: '',
+      avatarClass: isTakeaway ? 'bg-orange-1 text-orange-9' : 'bg-grey-2 text-grey-7',
       isTakeaway,
     };
-  });
+  }
+
+  const orders = session.orders || [];
+  const bill = session.bill?.[0] ?? null;
+  const orderCount = orders.length;
+
+  let totalItemCount = 0;
+  let totalOrdersAmount = 0;
+  let servedOrdersCount = 0;
+  let preparingOrdersCount = 0;
+  let queuedOrdersCount = 0;
+
+  for (const order of orders) {
+    totalOrdersAmount += order.total_amount || 0;
+    if (order.status === OrderStatus.SERVED) {
+      servedOrdersCount++;
+    } else if (order.status === OrderStatus.PREPARING || order.status === OrderStatus.PREPARED) {
+      preparingOrdersCount++;
+    } else if (order.status === OrderStatus.QUEUED) {
+      queuedOrdersCount++;
+    }
+
+    if (order.items) {
+      for (const item of order.items) {
+        totalItemCount += item.quantity || 1;
+      }
+    }
+  }
+
+  const totalAmount = bill?.total_amount || totalOrdersAmount;
+  const isPaid = bill?.status === 'PAID';
+  const allServed = orderCount > 0 && servedOrdersCount === orderCount;
+  const isReadyToPay = allServed && !isPaid;
+  const isCooking = orderCount > 0 && !allServed && !isPaid;
+  const isSeatedNoOrder = orderCount === 0 && !isPaid;
+
+  const servingPercentage = orderCount > 0 ? Math.round((servedOrdersCount / orderCount) * 100) : 0;
+
+  let tableStatus: TableOperationalStatus = 'AVAILABLE';
+  let statusBadge: StatusBadgeInfo = {
+    label: 'โต๊ะว่าง',
+    subLabel: 'พร้อมรับลูกค้า',
+    icon: 'chair_alt',
+    badgeClass: 'badge-status--available',
+    isPulse: false,
+    dotColor: 'grey',
+  };
+  let kitchenText = 'ยังไม่ได้สั่งอาหาร';
+  let kitchenTextColor = 'text-grey-7';
+  let kitchenIcon = 'pending';
+  let kitchenIconColor = 'text-grey-6';
+  let progressBarColorClass = 'bg-primary';
+  let avatarClass = isTakeaway ? 'bg-orange-1 text-orange-9' : 'bg-primary-soft text-primary';
+
+  if (isPaid) {
+    tableStatus = 'PAID';
+    statusBadge = {
+      label: isTakeaway ? 'ชำระแล้ว • รอรับอาหารกลับ' : 'ชำระแล้ว • รอเคลียร์โต๊ะ',
+      subLabel: 'พร้อมปิดรายการ',
+      icon: 'task_alt',
+      badgeClass: 'badge-status--paid',
+      isPulse: true,
+      dotColor: 'purple',
+    };
+    kitchenText = 'ชำระเงินแล้ว';
+    kitchenTextColor = 'text-purple-9';
+    kitchenIcon = 'check_circle';
+    kitchenIconColor = 'text-purple-8';
+    progressBarColorClass = 'bg-purple-8';
+    avatarClass = 'bg-purple-1 text-purple-9';
+  } else if (isReadyToPay) {
+    tableStatus = 'READY_TO_PAY';
+    statusBadge = {
+      label: isTakeaway ? 'ทำเสร็จครบ • รอชำระเงิน' : 'เสิร์ฟครบ • รอเช็กบิล',
+      subLabel: 'พร้อมรับชำระเงิน',
+      icon: 'receipt_long',
+      badgeClass: 'badge-status--ready-pay',
+      isPulse: true,
+      dotColor: 'green',
+    };
+    kitchenText = isTakeaway ? 'อาหารปรุงเสร็จครบทุกรายการแล้ว' : 'เสิร์ฟครบทุกรายการแล้ว';
+    kitchenTextColor = 'text-green-9';
+    kitchenIcon = 'done_all';
+    kitchenIconColor = 'text-green-8';
+    progressBarColorClass = 'bg-green-8';
+    avatarClass = 'bg-green-1 text-green-9';
+  } else if (isCooking) {
+    tableStatus = 'COOKING';
+    statusBadge = {
+      label: `กำลังทำอาหาร (${servedOrdersCount}/${orderCount})`,
+      subLabel: 'มีรายการกำลังปรุงในครัว',
+      icon: 'soup_kitchen',
+      badgeClass: 'badge-status--cooking',
+      isPulse: true,
+      dotColor: 'amber',
+    };
+
+    if (preparingOrdersCount > 0) {
+      kitchenText = `กำลังปรุงอาหารในครัว (${preparingOrdersCount} คิว)`;
+      kitchenTextColor = 'text-amber-10';
+      kitchenIcon = 'soup_kitchen';
+      kitchenIconColor = 'text-amber-9';
+      progressBarColorClass = 'bg-amber-8';
+    } else {
+      kitchenText = `มีออเดอร์ใหม่รอเริ่มทำ (${queuedOrdersCount} คิว)`;
+      kitchenTextColor = 'text-cyan-10';
+      kitchenIcon = 'schedule';
+      kitchenIconColor = 'text-cyan-8';
+      progressBarColorClass = 'bg-cyan-8';
+    }
+    avatarClass = 'bg-amber-1 text-amber-9';
+  } else if (isSeatedNoOrder) {
+    tableStatus = 'SEATED_NO_ORDER';
+    statusBadge = {
+      label: isTakeaway ? 'เปิดรายการแล้ว • รอลูกค้าสั่ง' : 'เปิดโต๊ะแล้ว • รอลูกค้าสั่ง',
+      subLabel: 'ลูกค้ากำลังเลือกเมนู',
+      icon: 'touch_app',
+      badgeClass: 'badge-status--seated',
+      isPulse: true,
+      dotColor: 'cyan',
+    };
+    kitchenText = 'ยังไม่มีรายการสั่งอาหาร';
+    kitchenTextColor = 'text-cyan-9';
+    kitchenIcon = 'touch_app';
+    kitchenIconColor = 'text-cyan-8';
+    progressBarColorClass = 'bg-cyan-8';
+    avatarClass = 'bg-cyan-1 text-cyan-9';
+  }
+
+  return {
+    table,
+    session,
+    tableStatus,
+    statusBadge,
+    orderCount,
+    totalItemCount,
+    totalAmount,
+    isPaid,
+    isReadyToPay,
+    servedOrdersCount,
+    preparingOrdersCount,
+    queuedOrdersCount,
+    servingPercentage,
+    kitchenText,
+    kitchenTextColor,
+    kitchenIcon,
+    kitchenIconColor,
+    progressBarColorClass,
+    elapsedTime: formatElapsed(session.created_at),
+    startedAtTime: formatTime(session.created_at),
+    avatarClass,
+    isTakeaway,
+  };
+}
+
+// Table cards mapped data with clear and rich statuses
+const tableCards = computed<TableCardItem[]>(() => {
+  const cards: TableCardItem[] = [];
+
+  for (const table of tables.value) {
+    const isTakeaway = isTakeawayName(table.name);
+
+    if (isTakeaway) {
+      const takeawaySessions = activeSessions.value.filter((s) => s.table_id === table.id);
+
+      if (takeawaySessions.length > 0) {
+        for (const session of takeawaySessions) {
+          cards.push(buildTableCardItem(table, session, isTakeaway));
+        }
+      } else {
+        cards.push(buildTableCardItem(table, null, isTakeaway));
+      }
+    } else {
+      const session = activeSessions.value.find((s) => s.table_id === table.id) ?? null;
+      cards.push(buildTableCardItem(table, session, isTakeaway));
+    }
+  }
+
+  return cards;
 });
 
 // Top Overview Stats Computed

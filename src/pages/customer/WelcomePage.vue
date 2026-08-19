@@ -34,13 +34,50 @@
         <span>{{ isTakeaway ? 'สั่งกลับบ้าน (Takeaway)' : sessionStore.tableName }}</span>
       </div>
 
-      <p class="welcome-tagline text-grey-7 q-mb-xl">
+      <p class="welcome-tagline text-grey-7 q-mb-md">
         {{
           isTakeaway
-            ? 'เลือกเมนูอร่อยและสั่งนำกลับบ้านได้ทันที'
+            ? 'ระบุชื่อของคุณเพื่อเปิดรายการสั่งกลับบ้านและรับอาหาร'
             : 'พร้อมสั่งอาหารแล้วหรือยัง? เลือกเมนูอร่อยได้ทันที'
         }}
       </p>
+
+      <!-- Customer Name Input for Takeaway -->
+      <div v-if="isTakeaway" class="welcome-name-container full-width q-mb-lg text-left">
+        <label class="welcome-input-label q-mb-xs block">
+          <q-icon name="badge" size="18px" class="q-mr-xs text-orange-9" />
+          <span class="text-weight-bold text-grey-9">ชื่อลูกค้า / ผู้สั่งอาหาร</span>
+          <span class="text-negative text-weight-bold q-ml-xs">*</span>
+        </label>
+        <q-input
+          v-model="customerName"
+          outlined
+          dense
+          placeholder="เช่น คุณสมชาย, คุณแอน"
+          class="welcome-name-input"
+          bg-color="white"
+          :error="nameError"
+          error-message="กรุณาระบุชื่อของคุณก่อนเริ่มสั่งอาหาร"
+          :disable="isJoining"
+          @keyup.enter="startOrdering"
+          @update:model-value="nameError = false"
+        >
+          <template #prepend>
+            <q-icon name="person" color="grey-6" size="20px" />
+          </template>
+        </q-input>
+        <div class="text-caption text-grey-6 q-mt-xs">
+          💡 ใช้สำหรับเรียกคิวและพิมพ์ในใบเสร็จรับอาหาร
+        </div>
+      </div>
+
+      <!-- Existing Active Session Notice if any -->
+      <div v-if="hasActiveGuestSession && isTakeaway" class="active-session-hint q-mb-md full-width">
+        <q-icon name="history" size="18px" color="orange-9" class="q-mr-xs" />
+        <span class="text-caption text-orange-9">
+          คุณมีรายการสั่งในชื่อ <strong>{{ activeSessionCustomerName }}</strong> กำลังดำเนินการอยู่
+        </span>
+      </div>
 
       <q-btn
         color="primary"
@@ -52,7 +89,7 @@
         :loading="isJoining"
       >
         <q-icon :name="isTakeaway ? 'shopping_bag' : 'restaurant_menu'" class="q-mr-sm" />
-        <span>{{ isTakeaway ? 'เริ่มสั่งกลับบ้าน' : 'เริ่มสั่งอาหาร' }}</span>
+        <span>{{ startButtonLabel }}</span>
       </q-btn>
     </div>
   </q-page>
@@ -64,9 +101,15 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useCartStore } from 'src/stores/cartStore';
 import { resolveTableFromToken, isTakeawayName } from 'src/services/tableService';
-import { joinOrCreateSession, getOrCreateGuestToken } from 'src/services/sessionService';
+import {
+  joinOrCreateSession,
+  createTakeawaySession,
+  getActiveTakeawaySessionForGuest,
+  getOrCreateGuestToken,
+} from 'src/services/sessionService';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import logoSvg from 'src/assets/logo.svg';
+import type { TableSession, GuestSession } from 'src/types/database';
 
 const route = useRoute();
 const router = useRouter();
@@ -77,9 +120,26 @@ const isTakeaway = computed(() => isTakeawayName(sessionStore.tableName));
 
 const isLoading = ref(true);
 const isJoining = ref(false);
+const customerName = ref('');
+const nameError = ref(false);
 const errorMessage = ref('');
 const errorDescription = ref('');
 const errorIcon = ref('error_outline');
+
+const hasActiveGuestSession = ref(false);
+const activeSessionCustomerName = ref('');
+let existingActiveTableSession: TableSession | null = null;
+let existingActiveGuestSession: GuestSession | null = null;
+
+const startButtonLabel = computed(() => {
+  if (isTakeaway.value) {
+    if (hasActiveGuestSession.value) {
+      return 'เข้าสู่เมนูสั่งอาหารต่อ';
+    }
+    return 'เริ่มสั่งกลับบ้าน';
+  }
+  return 'เริ่มสั่งอาหาร';
+});
 
 onMounted(async () => {
   const publicToken = route.params.publicToken as string;
@@ -120,18 +180,23 @@ onMounted(async () => {
       return;
     }
 
+    // Set restaurant and table metadata in store WITHOUT creating any session in DB yet
+    sessionStore.setTableContext(result.restaurant, result.table, publicToken);
+
+    // Check if this guest already has an active takeaway session in progress (e.g. refreshed page)
     const guestToken = getOrCreateGuestToken();
-    const { tableSession, guestSession } = await joinOrCreateSession(result.table.id, guestToken);
+    const isTakeawayTable = isTakeawayName(result.table.name);
 
-    sessionStore.setContext(
-      result.restaurant,
-      result.table,
-      tableSession,
-      guestSession,
-      publicToken,
-    );
-
-    cartStore.initForSession(tableSession.id);
+    if (isTakeawayTable) {
+      const activeTakeaway = await getActiveTakeawaySessionForGuest(result.table.id, guestToken);
+      if (activeTakeaway) {
+        hasActiveGuestSession.value = true;
+        existingActiveTableSession = activeTakeaway.tableSession;
+        existingActiveGuestSession = activeTakeaway.guestSession;
+        activeSessionCustomerName.value = activeTakeaway.tableSession.customer_name || '';
+        customerName.value = activeSessionCustomerName.value;
+      }
+    }
   } catch (err) {
     errorMessage.value = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
     errorDescription.value = 'ไม่สามารถโหลดข้อมูลโต๊ะอาหารได้ กรุณาสแกนใหม่อีกครั้ง';
@@ -143,9 +208,85 @@ onMounted(async () => {
 });
 
 async function startOrdering() {
-  isJoining.value = true;
+  if (!sessionStore.table || !sessionStore.restaurant) return;
+
   const publicToken = route.params.publicToken as string;
-  await router.push(`/t/${publicToken}/menu`);
+  const guestToken = getOrCreateGuestToken();
+
+  try {
+    isJoining.value = true;
+
+    if (isTakeaway.value) {
+      // If customer already has an active session and hasn't changed their name, reuse existing session
+      if (
+        hasActiveGuestSession.value &&
+        existingActiveTableSession &&
+        existingActiveGuestSession &&
+        customerName.value.trim() === activeSessionCustomerName.value
+      ) {
+        sessionStore.setContext(
+          sessionStore.restaurant,
+          sessionStore.table,
+          existingActiveTableSession,
+          existingActiveGuestSession,
+          publicToken,
+        );
+        cartStore.initForSession(existingActiveTableSession.id);
+        await router.push(`/t/${publicToken}/menu`);
+        return;
+      }
+
+      // Validate customer name
+      const trimmedName = customerName.value.trim();
+      if (!trimmedName) {
+        nameError.value = true;
+        isJoining.value = false;
+        return;
+      }
+
+      // Create a NEW takeaway session specifically for this customer
+      const { tableSession, guestSession } = await createTakeawaySession(
+        sessionStore.table.id,
+        guestToken,
+        trimmedName,
+      );
+
+      sessionStore.setContext(
+        sessionStore.restaurant,
+        sessionStore.table,
+        tableSession,
+        guestSession,
+        publicToken,
+      );
+
+      cartStore.initForSession(tableSession.id);
+      await router.push(`/t/${publicToken}/menu`);
+    } else {
+      // Regular Dine-in table session
+      const { tableSession, guestSession } = await joinOrCreateSession(
+        sessionStore.table.id,
+        guestToken,
+      );
+
+      sessionStore.setContext(
+        sessionStore.restaurant,
+        sessionStore.table,
+        tableSession,
+        guestSession,
+        publicToken,
+      );
+
+      cartStore.initForSession(tableSession.id);
+      await router.push(`/t/${publicToken}/menu`);
+    }
+  } catch (err) {
+    console.error('Failed to start ordering session:', err);
+    errorMessage.value = 'เกิดข้อผิดพลาดในการเริ่มต้นสั่งอาหาร';
+    errorDescription.value = 'ไม่สามารถสร้างรอบการสั่งอาหารได้ กรุณาลองใหม่อีกครั้ง';
+    errorIcon.value = 'error_outline';
+  } finally {
+    isJoining.value = false;
+  }
 }
 </script>
 
@@ -157,7 +298,7 @@ async function startOrdering() {
 
 .welcome-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   background: #ffffff;
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
@@ -218,6 +359,31 @@ async function startOrdering() {
 .welcome-tagline {
   font-size: 0.95rem;
   line-height: 1.5;
+}
+
+.welcome-name-container {
+  background: #fdfbf7;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed #fed7aa;
+}
+
+.welcome-input-label {
+  font-size: 0.9rem;
+}
+
+.welcome-name-input :deep(.q-field__control) {
+  border-radius: var(--radius-md);
+}
+
+.active-session-hint {
+  background: #fff7ed;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .welcome-start-btn {

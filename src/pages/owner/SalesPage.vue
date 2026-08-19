@@ -253,6 +253,7 @@ async function loadSales() {
       `
       *,
       table_session:table_sessions (
+        customer_name,
         table:tables(name)
       )
     `,
@@ -270,16 +271,27 @@ async function loadSales() {
 
   interface SupabaseBillWithTable extends BillRow {
     table_session?: {
+      customer_name?: string | null;
       table?: {
         name?: string;
       } | null;
     } | null;
   }
 
-  bills.value = ((data ?? []) as unknown as SupabaseBillWithTable[]).map((b) => ({
-    ...b,
-    table_name: b.table_session?.table?.name ?? 'โต๊ะ',
-  }));
+  bills.value = ((data ?? []) as unknown as SupabaseBillWithTable[]).map((b) => {
+    const rawTableName = b.table_session?.table?.name ?? 'โต๊ะ';
+    const custName = b.table_session?.customer_name;
+    let displayName = rawTableName;
+    if (custName && (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))) {
+      displayName = `สั่งกลับบ้าน (${custName})`;
+    } else if (custName) {
+      displayName = `${rawTableName} (${custName})`;
+    }
+    return {
+      ...b,
+      table_name: displayName,
+    };
+  });
 
   isLoading.value = false;
 }

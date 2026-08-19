@@ -93,6 +93,7 @@ export async function fetchTodayOrders(): Promise<OrderWithItems[]> {
       *,
       table_session:table_sessions (
         id,
+        customer_name,
         table:tables (
           id,
           name
@@ -122,6 +123,7 @@ export async function fetchOrder(orderId: string): Promise<OrderWithItems | null
       *,
       table_session:table_sessions (
         id,
+        customer_name,
         table:tables (
           id,
           name

@@ -19,6 +19,82 @@ export function getOrCreateGuestToken(): string {
 }
 
 /**
+ * Create a new distinct takeaway table session with customer name.
+ */
+export async function createTakeawaySession(
+  tableId: string,
+  guestToken: string,
+  customerName: string,
+): Promise<{ tableSession: TableSession; guestSession: GuestSession }> {
+  // 1. Create new takeaway session with customer name
+  const { data: newSession, error: sessionErr } = await supabase
+    .from('table_sessions')
+    .insert({
+      table_id: tableId,
+      customer_name: customerName.trim(),
+      status: SessionStatus.ACTIVE,
+    })
+    .select()
+    .single();
+
+  if (sessionErr || !newSession) {
+    throw new Error(sessionErr?.message ?? 'Failed to create takeaway session');
+  }
+
+  const tableSession = newSession as TableSession;
+
+  // 2. Create guest session linked to this takeaway session
+  const { data: newGuest, error: guestErr } = await supabase
+    .from('guest_sessions')
+    .insert({
+      table_session_id: tableSession.id,
+      session_token: guestToken,
+    })
+    .select()
+    .single();
+
+  if (guestErr || !newGuest) {
+    throw new Error(guestErr?.message ?? 'Failed to create guest session');
+  }
+
+  const guestSession = newGuest as GuestSession;
+
+  return { tableSession, guestSession };
+}
+
+/**
+ * Check if the guest already has an active takeaway session in progress.
+ */
+export async function getActiveTakeawaySessionForGuest(
+  tableId: string,
+  guestToken: string,
+): Promise<{ tableSession: TableSession; guestSession: GuestSession } | null> {
+  const { data: guestSessions } = await supabase
+    .from('guest_sessions')
+    .select('*, table_session:table_sessions(*)')
+    .eq('session_token', guestToken)
+    .order('created_at', { ascending: false });
+
+  if (!guestSessions || guestSessions.length === 0) return null;
+
+  for (const item of guestSessions) {
+    const ts = (item as unknown as { table_session: TableSession | null }).table_session;
+    if (ts && ts.table_id === tableId && ts.status === SessionStatus.ACTIVE) {
+      const guestSession: GuestSession = {
+        id: item.id,
+        table_session_id: item.table_session_id,
+        session_token: item.session_token,
+        created_at: item.created_at,
+        last_seen_at: item.last_seen_at,
+      };
+      return { tableSession: ts, guestSession };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Join or create a table session and guest session.
  * - If the table has an active session, join it.
  * - Otherwise, create a new one.

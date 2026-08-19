@@ -135,6 +135,21 @@
                     />
                     <q-badge v-if="!item.is_active" color="grey-5" label="ปิดการใช้งาน" />
                   </div>
+
+                  <!-- Option Groups preview tags on card -->
+                  <div
+                    v-if="getItemOptionGroupNames(item.id).length > 0"
+                    class="item-opt-tags-wrap q-mt-xs"
+                  >
+                    <span
+                      v-for="gName in getItemOptionGroupNames(item.id)"
+                      :key="gName"
+                      class="item-opt-tag"
+                    >
+                      <q-icon name="tune" size="10px" class="q-mr-xs" />
+                      {{ gName }}
+                    </span>
+                  </div>
                 </div>
 
                 <!-- Action Controls -->
@@ -388,6 +403,121 @@
               />
             </div>
 
+            <!-- Option Groups Selector Section -->
+            <div class="option-groups-section">
+              <div class="row items-center justify-between q-mb-xs">
+                <div class="field-label text-weight-bold row items-center">
+                  <q-icon name="tune" size="18px" color="primary" class="q-mr-xs" />
+                  <span>กลุ่มตัวเลือกเสริม (Option Groups)</span>
+                </div>
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  color="primary"
+                  icon="open_in_new"
+                  label="จัดการตัวเลือก"
+                  size="sm"
+                  to="/owner/options"
+                  class="manage-options-link"
+                />
+              </div>
+              <p class="text-caption text-grey-6 q-mb-sm">
+                เลือกกลุ่มตัวเลือกที่เปิดให้ลูกค้าเลือกเพิ่มเติมสำหรับเมนูนี้
+              </p>
+
+              <!-- Loading state for option groups -->
+              <div v-if="isLoadingOptionGroups" class="q-py-md text-center">
+                <q-spinner color="primary" size="24px" />
+                <div class="text-caption text-grey-6 q-mt-xs">กำลังโหลดกลุ่มตัวเลือก...</div>
+              </div>
+
+              <!-- Empty state when no option groups exist in restaurant -->
+              <div
+                v-else-if="allOptionGroups.length === 0"
+                class="no-options-hint q-pa-md text-center"
+              >
+                <q-icon name="tune" size="32px" color="grey-4" class="q-mb-xs" />
+                <div class="text-weight-medium text-caption text-grey-8">
+                  ยังไม่มีการสร้างกลุ่มตัวเลือกในระบบ
+                </div>
+                <div class="text-caption text-grey-6 q-mt-xs">
+                  สร้างกลุ่มตัวเลือกก่อน เช่น ระดับความเผ็ด, เพิ่มไข่ดาว, ระดับความหวาน
+                </div>
+                <q-btn
+                  outline
+                  dense
+                  no-caps
+                  color="primary"
+                  icon="add"
+                  label="ไปสร้างกลุ่มตัวเลือกใหม่"
+                  to="/owner/options"
+                  class="q-mt-sm"
+                  size="sm"
+                />
+              </div>
+
+              <!-- Option Groups Selection Cards List -->
+              <div v-else class="option-groups-grid q-gutter-y-xs">
+                <div
+                  v-for="group in allOptionGroups"
+                  :key="group.id"
+                  class="option-group-card-choice"
+                  :class="{
+                    'option-group-card-choice--selected': selectedOptionGroupIds.includes(group.id),
+                  }"
+                  @click="toggleOptionGroup(group.id)"
+                >
+                  <div class="row items-center justify-between no-wrap">
+                    <div class="row items-center no-wrap col">
+                      <q-checkbox
+                        :model-value="selectedOptionGroupIds.includes(group.id)"
+                        @update:model-value="toggleOptionGroup(group.id)"
+                        color="primary"
+                        dense
+                        class="q-mr-sm"
+                        @click.stop
+                      />
+                      <div class="col ellipsis">
+                        <div class="row items-center q-gutter-xs flex-wrap">
+                          <span class="text-weight-bold text-body2 group-name-title">{{
+                            group.name
+                          }}</span>
+                          <span
+                            class="opt-badge"
+                            :class="
+                              group.selection_type === 'single'
+                                ? 'opt-badge--single'
+                                : 'opt-badge--multi'
+                            "
+                          >
+                            {{
+                              group.selection_type === 'single'
+                                ? 'เลือก 1 อย่าง'
+                                : 'เลือกได้หลายอย่าง'
+                            }}
+                          </span>
+                          <span v-if="group.is_required" class="opt-badge opt-badge--required">
+                            จำเป็นต้องเลือก
+                          </span>
+                        </div>
+                        <div
+                          v-if="group.options.length > 0"
+                          class="text-caption text-grey-7 ellipsis q-mt-xs"
+                        >
+                          <span class="text-grey-5">ตัวเลือก: </span>
+                          <span>{{ group.options.map((o) => o.name).join(', ') }}</span>
+                        </div>
+                        <div v-else class="text-caption text-grey-5 q-mt-xs">
+                          (ยังไม่มีตัวเลือกย่อยในกลุ่มนี้)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="row items-center justify-between">
               <q-toggle
                 v-model="itemForm.is_available"
@@ -425,7 +555,11 @@ import { uploadMenuImage, createLocalPreviewUrl } from 'src/services/storageServ
 import { formatPrice } from 'src/utils/formatters';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
-import type { MenuCategory, MenuItem } from 'src/types/database';
+import type { MenuCategory, MenuItem, OptionGroup, Option } from 'src/types/database';
+
+export interface OptionGroupWithSubOptions extends OptionGroup {
+  options: Option[];
+}
 
 const menuStore = useMenuStore();
 const { notifySuccess, notifyError } = useNotify();
@@ -439,6 +573,12 @@ const isSaving = ref(false);
 const isUploading = ref(false);
 const editingCategory = ref<MenuCategory | null>(null);
 const editingItem = ref<MenuItem | null>(null);
+
+// Option Groups State
+const allOptionGroups = ref<OptionGroupWithSubOptions[]>([]);
+const itemOptionGroupMap = ref<Record<string, string[]>>({});
+const selectedOptionGroupIds = ref<string[]>([]);
+const isLoadingOptionGroups = ref(false);
 
 // File input refs for image upload
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -471,6 +611,82 @@ function getItemCountByCategory(catId: string | null): number {
   return menuStore.items.filter((i) => i.category_id === catId).length;
 }
 
+function getItemOptionGroupNames(itemId: string): string[] {
+  const groupIds = itemOptionGroupMap.value[itemId] || [];
+  return groupIds
+    .map((gid) => allOptionGroups.value.find((g) => g.id === gid)?.name)
+    .filter((name): name is string => Boolean(name));
+}
+
+function toggleOptionGroup(groupId: string) {
+  const idx = selectedOptionGroupIds.value.indexOf(groupId);
+  if (idx > -1) {
+    selectedOptionGroupIds.value.splice(idx, 1);
+  } else {
+    selectedOptionGroupIds.value.push(groupId);
+  }
+}
+
+async function loadOptionGroups() {
+  isLoadingOptionGroups.value = true;
+  try {
+    const { data: groups, error: gErr } = await supabase
+      .from('option_groups')
+      .select('*')
+      .order('sort_order');
+
+    if (gErr || !groups) {
+      allOptionGroups.value = [];
+      return;
+    }
+
+    const groupIds = groups.map((g) => g.id);
+    if (groupIds.length === 0) {
+      allOptionGroups.value = [];
+      return;
+    }
+
+    const { data: optionsData } = await supabase
+      .from('options')
+      .select('*')
+      .in('option_group_id', groupIds)
+      .order('sort_order');
+
+    allOptionGroups.value = groups.map((g) => ({
+      ...g,
+      options: (optionsData ?? []).filter((o) => o.option_group_id === g.id),
+    }));
+  } catch (err) {
+    console.error('Failed to load option groups:', err);
+  } finally {
+    isLoadingOptionGroups.value = false;
+  }
+}
+
+async function loadItemOptionGroups() {
+  try {
+    const { data, error: err } = await supabase
+      .from('menu_item_option_groups')
+      .select('menu_item_id, option_group_id, sort_order')
+      .order('sort_order');
+
+    if (err || !data) return;
+
+    const map: Record<string, string[]> = {};
+    data.forEach((row) => {
+      if (row.menu_item_id && row.option_group_id) {
+        if (!map[row.menu_item_id]) {
+          map[row.menu_item_id] = [];
+        }
+        map[row.menu_item_id]!.push(row.option_group_id);
+      }
+    });
+    itemOptionGroupMap.value = map;
+  } catch (err) {
+    console.error('Failed to load menu item option group mappings:', err);
+  }
+}
+
 function clearFilters() {
   filterCategory.value = null;
   searchQuery.value = '';
@@ -498,7 +714,7 @@ const filteredItems = computed(() => {
 onMounted(async () => {
   const { data } = await supabase.from('restaurants').select('id').limit(1).single();
   if (data) restaurantId = data.id;
-  await menuStore.loadMenu();
+  await Promise.all([menuStore.loadMenu(), loadOptionGroups(), loadItemOptionGroups()]);
 });
 
 // Image Upload Helpers
@@ -588,6 +804,7 @@ async function saveCategory() {
 function openAddItemDialog() {
   editingItem.value = null;
   resetItemForm();
+  selectedOptionGroupIds.value = [];
   if (menuStore.categories.length > 0) {
     itemForm.category_id = menuStore.categories[0]?.id ?? '';
   }
@@ -606,6 +823,8 @@ function editItem(item: MenuItem) {
 
   pendingImageFile.value = null;
   previewImageUrl.value = item.image_url ?? '';
+
+  selectedOptionGroupIds.value = [...(itemOptionGroupMap.value[item.id] || [])];
 
   showItemDialog.value = true;
 }
@@ -643,15 +862,46 @@ async function saveItem() {
       updated_at: new Date().toISOString(),
     };
 
+    let targetItemId = editingItem.value?.id;
+
     if (editingItem.value) {
       await supabase.from('menu_items').update(payload).eq('id', editingItem.value.id);
     } else {
       const maxOrder = Math.max(0, ...menuStore.items.map((i) => i.sort_order)) + 1;
-      await supabase.from('menu_items').insert({ ...payload, sort_order: maxOrder });
+      const { data: insertedItem, error: insertErr } = await supabase
+        .from('menu_items')
+        .insert({ ...payload, sort_order: maxOrder })
+        .select('id')
+        .single();
+      if (insertErr || !insertedItem) {
+        throw insertErr || new Error('ไม่สามารถเพิ่มรายการอาหารได้');
+      }
+      targetItemId = insertedItem.id;
+    }
+
+    // Sync menu_item_option_groups
+    if (targetItemId) {
+      // 1. Remove existing linked option groups for this menu item
+      await supabase.from('menu_item_option_groups').delete().eq('menu_item_id', targetItemId);
+
+      // 2. Insert newly selected option groups
+      if (selectedOptionGroupIds.value.length > 0) {
+        const rowsToInsert = selectedOptionGroupIds.value.map((groupId, index) => ({
+          menu_item_id: targetItemId,
+          option_group_id: groupId,
+          sort_order: index + 1,
+        }));
+        const { error: linkErr } = await supabase
+          .from('menu_item_option_groups')
+          .insert(rowsToInsert);
+        if (linkErr) {
+          console.error('Failed to link option groups to menu item:', linkErr);
+        }
+      }
     }
 
     showItemDialog.value = false;
-    await menuStore.loadMenu();
+    await Promise.all([menuStore.loadMenu(), loadItemOptionGroups()]);
     notifySuccess('บันทึกรายการอาหารเรียบร้อยแล้ว');
   } catch (err) {
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกรายการอาหารได้');
@@ -671,6 +921,7 @@ function resetItemForm() {
   itemForm.is_available = true;
   pendingImageFile.value = null;
   previewImageUrl.value = '';
+  selectedOptionGroupIds.value = [];
 }
 
 async function toggleAvailability(item: MenuItem) {
@@ -933,5 +1184,88 @@ async function toggleAvailability(item: MenuItem) {
   backdrop-filter: blur(4px);
   padding: 6px 10px;
   border-radius: var(--radius-pill);
+}
+
+/* Option Group Selector in Dialog */
+.option-groups-section {
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.manage-options-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.no-options-hint {
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+}
+
+.option-group-card-choice {
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.option-group-card-choice:hover {
+  border-color: var(--color-primary-tint);
+  background: #fdfdfd;
+}
+
+.option-group-card-choice--selected {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-soft) !important;
+}
+
+.group-name-title {
+  color: var(--color-text-primary);
+}
+
+.opt-badge {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+}
+
+.opt-badge--single {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.opt-badge--multi {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.opt-badge--required {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Item Card Option Tags */
+.item-opt-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.item-opt-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
 }
 </style>

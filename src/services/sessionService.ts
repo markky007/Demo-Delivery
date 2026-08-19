@@ -212,3 +212,86 @@ export async function closeTableSession(sessionId: string): Promise<void> {
 
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Transfer an active table session to another empty table.
+ * Source table becomes available, and target table receives all session orders/bills.
+ */
+export async function transferTableSession(
+  sessionId: string,
+  targetTableId: string,
+): Promise<{ sourceTableName?: string | undefined; targetTableName: string }> {
+  // 1. Try DB RPC first
+  const { data: rpcData, error: rpcError } = await supabase.rpc('transfer_table_session', {
+    p_session_id: sessionId,
+    p_target_table_id: targetTableId,
+  });
+
+  if (!rpcError && rpcData) {
+    const result = rpcData as {
+      source_table_name?: string;
+      target_table_name?: string;
+    };
+    return {
+      sourceTableName: result.source_table_name,
+      targetTableName: result.target_table_name || '',
+    };
+  }
+
+  // 2. Fallback client-side logic with robust validations
+  // Verify session exists and is ACTIVE
+  const { data: session, error: sErr } = await supabase
+    .from('table_sessions')
+    .select('*, table:tables(id, name)')
+    .eq('id', sessionId)
+    .eq('status', SessionStatus.ACTIVE)
+    .single();
+
+  if (sErr || !session) {
+    throw new Error('ไม่พบข้อมูลเซสชันโต๊ะ หรือโต๊ะนี้ไม่ได้เปิดอยู่');
+  }
+
+  if (session.table_id === targetTableId) {
+    throw new Error('ไม่สามารถย้ายไปยังโต๊ะเดิมได้');
+  }
+
+  // Check target table exists and is active
+  const { data: targetTable, error: tErr } = await supabase
+    .from('tables')
+    .select('id, name, is_active')
+    .eq('id', targetTableId)
+    .eq('is_active', true)
+    .single();
+
+  if (tErr || !targetTable) {
+    throw new Error('ไม่พบโต๊ะปลายทาง หรือโต๊ะปลายทางถูกปิดใช้งาน');
+  }
+
+  // Check target table has no active sessions
+  const { data: activeOnTarget } = await supabase
+    .from('table_sessions')
+    .select('id')
+    .eq('table_id', targetTableId)
+    .eq('status', SessionStatus.ACTIVE)
+    .limit(1);
+
+  if (activeOnTarget && activeOnTarget.length > 0) {
+    throw new Error(`โต๊ะ "${targetTable.name}" มีลูกค้านั่งอยู่แล้ว ไม่สามารถย้ายไปได้`);
+  }
+
+  // Update session table_id
+  const { error: updateErr } = await supabase
+    .from('table_sessions')
+    .update({ table_id: targetTableId })
+    .eq('id', sessionId);
+
+  if (updateErr) {
+    throw new Error(updateErr.message);
+  }
+
+  return {
+    sourceTableName: (session as unknown as { table?: { name?: string } }).table?.name,
+    targetTableName: targetTable.name,
+  };
+}
+

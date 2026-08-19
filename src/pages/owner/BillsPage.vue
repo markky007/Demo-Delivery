@@ -463,6 +463,17 @@
                     flat
                     round
                     dense
+                    color="primary"
+                    icon="swap_horiz"
+                    class="action-icon-btn"
+                    @click="promptTransferTable(item)"
+                  >
+                    <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
                     color="grey-7"
                     icon="qr_code_2"
                     class="action-icon-btn"
@@ -499,6 +510,17 @@
                     flat
                     round
                     dense
+                    color="primary"
+                    icon="swap_horiz"
+                    class="action-icon-btn"
+                    @click="promptTransferTable(item)"
+                  >
+                    <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
                     color="grey-7"
                     icon="qr_code_2"
                     class="action-icon-btn"
@@ -520,6 +542,17 @@
                     <q-icon name="receipt" size="16px" class="q-mr-xs" />
                     <span>ดูบิล / จัดการบิล</span>
                     <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    color="primary"
+                    icon="swap_horiz"
+                    class="action-icon-btn"
+                    @click="promptTransferTable(item)"
+                  >
+                    <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
                   </q-btn>
                   <q-btn
                     flat
@@ -756,6 +789,129 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Transfer Table Modal Dialog -->
+      <q-dialog v-model="showTransferModal">
+        <q-card style="min-width: 360px; max-width: 480px" class="q-pa-md border-radius-lg transfer-dialog-card">
+          <q-card-section class="q-pb-xs">
+            <div class="row items-center no-wrap q-mb-sm">
+              <div class="transfer-modal-icon-wrap q-mr-sm">
+                <q-icon name="swap_horiz" size="24px" color="primary" />
+              </div>
+              <div>
+                <div class="text-h6 text-weight-bold">ขอย้ายโต๊ะอาหาร</div>
+                <div class="text-caption text-grey-7">
+                  โอนย้ายออเดอร์และบิลทั้งหมดไปยังโต๊ะใหม่ที่ว่างอยู่
+                </div>
+              </div>
+            </div>
+
+            <!-- Current Table Info Card -->
+            <div v-if="tableToTransfer" class="transfer-source-card q-pa-sm q-my-sm">
+              <div class="row items-center justify-between">
+                <div class="row items-center">
+                  <q-icon name="table_restaurant" size="18px" class="q-mr-xs text-primary" />
+                  <span class="text-weight-bold text-body2">
+                    {{
+                      tableToTransfer.isTakeaway && tableToTransfer.session?.customer_name
+                        ? `สั่งกลับบ้าน (${tableToTransfer.session.customer_name})`
+                        : tableToTransfer.table.name
+                    }}
+                  </span>
+                </div>
+                <span class="text-caption text-grey-7">
+                  {{ tableToTransfer.orderCount }} ออเดอร์ • {{ formatPrice(tableToTransfer.totalAmount) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Target Table Selection -->
+            <div class="q-mt-md">
+              <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
+                เลือกโต๊ะว่างปลายทางที่ต้องการย้ายไป:
+              </div>
+
+              <!-- When No Empty Tables Available -->
+              <div
+                v-if="availableTablesForTransfer.length === 0"
+                class="no-available-tables-box q-pa-md text-center"
+              >
+                <q-icon name="do_not_disturb_on" size="32px" color="amber-9" class="q-mb-xs" />
+                <div class="text-weight-bold text-amber-10">ไม่มีโต๊ะว่างในขณะนี้</div>
+                <div class="text-caption text-grey-7 q-mt-xs">
+                  โต๊ะอื่นในร้านมีลูกค้านั่งเต็มทั้งหมดแล้ว กรุณาเคลียร์โต๊ะที่ชำระเงินแล้ว หรือรอให้มีโต๊ะว่างก่อน
+                </div>
+              </div>
+
+              <!-- Available Tables Grid -->
+              <div v-else class="available-tables-grid q-mt-xs">
+                <div
+                  v-for="targetTbl in availableTablesForTransfer"
+                  :key="targetTbl.id"
+                  class="target-table-item"
+                  :class="{ 'target-table-item--selected': selectedTargetTableId === targetTbl.id }"
+                  @click="selectedTargetTableId = targetTbl.id"
+                >
+                  <div class="row items-center justify-between">
+                    <div class="row items-center">
+                      <q-icon name="table_restaurant" size="18px" class="target-table-icon q-mr-xs" />
+                      <span class="target-table-name text-weight-bold">{{ targetTbl.name }}</span>
+                    </div>
+                    <q-icon
+                      v-if="selectedTargetTableId === targetTbl.id"
+                      name="check_circle"
+                      size="18px"
+                      color="primary"
+                    />
+                    <span v-else class="target-table-free-badge">ว่าง</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notice Info Box -->
+            <div v-if="selectedTargetTableId" class="transfer-hint-box q-pa-sm q-mt-md">
+              <div class="row items-start no-wrap">
+                <q-icon name="info" size="16px" color="primary" class="q-mr-xs q-mt-xs" />
+                <div class="text-caption text-grey-8 font-size-11">
+                  เมื่อกดยืนยัน รายการอาหารและยอดเงินจะย้ายไปที่
+                  <strong class="text-primary">{{
+                    tables.find((t) => t.id === selectedTargetTableId)?.name
+                  }}</strong>
+                  ทันที และโต๊ะเดิมจะกลับไปเป็นสถานะ <strong>"โต๊ะว่าง"</strong>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-md">
+            <q-btn
+              unelevated
+              no-caps
+              rounded
+              color="primary"
+              :label="
+                selectedTargetTableId
+                  ? `ยืนยันย้ายไป ${tables.find((t) => t.id === selectedTargetTableId)?.name || 'โต๊ะใหม่'}`
+                  : 'กรุณาเลือกโต๊ะว่าง'
+              "
+              :disabled="!selectedTargetTableId || availableTablesForTransfer.length === 0"
+              :loading="isTransferring"
+              @click="handleConfirmTransferTable"
+              class="full-width font-weight-600"
+            />
+            <q-btn
+              flat
+              no-caps
+              rounded
+              color="grey-7"
+              label="ยกเลิก"
+              v-close-popup
+              class="full-width"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -765,7 +921,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from 'src/services/supabase';
 import { fetchTables, generateQRToken, isTakeawayName } from 'src/services/tableService';
-import { closeTableSession } from 'src/services/sessionService';
+import { closeTableSession, transferTableSession } from 'src/services/sessionService';
 import { formatPrice, formatTime, formatElapsed } from 'src/utils/formatters';
 import { getAppUrl } from 'src/utils/constants';
 import { useNotify } from 'src/composables/useNotify';
@@ -880,6 +1036,28 @@ const showConfirmCancelModal = ref(false);
 const tableToCancel = ref<TableCardItem | null>(null);
 const isCancellingDirect = ref(false);
 const cancellingSessionId = ref<string | null>(null);
+
+// Transfer Table Modal State
+const showTransferModal = ref(false);
+const tableToTransfer = ref<TableCardItem | null>(null);
+const selectedTargetTableId = ref<string | null>(null);
+const isTransferring = ref(false);
+
+const availableTablesForTransfer = computed(() => {
+  if (!tableToTransfer.value) return [];
+  const currentTableId = tableToTransfer.value.table.id;
+  const occupiedTableIds = new Set(
+    activeSessions.value.filter((s) => s.status === 'ACTIVE').map((s) => s.table_id),
+  );
+
+  return tables.value.filter(
+    (t) =>
+      t.is_active &&
+      t.id !== currentTableId &&
+      !isTakeawayName(t.name) &&
+      !occupiedTableIds.has(t.id),
+  );
+});
 
 let realtimeSessions: RealtimeChannel | null = null;
 let realtimeOrders: RealtimeChannel | null = null;
@@ -1319,6 +1497,37 @@ async function handleConfirmCancelSession() {
   } finally {
     isCancellingDirect.value = false;
     cancellingSessionId.value = null;
+  }
+}
+
+// Transfer table prompt & action
+function promptTransferTable(item: TableCardItem) {
+  tableToTransfer.value = item;
+  selectedTargetTableId.value = null;
+  showTransferModal.value = true;
+}
+
+async function handleConfirmTransferTable() {
+  if (!tableToTransfer.value?.session || !selectedTargetTableId.value) return;
+
+  isTransferring.value = true;
+  try {
+    const res = await transferTableSession(
+      tableToTransfer.value.session.id,
+      selectedTargetTableId.value,
+    );
+    notifySuccess(
+      `ย้ายจาก ${res.sourceTableName || tableToTransfer.value.table.name} ไปยัง ${res.targetTableName} เรียบร้อยแล้ว`,
+    );
+    showTransferModal.value = false;
+    tableToTransfer.value = null;
+    selectedTargetTableId.value = null;
+    await loadAllData();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการย้ายโต๊ะ';
+    notifyError(msg);
+  } finally {
+    isTransferring.value = false;
   }
 }
 
@@ -2013,5 +2222,95 @@ function openDirectCustomerLink(table: TableWithQR) {
 
 .max-w-400 {
   max-width: 400px;
+}
+
+/* ─── Transfer Dialog Styles ─── */
+.transfer-dialog-card {
+  background: #ffffff;
+}
+
+.transfer-modal-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.transfer-source-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.no-available-tables-box {
+  background: #fffbeb;
+  border: 1px dashed #fcd34d;
+  border-radius: var(--radius-md);
+}
+
+.available-tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.target-table-item {
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.target-table-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  transform: translateY(-1px);
+}
+
+.target-table-item--selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.target-table-icon {
+  color: var(--color-text-secondary);
+}
+
+.target-table-item--selected .target-table-icon {
+  color: var(--color-primary);
+}
+
+.target-table-name {
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+
+.target-table-item--selected .target-table-name {
+  color: var(--color-primary);
+}
+
+.target-table-free-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.transfer-hint-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
 }
 </style>

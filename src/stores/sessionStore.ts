@@ -68,6 +68,14 @@ export const useSessionStore = defineStore('session', () => {
     isLoading.value = val;
   }
 
+  function updateTable(tbl: Table) {
+    table.value = tbl;
+  }
+
+  function updateTableSession(session: TableSession) {
+    tableSession.value = session;
+  }
+
   return {
     // State
     restaurant,
@@ -86,6 +94,8 @@ export const useSessionStore = defineStore('session', () => {
     // Actions
     setTableContext,
     setContext,
+    updateTable,
+    updateTableSession,
     clearSession,
     setError,
     setLoading,

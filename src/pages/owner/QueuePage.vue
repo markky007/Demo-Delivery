@@ -1776,6 +1776,20 @@ onMounted(async () => {
         })();
       },
     )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'table_sessions',
+      },
+      () => {
+        void (async () => {
+          const orders = await fetchTodayOrders();
+          queueStore.setOrders(orders);
+        })();
+      },
+    )
     .subscribe();
 
   elapsedInterval = setInterval(() => {

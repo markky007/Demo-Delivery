@@ -94,12 +94,16 @@ import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import logoMarkSvg from 'src/assets/logo-mark.svg';
 
+import { supabase } from 'src/services/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
 const route = useRoute();
 const router = useRouter();
 const sessionStore = useSessionStore();
 const cartStore = useCartStore();
 
 const isScrolled = ref(false);
+let sessionRealtimeChannel: RealtimeChannel | null = null;
 
 const publicToken = computed(
   () => (route.params.publicToken as string) || sessionStore.publicToken || '',
@@ -138,12 +142,51 @@ function handleScroll() {
   isScrolled.value = window.scrollY > 10;
 }
 
+function subscribeToSessionUpdates() {
+  if (!sessionStore.tableSession?.id) return;
+  if (sessionRealtimeChannel) {
+    void supabase.removeChannel(sessionRealtimeChannel);
+  }
+
+  sessionRealtimeChannel = supabase
+    .channel(`customer_session_${sessionStore.tableSession.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'table_sessions',
+        filter: `id=eq.${sessionStore.tableSession.id}`,
+      },
+      (payload) => {
+        void (async () => {
+          const updated = payload.new as { table_id?: string; customer_name?: string };
+          if (updated?.table_id && updated.table_id !== sessionStore.table?.id) {
+            const { data: newTable } = await supabase
+              .from('tables')
+              .select('*')
+              .eq('id', updated.table_id)
+              .maybeSingle();
+            if (newTable) {
+              sessionStore.updateTable(newTable);
+            }
+          }
+        })();
+      },
+    )
+    .subscribe();
+}
+
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true });
+  subscribeToSessionUpdates();
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  if (sessionRealtimeChannel) {
+    void supabase.removeChannel(sessionRealtimeChannel);
+  }
 });
 </script>
 

@@ -7,18 +7,28 @@
 
     <template v-else-if="session">
       <div class="bill-detail-container">
-        <!-- Session Info Card -->
-        <div class="session-info-card q-mb-md">
-          <div class="row items-center justify-between">
-            <div>
-              <div class="row items-center">
-                <q-icon name="table_restaurant" size="22px" color="primary" class="q-mr-xs" />
-                <span class="text-h6 text-weight-bold table-title">{{ tableName }}</span>
-              </div>
-              <div class="text-caption text-grey-7 q-mt-xs">
-                เปิดโต๊ะเมื่อ {{ formatDateTime(session.created_at) }}
-              </div>
-            </div>
+        <!-- Top Navigation & Header -->
+        <div class="row items-center justify-between q-mb-md no-print">
+          <q-btn
+            flat
+            round
+            dense
+            icon="arrow_back"
+            color="grey-8"
+            to="/owner/bills"
+            aria-label="กลับหน้ารายการบิล"
+          />
+          <div class="row items-center q-gutter-sm">
+            <q-btn
+              outline
+              rounded
+              no-caps
+              size="sm"
+              icon="print"
+              label="พิมพ์ใบเสร็จ"
+              @click="printReceipt"
+              class="q-px-sm"
+            />
             <StatusBadge
               :status="session.status"
               mode="raw"
@@ -27,85 +37,91 @@
           </div>
         </div>
 
-        <!-- Orders Breakdown List -->
-        <div class="section-title q-mb-xs text-weight-bold text-subtitle1">
-          รายการออเดอร์ในโต๊ะนี้ ({{ orders.length }} ออเดอร์)
-        </div>
-
-        <div class="orders-list q-gutter-y-sm q-mb-lg">
-          <div v-for="order in orders" :key="order.id" class="order-bill-card">
-            <div class="row items-center justify-between q-mb-xs">
-              <span class="text-weight-bold order-seq">{{
-                formatQueueNumber(order.queue_number)
-              }}</span>
-              <StatusBadge :status="order.status" mode="customer" />
+        <!-- Quick Add Drinks Section (Only if session is ACTIVE) -->
+        <div v-if="session.status === 'ACTIVE'" class="quick-add-card q-mb-lg no-print">
+          <div class="row items-center justify-between q-mb-xs">
+            <div class="row items-center">
+              <q-icon name="local_bar" size="20px" color="primary" class="q-mr-xs" />
+              <span class="text-weight-bold text-subtitle2">เพิ่มเครื่องดื่มท้ายบิล (Quick Add)</span>
             </div>
+            <span class="text-caption text-grey-7">กดเพื่อบวกเพิ่มเข้าบิลทันที</span>
+          </div>
 
-            <div class="dishes-list q-my-xs">
-              <div
-                v-for="item in order.items"
-                :key="item.id"
-                class="dishes-list-item q-py-xs"
-              >
-                <div class="row justify-between items-start text-body2">
-                  <div>
-                    <span class="text-weight-medium">{{ item.snapshot_name }}</span>
-                    <span class="text-grey-7 q-ml-xs">x{{ item.quantity }}</span>
+          <div class="row q-col-gutter-sm q-mt-xs">
+            <!-- Canned Soft Drink -->
+            <div class="col-12 col-sm-6">
+              <div class="drink-item-card row items-center justify-between q-pa-sm">
+                <div class="row items-center">
+                  <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">
+                    🥤
                   </div>
-                  <span class="text-weight-bold">{{ formatPrice(item.subtotal) }}</span>
+                  <div>
+                    <div class="text-weight-bold text-body2">น้ำอัดลมกระป๋อง</div>
+                    <div class="text-caption text-primary text-weight-bold font-mono">
+                      {{ formatPrice(20) }}
+                    </div>
+                  </div>
                 </div>
-
-                <!-- Options -->
-                <div v-if="item.options && item.options.length > 0" class="row items-center q-gutter-xs q-mt-none">
-                  <span
-                    v-for="opt in item.options"
-                    :key="opt.id"
-                    class="bill-opt-chip"
-                  >
-                    + {{ opt.snapshot_option_name }}
-                    <template v-if="opt.snapshot_price_adjustment > 0">
-                      (+{{ formatPrice(opt.snapshot_price_adjustment) }})
-                    </template>
-                  </span>
-                </div>
-
-                <!-- Special Note -->
-                <div v-if="item.special_instruction" class="bill-note-text q-mt-none">
-                  <q-icon name="edit_note" size="14px" class="q-mr-xs" />
-                  <span>{{ item.special_instruction }}</span>
-                </div>
+                <q-btn
+                  unelevated
+                  rounded
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="add"
+                  label="เพิ่ม 1 กป."
+                  :loading="isAddingDrink === 'can'"
+                  @click="addDrinkItem('น้ำอัดลมกระป๋อง', 20, 'can')"
+                  class="q-px-sm"
+                />
               </div>
             </div>
 
-            <div class="row justify-end q-mt-xs text-caption text-grey-7">
-              <span
-                >รวมออเดอร์นี้:
-                <strong class="text-dark">{{ formatPrice(order.total_amount) }}</strong></span
-              >
+            <!-- Bottled Water -->
+            <div class="col-12 col-sm-6">
+              <div class="drink-item-card row items-center justify-between q-pa-sm">
+                <div class="row items-center">
+                  <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">
+                    💧
+                  </div>
+                  <div>
+                    <div class="text-weight-bold text-body2">น้ำดื่มขวด</div>
+                    <div class="text-caption text-primary text-weight-bold font-mono">
+                      {{ formatPrice(25) }}
+                    </div>
+                  </div>
+                </div>
+                <q-btn
+                  unelevated
+                  rounded
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="add"
+                  label="เพิ่ม 1 ขวด"
+                  :loading="isAddingDrink === 'water'"
+                  @click="addDrinkItem('น้ำดื่มขวด', 25, 'water')"
+                  class="q-px-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Bill Total Card -->
-        <div class="total-summary-card q-mb-lg">
-          <div class="row justify-between items-center q-mb-xs">
-            <span class="text-grey-7">สถานะการชำระเงิน</span>
-            <q-badge
-              :color="bill?.status === 'PAID' ? 'positive' : 'warning'"
-              :label="bill?.status === 'PAID' ? 'ชำระเงินแล้ว' : 'รอชำระเงิน'"
-              rounded
-              class="q-px-sm"
-            />
-          </div>
-          <q-separator class="q-my-sm" />
-          <div class="row justify-between items-center">
-            <span class="text-h6 text-weight-bold">ยอดรวมทั้งสิ้น</span>
-            <span class="text-h5 text-weight-bold text-primary">{{ formatPrice(billTotal) }}</span>
-          </div>
+        <!-- Receipt Slip View -->
+        <div class="receipt-wrapper q-mb-lg">
+          <ReceiptSlip
+            :bill="bill"
+            :table-name="tableName"
+            :orders="orders"
+            :show-actions="true"
+          />
         </div>
 
-        <!-- Action Controls -->
-        <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm">
+        <!-- Action Controls for Owner (No Print) -->
+        <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm no-print">
           <!-- Cannot pay if not all served -->
           <div v-if="!allServed" class="not-served-warning q-pa-md q-mb-xs">
             <div class="row items-center">
@@ -147,7 +163,7 @@
           </q-btn>
         </div>
 
-        <div v-if="session.status === 'CLOSED'" class="closed-banner q-pa-md text-center">
+        <div v-if="session.status === 'CLOSED'" class="closed-banner q-pa-md text-center no-print">
           <q-icon name="task_alt" size="32px" color="positive" class="q-mb-xs" />
           <div class="text-weight-bold">โต๊ะนี้ปิดบิลเรียบร้อยแล้ว</div>
         </div>
@@ -161,12 +177,13 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useNotify } from 'src/composables/useNotify';
 import { supabase } from 'src/services/supabase';
-import { getOrCreateBill, markBillPaid } from 'src/services/billService';
+import { getOrCreateBill, markBillPaid, ownerAddQuickItem } from 'src/services/billService';
 import { closeTableSession } from 'src/services/sessionService';
-import { formatPrice, formatDateTime, formatQueueNumber } from 'src/utils/formatters';
+import { formatPrice } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import ReceiptSlip from 'src/components/ReceiptSlip.vue';
 import type { TableSession, Bill, OrderWithItems } from 'src/types/database';
 
 const route = useRoute();
@@ -179,21 +196,39 @@ const bill = ref<Bill | null>(null);
 const tableName = ref('');
 const isLoading = ref(true);
 const isProcessing = ref(false);
+const isAddingDrink = ref<string | null>(null);
 
-const billTotal = computed(() => orders.value.reduce((sum, o) => sum + o.total_amount, 0));
+const billTotal = computed(() => {
+  if (bill.value?.total_amount !== undefined && bill.value?.total_amount !== null) {
+    return bill.value.total_amount;
+  }
+  return orders.value.reduce((sum, o) => sum + o.total_amount, 0);
+});
 
 const allServed = computed(
   () => orders.value.length > 0 && orders.value.every((o) => o.status === OrderStatus.SERVED),
 );
 
 onMounted(async () => {
+  await loadData();
+});
+
+async function loadData() {
   const sessionId = route.params.sessionId as string;
 
   const [{ data: sessionData }, { data: ordersData }] = await Promise.all([
     supabase.from('table_sessions').select('*, table:tables(name)').eq('id', sessionId).single(),
     supabase
       .from('orders')
-      .select('*, items:order_items(*, options:order_item_options(*))')
+      .select(
+        `
+        *,
+        items:order_items (
+          *,
+          options:order_item_options (*)
+        )
+      `,
+      )
       .eq('table_session_id', sessionId)
       .order('queue_number'),
   ]);
@@ -209,7 +244,25 @@ onMounted(async () => {
   }
 
   isLoading.value = false;
-});
+}
+
+async function addDrinkItem(name: string, price: number, type: string) {
+  if (!session.value) return;
+  isAddingDrink.value = type;
+  try {
+    await ownerAddQuickItem(session.value.id, name, price, 1);
+    notifySuccess(`เพิ่ม "${name}" (฿${price}) เข้าบิลเรียบร้อยแล้ว`);
+    await loadData();
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถเพิ่มรายการได้');
+  } finally {
+    isAddingDrink.value = null;
+  }
+}
+
+function printReceipt() {
+  window.print();
+}
 
 async function handleMarkPaid() {
   if (!bill.value) return;
@@ -242,76 +295,53 @@ async function handleCloseSession() {
 <style scoped>
 .bill-detail-page {
   background: var(--color-background);
+  min-height: 100vh;
 }
 
 .bill-detail-container {
-  max-width: 650px;
+  max-width: 500px;
   margin: 0 auto;
 }
 
-.session-info-card {
+.quick-add-card {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  padding: 16px;
+  padding: 14px;
   box-shadow: var(--shadow-subtle);
 }
 
-.table-title {
-  color: var(--color-text-primary);
-}
-
-.order-bill-card {
-  background: #ffffff;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 14px 16px;
-  box-shadow: var(--shadow-subtle);
-}
-
-.order-seq {
-  font-size: 1.05rem;
-  color: var(--color-text-primary);
-}
-
-.dishes-list {
-  border-top: 1px solid var(--color-border-subtle);
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.dishes-list-item:not(:last-child) {
-  border-bottom: 1px dashed var(--color-border-subtle);
-  padding-bottom: 6px;
-  margin-bottom: 4px;
-}
-
-.bill-opt-chip {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.75rem;
+.drink-item-card {
   background: var(--color-surface-subtle);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-right: 4px;
-  margin-top: 2px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease;
 }
 
-.bill-note-text {
-  font-size: 0.78rem;
-  color: var(--color-primary);
+.drink-item-card:hover {
+  border-color: var(--color-primary);
+}
+
+.drink-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  margin-top: 2px;
+  justify-content: center;
+  font-size: 1.1rem;
 }
 
-.total-summary-card {
-  background: #ffffff;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 18px;
-  box-shadow: var(--shadow-subtle);
+.drink-icon-wrap--can {
+  background: #fee2e2;
+}
+
+.drink-icon-wrap--water {
+  background: #e0f2fe;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .not-served-warning {
@@ -332,5 +362,11 @@ async function handleCloseSession() {
   border: 1px solid #bbf7d0;
   border-radius: var(--radius-md);
   color: #166534;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }
 </style>

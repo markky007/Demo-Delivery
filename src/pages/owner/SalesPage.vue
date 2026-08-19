@@ -102,9 +102,17 @@
               <span class="text-weight-mono text-grey-8">{{ props.value }}</span>
             </q-td>
           </template>
+          <template v-slot:body-cell-table_name="props">
+            <q-td :props="props">
+              <q-badge color="grey-2" text-color="dark" class="q-px-sm text-weight-medium">
+                <q-icon name="table_restaurant" size="14px" class="q-mr-xs text-primary" />
+                {{ props.value }}
+              </q-badge>
+            </q-td>
+          </template>
           <template v-slot:body-cell-amount="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">{{
+              <span class="text-weight-bold text-primary font-mono">{{
                 formatPrice(props.value as number)
               }}</span>
             </q-td>
@@ -119,8 +127,49 @@
               {{ props.value ? formatDateTime(props.value as string) : '—' }}
             </q-td>
           </template>
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn
+                flat
+                dense
+                rounded
+                no-caps
+                size="sm"
+                color="primary"
+                icon="receipt_long"
+                label="ดูใบเสร็จ"
+                @click="openReceiptDialog(props.row.id)"
+                class="q-px-sm"
+              />
+            </q-td>
+          </template>
         </q-table>
       </template>
+
+      <!-- Receipt Modal Dialog -->
+      <q-dialog v-model="showReceiptModal" transition-show="scale" transition-hide="scale">
+        <q-card style="width: 480px; max-width: 95vw; border-radius: 12px" class="q-pa-sm">
+          <q-card-section class="row items-center justify-between q-pb-none no-print">
+            <div class="text-h6 text-weight-bold">ใบเสร็จรับเงิน</div>
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <div v-if="isReceiptLoading" class="q-py-xl text-center">
+              <q-spinner color="primary" size="40px" />
+              <div class="text-caption text-grey-7 q-mt-sm">กำลังโหลดข้อมูลใบเสร็จ...</div>
+            </div>
+
+            <ReceiptSlip
+              v-else-if="selectedReceiptData"
+              :bill="selectedReceiptData.bill"
+              :table-name="selectedReceiptData.tableName"
+              :orders="selectedReceiptData.orders"
+              :show-actions="true"
+            />
+          </q-card-section>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -128,10 +177,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { supabase } from 'src/services/supabase';
+import { fetchBillWithDetails } from 'src/services/billService';
 import { formatPrice, formatDateTime } from 'src/utils/formatters';
+import { useNotify } from 'src/composables/useNotify';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import ReceiptSlip from 'src/components/ReceiptSlip.vue';
 import type { QTableColumn } from 'quasar';
+import type { Bill, OrderWithItems } from 'src/types/database';
 
 interface BillRow {
   id: string;
@@ -140,7 +193,10 @@ interface BillRow {
   status: string;
   created_at: string;
   paid_at: string | null;
+  table_name?: string;
 }
+
+const { notifyError } = useNotify();
 
 const bills = ref<BillRow[]>([]);
 const isLoading = ref(true);
@@ -148,6 +204,14 @@ const isLoading = ref(true);
 const today = new Date().toISOString().slice(0, 10);
 const dateFrom = ref(today);
 const dateTo = ref(today);
+
+const showReceiptModal = ref(false);
+const isReceiptLoading = ref(false);
+const selectedReceiptData = ref<{
+  bill: Bill;
+  tableName: string;
+  orders: OrderWithItems[];
+} | null>(null);
 
 const totalSales = computed(() => bills.value.reduce((sum, b) => sum + b.total_amount, 0));
 
@@ -160,9 +224,17 @@ const columns: QTableColumn[] = [
     sortable: false,
     format: (val: string) => `#${val.slice(0, 8)}`,
   },
+  {
+    name: 'table_name',
+    label: 'โต๊ะ',
+    field: 'table_name',
+    align: 'left',
+    sortable: true,
+  },
   { name: 'amount', label: 'ยอดเงินรวม', field: 'total_amount', align: 'right', sortable: true },
   { name: 'status', label: 'สถานะ', field: 'status', align: 'center' },
   { name: 'paid_at', label: 'วันและเวลาที่ชำระ', field: 'paid_at', align: 'left', sortable: true },
+  { name: 'actions', label: 'จัดการ', field: 'actions', align: 'center' },
 ];
 
 onMounted(() => loadSales());
@@ -175,16 +247,62 @@ async function loadSales() {
   const toDate = new Date(dateTo.value || today);
   toDate.setHours(23, 59, 59, 999);
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('bills')
-    .select('*')
+    .select(
+      `
+      *,
+      table_session:table_sessions (
+        table:tables(name)
+      )
+    `,
+    )
     .eq('status', 'PAID')
     .gte('paid_at', fromDate.toISOString())
     .lte('paid_at', toDate.toISOString())
     .order('paid_at', { ascending: false });
 
-  bills.value = (data ?? []) as BillRow[];
+  if (error) {
+    notifyError('ไม่สามารถโหลดประวัติยอดขายได้');
+    isLoading.value = false;
+    return;
+  }
+
+  interface SupabaseBillWithTable extends BillRow {
+    table_session?: {
+      table?: {
+        name?: string;
+      } | null;
+    } | null;
+  }
+
+  bills.value = ((data ?? []) as unknown as SupabaseBillWithTable[]).map((b) => ({
+    ...b,
+    table_name: b.table_session?.table?.name ?? 'โต๊ะ',
+  }));
+
   isLoading.value = false;
+}
+
+async function openReceiptDialog(billId: string) {
+  showReceiptModal.value = true;
+  isReceiptLoading.value = true;
+  selectedReceiptData.value = null;
+
+  try {
+    const data = await fetchBillWithDetails(billId);
+    if (data) {
+      selectedReceiptData.value = data;
+    } else {
+      notifyError('ไม่พบข้อมูลใบเสร็จนี้');
+      showReceiptModal.value = false;
+    }
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดใบเสร็จได้');
+    showReceiptModal.value = false;
+  } finally {
+    isReceiptLoading.value = false;
+  }
 }
 </script>
 
@@ -248,5 +366,10 @@ async function loadSales() {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 </style>

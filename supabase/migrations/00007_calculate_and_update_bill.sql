@@ -13,12 +13,11 @@ AS $$
 DECLARE
   v_total INTEGER := 0;
 BEGIN
-  -- Sum up total_amount of all non-cancelled orders in this session
+  -- Sum up total_amount of all orders in this session
   SELECT COALESCE(SUM(total_amount), 0)
   INTO v_total
   FROM orders
-  WHERE table_session_id = p_table_session_id
-    AND status != 'CANCELLED';
+  WHERE table_session_id = p_table_session_id;
 
   -- Upsert bill for table session
   INSERT INTO bills (table_session_id, total_amount, status)

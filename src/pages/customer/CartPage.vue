@@ -195,12 +195,16 @@ async function confirmOrder() {
     }
 
     // 2. Prepare payload
-    const items: CreateOrderItemPayload[] = cartStore.items.map((item) => ({
-      menu_item_id: item.menu_item_id,
-      quantity: item.quantity,
-      special_instruction: item.special_instruction,
-      selected_option_ids: item.selected_options.map((o) => o.option_id),
-    }));
+    const items: CreateOrderItemPayload[] = cartStore.items.map((item) => {
+      const optionIds = item.selected_options.map((o) => o.option_id);
+      return {
+        menu_item_id: item.menu_item_id,
+        quantity: item.quantity,
+        special_instruction: item.special_instruction,
+        selected_option_ids: optionIds,
+        option_ids: optionIds,
+      };
+    });
 
     // 3. Submit order
     await createOrder({

@@ -38,6 +38,7 @@ export interface CreateOrderItemPayload {
   quantity: number;
   special_instruction: string;
   selected_option_ids: string[];
+  option_ids?: string[];
 }
 
 /** Payload sent to the update_order RPC */

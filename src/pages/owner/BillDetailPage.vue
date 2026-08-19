@@ -45,13 +45,35 @@
               <div
                 v-for="item in order.items"
                 :key="item.id"
-                class="row justify-between text-body2 q-py-xs"
+                class="dishes-list-item q-py-xs"
               >
-                <div>
-                  <span class="text-weight-medium">{{ item.snapshot_name }}</span>
-                  <span class="text-grey-7 q-ml-xs">x{{ item.quantity }}</span>
+                <div class="row justify-between items-start text-body2">
+                  <div>
+                    <span class="text-weight-medium">{{ item.snapshot_name }}</span>
+                    <span class="text-grey-7 q-ml-xs">x{{ item.quantity }}</span>
+                  </div>
+                  <span class="text-weight-bold">{{ formatPrice(item.subtotal) }}</span>
                 </div>
-                <span class="text-weight-bold">{{ formatPrice(item.subtotal) }}</span>
+
+                <!-- Options -->
+                <div v-if="item.options && item.options.length > 0" class="row items-center q-gutter-xs q-mt-none">
+                  <span
+                    v-for="opt in item.options"
+                    :key="opt.id"
+                    class="bill-opt-chip"
+                  >
+                    + {{ opt.snapshot_option_name }}
+                    <template v-if="opt.snapshot_price_adjustment > 0">
+                      (+{{ formatPrice(opt.snapshot_price_adjustment) }})
+                    </template>
+                  </span>
+                </div>
+
+                <!-- Special Note -->
+                <div v-if="item.special_instruction" class="bill-note-text q-mt-none">
+                  <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                  <span>{{ item.special_instruction }}</span>
+                </div>
               </div>
             </div>
 
@@ -255,6 +277,33 @@ async function handleCloseSession() {
 .dishes-list {
   border-top: 1px solid var(--color-border-subtle);
   border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.dishes-list-item:not(:last-child) {
+  border-bottom: 1px dashed var(--color-border-subtle);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+.bill-opt-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+  margin-top: 2px;
+}
+
+.bill-note-text {
+  font-size: 0.78rem;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
 }
 
 .total-summary-card {

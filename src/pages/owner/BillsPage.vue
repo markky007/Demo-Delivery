@@ -478,7 +478,13 @@ interface RawSessionOrder {
   status: OrderStatus;
   total_amount: number;
   created_at: string;
-  items: { id: string; quantity: number; snapshot_name: string; subtotal: number }[];
+  items: {
+    id: string;
+    quantity: number;
+    snapshot_name: string;
+    subtotal: number;
+    options?: { id: string; snapshot_option_name: string; snapshot_price_adjustment: number }[];
+  }[];
 }
 
 interface RawSessionBill {
@@ -569,7 +575,7 @@ async function loadAllData() {
             status,
             total_amount,
             created_at,
-            items:order_items(id, quantity, snapshot_name, subtotal)
+            items:order_items(id, quantity, snapshot_name, subtotal, options:order_item_options(id, snapshot_option_name, snapshot_price_adjustment))
           ),
           bill:bills(id, total_amount, status, created_at, paid_at)
         `,

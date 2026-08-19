@@ -53,20 +53,53 @@
                 <StatusBadge :status="order.status" mode="customer" />
               </div>
 
-              <!-- Quick Dish Summary Preview -->
-              <div class="order-dishes-preview q-my-xs text-grey-8">
-                <span v-for="(item, idx) in order.items" :key="item.id">
-                  {{ item.snapshot_name }} ({{ item.quantity }}){{
-                    idx < order.items.length - 1 ? ', ' : ''
-                  }}
-                </span>
+              <!-- Dish items breakdown -->
+              <div class="order-items-list q-my-sm">
+                <div
+                  v-for="item in order.items"
+                  :key="item.id"
+                  class="order-item-row q-py-xs"
+                >
+                  <div class="row justify-between items-center text-body2">
+                    <div class="row items-center">
+                      <span class="text-weight-medium text-dark">{{ item.snapshot_name }}</span>
+                      <span class="text-weight-bold text-primary q-ml-xs">x{{ item.quantity }}</span>
+                    </div>
+                    <span class="text-weight-bold text-dark">{{ formatPrice(item.subtotal) }}</span>
+                  </div>
+
+                  <!-- Selected Options Chips -->
+                  <div v-if="item.options && item.options.length > 0" class="row items-center q-gutter-xs q-mt-none">
+                    <span
+                      v-for="opt in item.options"
+                      :key="opt.id"
+                      class="order-opt-chip"
+                    >
+                      + {{ opt.snapshot_option_name }}
+                      <template v-if="opt.snapshot_price_adjustment > 0">
+                        (+{{ formatPrice(opt.snapshot_price_adjustment) }})
+                      </template>
+                    </span>
+                  </div>
+
+                  <!-- Special Note -->
+                  <div v-if="item.special_instruction" class="order-note-text q-mt-none">
+                    <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                    <span>{{ item.special_instruction }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="row items-center justify-between q-mt-sm text-caption">
+              <q-separator class="q-my-xs" />
+
+              <div class="row items-center justify-between q-mt-xs text-caption">
                 <span class="text-grey-6">{{ formatTime(order.created_at) }}</span>
-                <span class="text-weight-bold text-subtitle2">{{
-                  formatPrice(order.total_amount)
-                }}</span>
+                <div class="row items-center">
+                  <span class="text-grey-7 q-mr-xs">รวมออเดอร์นี้:</span>
+                  <span class="text-weight-bold text-subtitle2 text-primary">{{
+                    formatPrice(order.total_amount)
+                  }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -98,19 +131,53 @@
                 <StatusBadge :status="order.status" mode="customer" />
               </div>
 
-              <div class="order-dishes-preview q-my-xs text-grey-6">
-                <span v-for="(item, idx) in order.items" :key="item.id">
-                  {{ item.snapshot_name }} ({{ item.quantity }}){{
-                    idx < order.items.length - 1 ? ', ' : ''
-                  }}
-                </span>
+              <!-- History Dish items breakdown -->
+              <div class="order-items-list q-my-sm">
+                <div
+                  v-for="item in order.items"
+                  :key="item.id"
+                  class="order-item-row q-py-xs"
+                >
+                  <div class="row justify-between items-center text-body2">
+                    <div class="row items-center">
+                      <span class="text-weight-medium text-grey-8">{{ item.snapshot_name }}</span>
+                      <span class="text-grey-6 q-ml-xs">x{{ item.quantity }}</span>
+                    </div>
+                    <span class="text-weight-bold text-grey-8">{{ formatPrice(item.subtotal) }}</span>
+                  </div>
+
+                  <!-- Selected Options Chips -->
+                  <div v-if="item.options && item.options.length > 0" class="row items-center q-gutter-xs q-mt-none">
+                    <span
+                      v-for="opt in item.options"
+                      :key="opt.id"
+                      class="order-opt-chip"
+                    >
+                      + {{ opt.snapshot_option_name }}
+                      <template v-if="opt.snapshot_price_adjustment > 0">
+                        (+{{ formatPrice(opt.snapshot_price_adjustment) }})
+                      </template>
+                    </span>
+                  </div>
+
+                  <!-- Special Note -->
+                  <div v-if="item.special_instruction" class="order-note-text text-grey-6 q-mt-none">
+                    <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                    <span>{{ item.special_instruction }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="row items-center justify-between q-mt-sm text-caption">
+              <q-separator class="q-my-xs" />
+
+              <div class="row items-center justify-between q-mt-xs text-caption">
                 <span class="text-grey-5">{{ formatTime(order.created_at) }}</span>
-                <span class="text-weight-bold text-grey-7">{{
-                  formatPrice(order.total_amount)
-                }}</span>
+                <div class="row items-center">
+                  <span class="text-grey-6 q-mr-xs">รวมออเดอร์นี้:</span>
+                  <span class="text-weight-bold text-grey-8">{{
+                    formatPrice(order.total_amount)
+                  }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -284,12 +351,36 @@ onUnmounted(() => {
   font-size: 0.85rem;
 }
 
-.order-dishes-preview {
-  font-size: 0.85rem;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.order-items-list {
+  background: var(--color-surface-subtle);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.order-item-row:not(:last-child) {
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+.order-opt-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  background: #ffffff;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+  margin-top: 2px;
+}
+
+.order-note-text {
+  font-size: 0.78rem;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
 }
 </style>

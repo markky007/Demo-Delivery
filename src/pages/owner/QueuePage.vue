@@ -728,6 +728,19 @@
                       >
                       <span>{{ item.snapshot_name }}</span>
                     </div>
+                    <!-- Options -->
+                    <div
+                      v-if="item.options && item.options.length > 0"
+                      class="dish-options-line text-grey-7"
+                    >
+                      <span v-for="opt in item.options" :key="opt.id" class="q-mr-xs">
+                        +{{ opt.snapshot_option_name }}
+                      </span>
+                    </div>
+                    <div v-if="item.special_instruction" class="dish-special-note">
+                      <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                      <span>{{ item.special_instruction }}</span>
+                    </div>
                   </div>
                 </div>
 

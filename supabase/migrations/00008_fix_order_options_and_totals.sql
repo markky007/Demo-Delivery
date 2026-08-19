@@ -1,109 +1,9 @@
 -- ============================================================================
--- Migration 00006: Permanent Table QR & Restaurant Geofencing
+-- Migration 00008: Fix Order Options and Price Calculation in create_order & update_order
 -- ============================================================================
 
--- 1. Add geolocation columns to restaurants table
-ALTER TABLE restaurants
-  ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
-  ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
-  ADD COLUMN IF NOT EXISTS geofence_radius_meters INTEGER DEFAULT 100,
-  ADD COLUMN IF NOT EXISTS is_geofence_enabled BOOLEAN DEFAULT false;
-
--- Set default initial coordinates for DEMO Bang Saen if not yet set
-UPDATE restaurants
-SET latitude = COALESCE(latitude, 13.2849),
-    longitude = COALESCE(longitude, 100.9234),
-    geofence_radius_meters = COALESCE(geofence_radius_meters, 100),
-    is_geofence_enabled = COALESCE(is_geofence_enabled, true)
-WHERE latitude IS NULL OR longitude IS NULL;
-
--- 2. Make all active QR tokens permanent (clear expires_at)
-UPDATE table_qr_tokens
-SET expires_at = NULL
-WHERE is_active = true;
-
--- 3. Update close_table_session function
--- Important: Do NOT revoke table QR token on close_table_session so printed table sticker remains valid permanently.
-CREATE OR REPLACE FUNCTION close_table_session(
-  p_session_id UUID
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_unserved INTEGER;
-  v_bill_status bill_status;
-  v_table_id UUID;
-BEGIN
-  -- Get table_id for this session
-  SELECT table_id INTO v_table_id
-  FROM table_sessions
-  WHERE id = p_session_id;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Table session not found';
-  END IF;
-
-  -- Check all orders are served
-  SELECT COUNT(*) INTO v_unserved
-  FROM orders
-  WHERE table_session_id = p_session_id
-    AND status != 'SERVED';
-
-  IF v_unserved > 0 THEN
-    RAISE EXCEPTION 'Cannot close session — % order(s) not yet served', v_unserved;
-  END IF;
-
-  -- Check bill is paid
-  SELECT status INTO v_bill_status
-  FROM bills
-  WHERE table_session_id = p_session_id;
-
-  IF v_bill_status IS NULL OR v_bill_status != 'PAID' THEN
-    RAISE EXCEPTION 'Cannot close session — bill is not paid';
-  END IF;
-
-  -- Close the session
-  UPDATE table_sessions SET
-    status = 'CLOSED',
-    closed_at = NOW()
-  WHERE id = p_session_id;
-
-  -- Note: We intentionally DO NOT revoke the table QR token here.
-  -- The physical QR code sticker on the table is permanent.
-  -- When the next customer scans the QR code, joinOrCreateSession will open a fresh active table_session.
-END;
-$$;
-
--- 4. Function to auto-calculate and update bill for a table session
-CREATE OR REPLACE FUNCTION calculate_and_update_bill(
-  p_table_session_id UUID
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_total INTEGER := 0;
-BEGIN
-  -- Calculate sum of orders for this table session
-  SELECT COALESCE(SUM(total_amount), 0)
-  INTO v_total
-  FROM orders
-  WHERE table_session_id = p_table_session_id;
-
-  -- Upsert the bill record
-  INSERT INTO bills (table_session_id, total_amount, status)
-  VALUES (p_table_session_id, v_total, 'PENDING')
-  ON CONFLICT (table_session_id)
-  DO UPDATE SET
-    total_amount = EXCLUDED.total_amount
-    WHERE bills.status = 'PENDING';
-END;
-$$;
-
--- 5. Update create_order to validate active session (No expires_at constraint on QR)
+-- Update create_order to correctly read both selected_option_ids and option_ids,
+-- insert into order_item_options, and accurately calculate subtotals and totals.
 CREATE OR REPLACE FUNCTION create_order(
   p_table_session_id UUID,
   p_guest_session_token TEXT,
@@ -123,6 +23,7 @@ DECLARE
   v_queue_num BIGINT;
   v_item JSONB;
   v_menu_item RECORD;
+  v_options_json JSONB;
   v_opt_id_text TEXT;
   v_opt_id UUID;
   v_option RECORD;
@@ -243,9 +144,12 @@ BEGIN
       0
     ) RETURNING id INTO v_order_item_id;
 
+    -- Extract options array from selected_option_ids or option_ids
+    v_options_json := COALESCE(v_item->'selected_option_ids', v_item->'option_ids');
+
     -- Loop over options if any
-    IF COALESCE(v_item->'selected_option_ids', v_item->'option_ids') IS NOT NULL AND jsonb_array_length(COALESCE(v_item->'selected_option_ids', v_item->'option_ids')) > 0 THEN
-      FOR v_opt_id_text IN SELECT * FROM jsonb_array_elements_text(COALESCE(v_item->'selected_option_ids', v_item->'option_ids'))
+    IF v_options_json IS NOT NULL AND jsonb_typeof(v_options_json) = 'array' AND jsonb_array_length(v_options_json) > 0 THEN
+      FOR v_opt_id_text IN SELECT * FROM jsonb_array_elements_text(v_options_json)
       LOOP
         v_opt_id := v_opt_id_text::UUID;
 
@@ -319,5 +223,164 @@ BEGIN
     FROM orders o
     WHERE o.id = v_order_id
   );
+END;
+$$;
+
+
+-- Update update_order to also safely support both selected_option_ids and option_ids
+CREATE OR REPLACE FUNCTION update_order(
+  p_order_id UUID,
+  p_guest_session_token TEXT,
+  p_items JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_order RECORD;
+  v_table_session RECORD;
+  v_guest_session RECORD;
+  v_item JSONB;
+  v_menu_item RECORD;
+  v_options_json JSONB;
+  v_opt_id_text TEXT;
+  v_opt_id UUID;
+  v_option RECORD;
+  v_order_item_id UUID;
+  v_item_subtotal INTEGER;
+  v_options_subtotal INTEGER;
+  v_order_total INTEGER := 0;
+  v_item_qty INTEGER;
+  v_special_instruction TEXT;
+BEGIN
+  -- 1. Fetch order and check status
+  SELECT * INTO v_order FROM orders WHERE id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Order not found';
+  END IF;
+
+  IF v_order.status NOT IN ('QUEUED', 'PREPARING') THEN
+    RAISE EXCEPTION 'Cannot edit order with status %', v_order.status;
+  END IF;
+
+  -- 2. Verify table session is active
+  SELECT * INTO v_table_session FROM table_sessions WHERE id = v_order.table_session_id;
+  IF NOT FOUND OR v_table_session.status != 'ACTIVE' THEN
+    RAISE EXCEPTION 'Table session is not active';
+  END IF;
+
+  -- 3. Verify guest session token
+  SELECT * INTO v_guest_session FROM guest_sessions
+  WHERE id = v_order.guest_session_id AND session_token = p_guest_session_token;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid guest session token';
+  END IF;
+
+  -- 4. Delete existing items (cascades to order_item_options)
+  DELETE FROM order_items WHERE order_id = p_order_id;
+
+  -- 5. Re-insert items with snapshots
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
+  LOOP
+    SELECT * INTO v_menu_item FROM menu_items
+    WHERE id = (v_item->>'menu_item_id')::UUID AND is_active = true;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Menu item not found';
+    END IF;
+
+    IF NOT v_menu_item.is_available THEN
+      RAISE EXCEPTION 'Menu item "%" is sold out', v_menu_item.name;
+    END IF;
+
+    v_item_qty := (v_item->>'quantity')::INTEGER;
+    IF v_item_qty <= 0 THEN
+      RAISE EXCEPTION 'Quantity must be > 0';
+    END IF;
+
+    v_special_instruction := v_item->>'special_instruction';
+    IF char_length(v_special_instruction) > 200 THEN
+      RAISE EXCEPTION 'Special instruction exceeds 200 characters';
+    END IF;
+
+    v_options_subtotal := 0;
+
+    INSERT INTO order_items (
+      order_id,
+      menu_item_id,
+      snapshot_name,
+      snapshot_base_price,
+      snapshot_description,
+      quantity,
+      special_instruction,
+      subtotal
+    ) VALUES (
+      p_order_id,
+      v_menu_item.id,
+      v_menu_item.name,
+      v_menu_item.base_price,
+      v_menu_item.description,
+      v_item_qty,
+      v_special_instruction,
+      0
+    ) RETURNING id INTO v_order_item_id;
+
+    -- Extract options array from selected_option_ids or option_ids
+    v_options_json := COALESCE(v_item->'selected_option_ids', v_item->'option_ids');
+
+    IF v_options_json IS NOT NULL AND jsonb_typeof(v_options_json) = 'array' AND jsonb_array_length(v_options_json) > 0 THEN
+      FOR v_opt_id_text IN SELECT * FROM jsonb_array_elements_text(v_options_json)
+      LOOP
+        v_opt_id := v_opt_id_text::UUID;
+
+        SELECT o.*, og.name as group_name
+        INTO v_option
+        FROM options o
+        JOIN option_groups og ON og.id = o.option_group_id
+        WHERE o.id = v_opt_id
+          AND o.is_active = true
+          AND og.is_active = true;
+
+        IF NOT FOUND OR NOT v_option.is_available THEN
+          RAISE EXCEPTION 'Option is unavailable';
+        END IF;
+
+        INSERT INTO order_item_options (
+          order_item_id,
+          option_id,
+          option_group_id,
+          snapshot_option_name,
+          snapshot_group_name,
+          snapshot_price_adjustment
+        ) VALUES (
+          v_order_item_id,
+          v_option.id,
+          v_option.option_group_id,
+          v_option.name,
+          v_option.group_name,
+          v_option.price_adjustment
+        );
+
+        v_options_subtotal := v_options_subtotal + v_option.price_adjustment;
+      END LOOP;
+    END IF;
+
+    v_item_subtotal := (v_menu_item.base_price + v_options_subtotal) * v_item_qty;
+    UPDATE order_items SET subtotal = v_item_subtotal WHERE id = v_order_item_id;
+    v_order_total := v_order_total + v_item_subtotal;
+  END LOOP;
+
+  -- 6. Update order total & bump revision
+  UPDATE orders SET
+    total_amount = v_order_total,
+    revision = revision + 1,
+    updated_at = NOW()
+  WHERE id = p_order_id;
+
+  -- 7. Auto-recalculate bill
+  PERFORM calculate_and_update_bill(v_order.table_session_id);
+
+  RETURN (SELECT to_jsonb(o) FROM orders o WHERE o.id = p_order_id);
 END;
 $$;

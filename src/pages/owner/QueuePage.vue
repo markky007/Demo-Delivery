@@ -262,7 +262,7 @@
       </div>
 
       <!-- ========================================================================= -->
-      <!-- VIEW 1: FOCUS COOK SLIDER MODE (มุมมองโฟกัสทำอาหารขนาดใหญ่ สไลด์ได้) -->
+      <!-- VIEW 1: FOCUS COOK SLIP MODE (มุมมองโฟกัสทำอาหาร แสดงครั้งละสูงสุด 3 ออเดอร์ สไตล์สลิป) -->
       <!-- ========================================================================= -->
       <div v-if="viewMode === 'focus'" class="focus-mode-container animate-fade-in">
         <!-- Focus Filter & Navigation Header -->
@@ -326,8 +326,8 @@
             <!-- Slide Navigation Counter & Arrow Controls -->
             <div v-if="filteredFocusOrders.length > 0" class="row items-center q-gutter-sm">
               <span class="slide-counter-label">
-                ออเดอร์ที่ <strong>{{ currentSlideIndex + 1 }}</strong> จาก
-                <strong>{{ filteredFocusOrders.length }}</strong>
+                หน้า <strong>{{ focusPage + 1 }}</strong> / <strong>{{ totalFocusPages }}</strong>
+                <span class="text-caption text-grey-6 q-ml-xs">({{ getPageRangeText(focusPage) }})</span>
               </span>
 
               <q-btn
@@ -336,10 +336,10 @@
                 unelevated
                 icon="chevron_left"
                 class="slider-arrow-btn"
-                :disable="currentSlideIndex === 0"
-                @click="prevSlide"
+                :disable="focusPage === 0"
+                @click="prevPage"
               >
-                <q-tooltip>ออเดอร์ก่อนหน้า (ลูกศรซ้าย)</q-tooltip>
+                <q-tooltip>หน้าก่อนหน้า (ลูกศรซ้าย)</q-tooltip>
               </q-btn>
 
               <q-btn
@@ -348,10 +348,10 @@
                 unelevated
                 icon="chevron_right"
                 class="slider-arrow-btn"
-                :disable="currentSlideIndex >= filteredFocusOrders.length - 1"
-                @click="nextSlide"
+                :disable="focusPage >= totalFocusPages - 1"
+                @click="nextPage"
               >
-                <q-tooltip>ออเดอร์ถัดไป (ลูกศรขวา)</q-tooltip>
+                <q-tooltip>หน้าถัดไป (ลูกศรขวา)</q-tooltip>
               </q-btn>
 
               <q-btn
@@ -398,10 +398,10 @@
           </div>
         </div>
 
-        <!-- Main Swipeable Carousel of Large Cards -->
+        <!-- Main Dynamic Kitchen Slips Carousel (1-3 orders per page) -->
         <div v-else class="focus-slider-wrapper">
           <q-carousel
-            v-model="currentSlideId"
+            v-model="focusPage"
             swipeable
             animated
             transition-prev="slide-right"
@@ -410,34 +410,44 @@
             class="focus-carousel bg-transparent"
           >
             <q-carousel-slide
-              v-for="order in filteredFocusOrders"
-              :key="order.id"
-              :name="order.id"
+              v-for="(pageOrders, pageIdx) in focusPages"
+              :key="pageIdx"
+              :name="pageIdx"
               class="q-pa-none"
             >
               <div
-                class="chef-large-card"
-                :class="{
-                  'chef-large-card--queued': order.status === OrderStatus.QUEUED,
-                  'chef-large-card--preparing': order.status === OrderStatus.PREPARING,
-                  'chef-large-card--prepared': order.status === OrderStatus.PREPARED,
-                }"
+                class="kitchen-slips-container"
+                :class="`kitchen-slips-container--count-${pageOrders.length}`"
               >
-                <!-- Card Header: Queue Number, Table, Status, Elapsed Time -->
-                <div class="chef-card-header">
-                  <div class="row items-center justify-between wrap q-gutter-y-sm">
-                    <div class="row items-center q-gutter-x-md">
-                      <div class="chef-queue-badge">
-                        <span class="chef-queue-label">คิวที่</span>
-                        <span class="chef-queue-number">{{
+                <div
+                  v-for="order in pageOrders"
+                  :key="order.id"
+                  class="kitchen-slip"
+                  :class="{
+                    'kitchen-slip--queued': order.status === OrderStatus.QUEUED,
+                    'kitchen-slip--preparing': order.status === OrderStatus.PREPARING,
+                    'kitchen-slip--prepared': order.status === OrderStatus.PREPARED,
+                  }"
+                >
+                  <!-- Slip Top Perforation Edge -->
+                  <div class="slip-ticket-edge slip-ticket-edge--top"></div>
+
+                  <!-- Slip Header: Queue Number, Table, Status, Elapsed Time -->
+                  <div class="slip-header">
+                    <div class="row items-center justify-between no-wrap q-mb-sm">
+                      <!-- Big Queue Badge -->
+                      <div class="slip-queue-badge">
+                        <span class="slip-queue-label">คิวที่</span>
+                        <span class="slip-queue-number">{{
                           formatQueueNumber(order.queue_number)
                         }}</span>
                       </div>
 
+                      <!-- Table Badge -->
                       <div
-                        class="chef-table-badge"
+                        class="slip-table-badge"
                         :class="{
-                          'chef-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                          'slip-table-badge--takeaway': isTakeawayName(getTableName(order)),
                         }"
                       >
                         <q-icon
@@ -446,12 +456,12 @@
                               ? 'shopping_bag'
                               : 'table_restaurant'
                           "
-                          size="20px"
+                          size="18px"
                           class="q-mr-xs"
                           :color="isTakeawayName(getTableName(order)) ? 'orange-9' : 'primary'"
                         />
                         <span
-                          class="chef-table-name"
+                          class="slip-table-name"
                           :class="{ 'text-orange-9': isTakeawayName(getTableName(order)) }"
                         >
                           {{ getTableName(order) }}
@@ -459,178 +469,154 @@
                       </div>
                     </div>
 
-                    <!-- Status & Timer Badges -->
-                    <div class="row items-center q-gutter-x-sm">
+                    <!-- Status & Timer Badges Row -->
+                    <div class="row items-center justify-between q-gutter-x-xs q-gutter-y-xs">
                       <div
-                        class="chef-status-pill"
+                        class="slip-status-pill"
                         :class="{
-                          'chef-status-pill--queued': order.status === OrderStatus.QUEUED,
-                          'chef-status-pill--preparing': order.status === OrderStatus.PREPARING,
-                          'chef-status-pill--prepared': order.status === OrderStatus.PREPARED,
+                          'slip-status-pill--queued': order.status === OrderStatus.QUEUED,
+                          'slip-status-pill--preparing': order.status === OrderStatus.PREPARING,
+                          'slip-status-pill--prepared': order.status === OrderStatus.PREPARED,
                         }"
                       >
-                        <q-icon :name="getStatusIcon(order.status)" size="18px" class="q-mr-xs" />
+                        <q-icon :name="getStatusIcon(order.status)" size="15px" class="q-mr-xs" />
                         <span>{{ getStatusLabel(order.status) }}</span>
                       </div>
 
-                      <div class="chef-timer-pill" :class="getTimerColorClass(order.created_at)">
-                        <q-icon name="timer" size="16px" class="q-mr-xs" />
-                        <span>รอมาแล้ว {{ formatElapsed(order.created_at) }}</span>
+                      <div class="slip-timer-pill" :class="getTimerColorClass(order.created_at)">
+                        <q-icon name="timer" size="14px" class="q-mr-xs" />
+                        <span>รอ {{ formatElapsed(order.created_at) }}</span>
                       </div>
+                    </div>
+
+                    <!-- Revision Alert Banner -->
+                    <div v-if="order.revision > 1" class="slip-revision-alert q-mt-xs">
+                      <q-icon
+                        name="notification_important"
+                        size="17px"
+                        class="q-mr-xs animate-bounce"
+                      />
+                      <span><strong>แก้ไขรายการ:</strong> เวอร์ชัน {{ order.revision }}</span>
                     </div>
                   </div>
 
-                  <!-- Revision Alert Banner -->
-                  <div v-if="order.revision > 1" class="chef-revision-alert q-mt-sm">
-                    <q-icon
-                      name="notification_important"
-                      size="20px"
-                      class="q-mr-xs animate-bounce"
-                    />
-                    <span
-                      ><strong>คำเตือน:</strong> ลูกค้ารายการนี้มีการแก้ไขรายการอาหาร (เวอร์ชัน
-                      {{ order.revision }})</span
-                    >
-                  </div>
-                </div>
+                  <!-- Perforated Dashed Divider -->
+                  <div class="slip-divider-dashed"></div>
 
-                <!-- Card Body: Large Dish Items List -->
-                <div class="chef-card-body">
-                  <div class="chef-dishes-header">
-                    <span class="chef-dishes-title"
-                      >รายการอาหารที่ต้องทำ ({{ getTotalDishesCount(order) }} จาน)</span
-                    >
-                    <span class="text-caption text-grey-6"
-                      >เวลาสั่ง {{ formatTime(order.created_at) }}</span
-                    >
-                  </div>
+                  <!-- Slip Body: Dish Items List with crystal clear option badges -->
+                  <div class="slip-body">
+                    <div class="slip-dishes-header">
+                      <span class="slip-dishes-title">
+                        รายการอาหาร ({{ getTotalDishesCount(order) }} จาน)
+                      </span>
+                      <span class="text-caption text-grey-6">
+                        {{ formatTime(order.created_at) }}
+                      </span>
+                    </div>
 
-                  <div class="chef-dishes-grid">
-                    <div
-                      v-for="(item, idx) in order.items"
-                      :key="item.id || idx"
-                      class="chef-dish-row"
-                    >
-                      <div class="row items-start no-wrap">
-                        <!-- Big Quantity Badge -->
-                        <div class="chef-dish-qty-box">{{ item.quantity }}x</div>
+                    <div class="slip-dishes-list">
+                      <div
+                        v-for="(item, idx) in order.items"
+                        :key="item.id || idx"
+                        class="slip-dish-card"
+                      >
+                        <div class="row items-start no-wrap">
+                          <!-- Distinct Quantity Box -->
+                          <div class="slip-dish-qty-box">{{ item.quantity }}x</div>
 
-                        <!-- Dish Details -->
-                        <div class="chef-dish-info q-ml-md col">
-                          <div class="chef-dish-name">
-                            {{ item.snapshot_name }}
-                          </div>
+                          <!-- Dish Details -->
+                          <div class="slip-dish-info q-ml-sm col">
+                            <div class="slip-dish-name">
+                              {{ item.snapshot_name }}
+                            </div>
 
-                          <!-- Options / Addons List -->
-                          <div
-                            v-if="item.options && getVisibleOptions(item.options).length > 0"
-                            class="chef-options-wrap q-mt-xs"
-                          >
-                            <span
-                              v-for="opt in getVisibleOptions(item.options)"
-                              :key="opt.id"
-                              class="chef-option-chip"
-                              :class="{
-                                'chef-option-chip--takeaway': isTakeawayOption(
-                                  opt.snapshot_option_name,
-                                ),
-                              }"
+                            <!-- Options / Addons List (Highlighted & Categorized) -->
+                            <div
+                              v-if="item.options && getVisibleOptions(item.options).length > 0"
+                              class="slip-options-wrap q-mt-xs"
                             >
-                              <q-icon
-                                v-if="isTakeawayOption(opt.snapshot_option_name)"
-                                name="shopping_bag"
-                                size="13px"
-                                class="q-mr-xs"
-                              />
-                              {{
-                                isTakeawayOption(opt.snapshot_option_name)
-                                  ? opt.snapshot_option_name
-                                  : `+ ${opt.snapshot_option_name}`
-                              }}
-                            </span>
-                          </div>
+                              <span
+                                v-for="opt in getVisibleOptions(item.options)"
+                                :key="opt.id"
+                                class="slip-option-chip"
+                                :class="`slip-option-chip--${getOptionDisplayInfo(opt.snapshot_option_name).category}`"
+                              >
+                                <q-icon
+                                  :name="getOptionDisplayInfo(opt.snapshot_option_name).icon"
+                                  size="13px"
+                                  class="q-mr-xs"
+                                />
+                                {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
+                              </span>
+                            </div>
 
-                          <!-- Special Instruction / Note -->
-                          <div v-if="item.special_instruction" class="chef-special-note q-mt-xs">
-                            <q-icon name="edit_note" size="18px" class="q-mr-xs" />
-                            <span>{{ item.special_instruction }}</span>
+                            <!-- Special Instruction / Note -->
+                            <div v-if="item.special_instruction" class="slip-special-note q-mt-xs">
+                              <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+                              <span>{{ item.special_instruction }}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Giant Action Button Bar -->
-                <div class="chef-card-footer">
-                  <div class="row items-center q-col-gutter-md">
-                    <div class="col-12 col-sm-8">
-                      <!-- 1. QUEUED -> Start Preparing Button -->
-                      <q-btn
-                        v-if="order.status === OrderStatus.QUEUED"
-                        unelevated
-                        no-caps
-                        size="lg"
-                        class="full-width chef-main-btn chef-main-btn--start"
-                        @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
-                      >
-                        <q-icon name="soup_kitchen" size="24px" class="q-mr-sm" />
-                        <span class="text-weight-bold">🔥 เริ่มเตรียมออเดอร์นี้</span>
-                      </q-btn>
+                  <!-- Slip Footer & Action Button -->
+                  <div class="slip-footer">
+                    <!-- 1. QUEUED -> Start Preparing Button -->
+                    <q-btn
+                      v-if="order.status === OrderStatus.QUEUED"
+                      unelevated
+                      no-caps
+                      size="md"
+                      class="full-width slip-action-btn slip-action-btn--start"
+                      @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
+                    >
+                      <q-icon name="soup_kitchen" size="20px" class="q-mr-xs" />
+                      <span class="text-weight-bold">🔥 เริ่มทำออเดอร์นี้</span>
+                    </q-btn>
 
-                      <!-- 2. PREPARING -> Prepared Button -->
-                      <q-btn
-                        v-else-if="order.status === OrderStatus.PREPARING"
-                        unelevated
-                        no-caps
-                        size="lg"
-                        class="full-width chef-main-btn chef-main-btn--done"
-                        @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARED)"
-                      >
-                        <q-icon name="check_circle" size="24px" class="q-mr-sm" />
-                        <span class="text-weight-bold">✅ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)</span>
-                      </q-btn>
+                    <!-- 2. PREPARING -> Prepared Button -->
+                    <q-btn
+                      v-else-if="order.status === OrderStatus.PREPARING"
+                      unelevated
+                      no-caps
+                      size="md"
+                      class="full-width slip-action-btn slip-action-btn--done"
+                      @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARED)"
+                    >
+                      <q-icon name="check_circle" size="20px" class="q-mr-xs" />
+                      <span class="text-weight-bold">✅ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)</span>
+                    </q-btn>
 
-                      <!-- 3. PREPARED -> Confirm Served Button -->
-                      <q-btn
-                        v-else-if="order.status === OrderStatus.PREPARED"
-                        unelevated
-                        no-caps
-                        size="lg"
-                        class="full-width chef-main-btn"
-                        :class="
+                    <!-- 3. PREPARED -> Confirm Served Button -->
+                    <q-btn
+                      v-else-if="order.status === OrderStatus.PREPARED"
+                      unelevated
+                      no-caps
+                      size="md"
+                      class="full-width slip-action-btn"
+                      :class="
+                        queueStore.canServe(order)
+                          ? 'slip-action-btn--serve'
+                          : 'slip-action-btn--disabled'
+                      "
+                      :disable="!queueStore.canServe(order)"
+                      @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
+                    >
+                      <q-icon name="done_all" size="20px" class="q-mr-xs" />
+                      <span class="text-weight-bold">
+                        {{
                           queueStore.canServe(order)
-                            ? 'chef-main-btn--serve'
-                            : 'chef-main-btn--disabled'
-                        "
-                        :disable="!queueStore.canServe(order)"
-                        @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
-                      >
-                        <q-icon name="done_all" size="24px" class="q-mr-sm" />
-                        <span class="text-weight-bold">
-                          {{
-                            queueStore.canServe(order)
-                              ? '🍽️ ยืนยันว่าเสิร์ฟเรียบร้อย'
-                              : '⏳ รอเสิร์ฟตามลำดับคิว'
-                          }}
-                        </span>
-                      </q-btn>
-                    </div>
-
-                    <div class="col-12 col-sm-4">
-                      <!-- Quick Switch Back to Overview Button -->
-                      <q-btn
-                        outline
-                        no-caps
-                        size="lg"
-                        class="full-width chef-secondary-btn"
-                        @click="viewMode = 'overview'"
-                      >
-                        <q-icon name="view_kanban" size="20px" class="q-mr-sm" />
-                        <span>ดูภาพรวมทั้งหมด</span>
-                      </q-btn>
-                    </div>
+                            ? '🍽️ ยืนยันว่าเสิร์ฟเรียบร้อย'
+                            : '⏳ รอเสิร์ฟตามลำดับคิว'
+                        }}
+                      </span>
+                    </q-btn>
                   </div>
+
+                  <!-- Slip Bottom Perforation Edge -->
+                  <div class="slip-ticket-edge slip-ticket-edge--bottom"></div>
                 </div>
               </div>
             </q-carousel-slide>
@@ -638,8 +624,13 @@
 
           <!-- Bottom Mini Thumbnails Strip for Quick Jump -->
           <div v-if="filteredFocusOrders.length > 1" class="focus-thumbnails-strip q-mt-md">
-            <div class="text-caption text-grey-7 q-mb-xs text-weight-medium">
-              สลับไปยังออเดอร์อื่นอย่างรวดเร็ว (แตะเลือกเพื่อดู):
+            <div class="row items-center justify-between q-mb-xs">
+              <div class="text-caption text-grey-7 text-weight-medium">
+                รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
+              </div>
+              <div class="text-caption text-grey-6">
+                แสดงผลทีละสูงสุด 3 ออเดอร์ / หน้า
+              </div>
             </div>
             <div class="thumbnails-scroll-row">
               <div
@@ -647,7 +638,7 @@
                 :key="ord.id"
                 class="mini-order-chip"
                 :class="{
-                  'mini-order-chip--active': ord.id === currentSlideId,
+                  'mini-order-chip--active': isOrderOnCurrentPage(ord.id),
                   'mini-order-chip--queued': ord.status === OrderStatus.QUEUED,
                   'mini-order-chip--preparing': ord.status === OrderStatus.PREPARING,
                   'mini-order-chip--prepared': ord.status === OrderStatus.PREPARED,
@@ -1381,6 +1372,7 @@ import {
   formatElapsed,
   formatTime,
   getVisibleOptions,
+  getOptionDisplayInfo,
   isTakeawayOption,
 } from 'src/utils/formatters';
 import { isTakeawayName } from 'src/services/tableService';
@@ -1411,7 +1403,8 @@ const isLoading = ref(true);
 const viewMode = ref<'focus' | 'overview' | 'fry'>('focus');
 const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
 const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
-const currentSlideId = ref<string>('');
+const FOCUS_PAGE_SIZE = 3;
+const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
 const soundVolume = ref<number>(getSoundVolume());
 
@@ -1458,57 +1451,74 @@ const filteredFocusOrders = computed<OrderWithItems[]>(() => {
   return active;
 });
 
-// Current slide index within the filtered list
-const currentSlideIndex = computed(() => {
+// Group filtered focus orders into pages of up to 3 orders
+const focusPages = computed<OrderWithItems[][]>(() => {
   const list = filteredFocusOrders.value;
-  if (list.length === 0) return 0;
-  const idx = list.findIndex((o) => o.id === currentSlideId.value);
-  return idx >= 0 ? idx : 0;
+  if (list.length === 0) return [];
+  const pages: OrderWithItems[][] = [];
+  for (let i = 0; i < list.length; i += FOCUS_PAGE_SIZE) {
+    pages.push(list.slice(i, i + FOCUS_PAGE_SIZE));
+  }
+  return pages;
 });
 
-// Automatically ensure currentSlideId points to a valid order in the filtered list
+const totalFocusPages = computed(() => Math.max(1, focusPages.value.length));
+
+// Automatically keep focusPage within valid range
 watch(
-  filteredFocusOrders,
-  (newList) => {
-    if (newList.length > 0) {
-      const exists = newList.some((o) => o.id === currentSlideId.value);
-      if (!exists && newList[0]) {
-        currentSlideId.value = newList[0].id;
+  focusPages,
+  (newPages) => {
+    if (newPages.length > 0) {
+      if (focusPage.value >= newPages.length) {
+        focusPage.value = Math.max(0, newPages.length - 1);
       }
     } else {
-      currentSlideId.value = '';
+      focusPage.value = 0;
     }
   },
   { immediate: true },
 );
 
-function prevSlide() {
-  const list = filteredFocusOrders.value;
-  if (currentSlideIndex.value > 0) {
-    const prev = list[currentSlideIndex.value - 1];
-    if (prev) {
-      currentSlideId.value = prev.id;
-    }
+function prevPage() {
+  if (focusPage.value > 0) {
+    focusPage.value--;
   }
 }
 
-function nextSlide() {
-  const list = filteredFocusOrders.value;
-  if (currentSlideIndex.value < list.length - 1) {
-    const next = list[currentSlideIndex.value + 1];
-    if (next) {
-      currentSlideId.value = next.id;
-    }
+function nextPage() {
+  if (focusPage.value < focusPages.value.length - 1) {
+    focusPage.value++;
   }
 }
 
 function jumpToOrder(orderId: string) {
-  currentSlideId.value = orderId;
+  const pageIdx = focusPages.value.findIndex((page) => page.some((o) => o.id === orderId));
+  if (pageIdx !== -1) {
+    focusPage.value = pageIdx;
+  }
+}
+
+function isOrderOnCurrentPage(orderId: string): boolean {
+  const curPage = focusPages.value[focusPage.value];
+  return curPage ? curPage.some((o) => o.id === orderId) : false;
+}
+
+function getPageRangeText(pageIdx: number): string {
+  const total = filteredFocusOrders.value.length;
+  if (total === 0) return '0 ออเดอร์';
+  const start = pageIdx * FOCUS_PAGE_SIZE + 1;
+  const end = Math.min((pageIdx + 1) * FOCUS_PAGE_SIZE, total);
+  if (start === end) {
+    return `ออเดอร์ที่ ${start} จากทั้งหมด ${total}`;
+  }
+  return `ออเดอร์ที่ ${start} - ${end} จากทั้งหมด ${total}`;
 }
 
 function setFocusFilter(filter: 'all' | 'queued' | 'preparing' | 'prepared') {
   focusFilter.value = filter;
+  focusPage.value = 0;
 }
+
 
 function onSoundToggle(val: boolean) {
   setSoundEnabled(val);
@@ -1703,13 +1713,13 @@ function clearCompletedFryItems() {
   notifySuccess('ล้างรายการที่ติ๊กเสร็จแล้วเรียบร้อย');
 }
 
-// Keyboard shortcuts for kitchen navigation (Left/Right to slide)
+// Keyboard shortcuts for kitchen navigation (Left/Right to slide pages)
 function handleKeydown(e: KeyboardEvent) {
   if (viewMode.value !== 'focus') return;
   if (e.key === 'ArrowLeft') {
-    prevSlide();
+    prevPage();
   } else if (e.key === 'ArrowRight') {
-    nextSlide();
+    nextPage();
   }
 }
 
@@ -1746,10 +1756,10 @@ onMounted(async () => {
           if (payload.eventType === 'INSERT') {
             playNewOrderChime();
             notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
-            // Auto switch to focus view and highlight the newest order
+            // Auto switch to focus view and jump to the page containing new order
             const newOrder = payload.new as { id?: string };
             if (newOrder.id) {
-              currentSlideId.value = newOrder.id;
+              jumpToOrder(newOrder.id);
             }
             viewMode.value = 'focus';
           }
@@ -1798,16 +1808,11 @@ async function advanceStatus(orderId: string, newStatus: OrderStatus) {
 
 async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) {
   await advanceStatus(orderId, newStatus);
-
-  // If we just marked it prepared or served, smooth slide to the next pending order
   if (newStatus === OrderStatus.PREPARED || newStatus === OrderStatus.SERVED) {
     playStatusDoneChime();
-    const remaining = filteredFocusOrders.value.filter((o) => o.id !== orderId);
-    if (remaining.length > 0 && remaining[0]) {
-      currentSlideId.value = remaining[0].id;
-    }
   }
 }
+
 </script>
 
 <style scoped>
@@ -1877,9 +1882,9 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   color: #475569;
 }
 
-/* ─── VIEW 1: FOCUS MODE (Large Chef Slider) ───────────── */
+/* ─── VIEW 1: FOCUS MODE (Kitchen Order Slips - Up to 3 per view) ───────────── */
 .focus-mode-container {
-  max-width: 960px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
@@ -1930,133 +1935,181 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   color: var(--color-text-primary);
 }
 
-/* Chef Large Card */
-.chef-large-card {
+/* Dynamic Kitchen Slips Layout Grid */
+.kitchen-slips-container {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.kitchen-slips-container--count-1 {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.kitchen-slips-container--count-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.kitchen-slips-container--count-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .kitchen-slips-container--count-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .kitchen-slips-container--count-2,
+  .kitchen-slips-container--count-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Kitchen Order Slip Card */
+.kitchen-slip {
   background: #ffffff;
-  border-radius: var(--radius-lg);
-  border: 2px solid var(--color-border);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
   display: flex;
   flex-direction: column;
-  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.22s ease;
+  min-height: 460px;
 }
 
-.chef-large-card--queued {
-  border-color: #38bdf8;
-  border-top: 6px solid var(--color-status-queued);
+.kitchen-slip:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.11);
 }
 
-.chef-large-card--preparing {
-  border-color: #fbbf24;
-  border-top: 6px solid var(--color-status-preparing);
-  background: #fffdfa;
+.kitchen-slip--queued {
+  border-top: 6px solid #0284c7;
 }
 
-.chef-large-card--prepared {
-  border-color: #4ade80;
-  border-top: 6px solid var(--color-status-prepared);
-  background: #f0fdf4;
+.kitchen-slip--preparing {
+  border-top: 6px solid #d97706;
+  background: #fffdfb;
 }
 
-/* Chef Card Header */
-.chef-card-header {
-  padding: 18px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--color-border-subtle);
+.kitchen-slip--prepared {
+  border-top: 6px solid #16a34a;
+  background: #fbfdfb;
 }
 
-.chef-queue-badge {
-  display: flex;
+/* Ticket Edge Pattern */
+.slip-ticket-edge {
+  height: 4px;
+  background-image: radial-gradient(circle, #e2e8f0 2px, transparent 2px);
+  background-size: 8px 8px;
+  opacity: 0.9;
+}
+
+.slip-header {
+  padding: 14px 16px 10px 16px;
+  background: inherit;
+}
+
+.slip-queue-badge {
+  display: inline-flex;
   align-items: baseline;
-  background: var(--color-text-primary);
+  background: #1e293b;
   color: #ffffff;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-.chef-queue-label {
-  font-size: 0.8rem;
+.slip-queue-label {
+  font-size: 0.75rem;
   font-weight: 500;
   opacity: 0.85;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
-.chef-queue-number {
-  font-size: 1.85rem;
+.slip-queue-number {
+  font-size: 1.45rem;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
-.chef-table-badge {
+.slip-table-badge {
   display: inline-flex;
   align-items: center;
-  background: var(--color-primary-soft);
-  border: 1.5px solid var(--color-primary-tint);
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 8px;
 }
 
-.chef-table-badge--takeaway {
+.slip-table-badge--takeaway {
   background: #ffedd5;
-  border: 1.5px solid #fed7aa;
+  border-color: #fed7aa;
 }
 
-.chef-table-name {
-  font-size: 1.25rem;
+.slip-table-name {
+  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: #334155;
 }
 
-.chef-status-pill {
+.slip-status-pill {
   display: inline-flex;
   align-items: center;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  border-radius: 9999px;
 }
 
-.chef-status-pill--queued {
+.slip-status-pill--queued {
   background: #e0f2fe;
   color: #0284c7;
 }
 
-.chef-status-pill--preparing {
+.slip-status-pill--preparing {
   background: #fef3c7;
   color: #d97706;
 }
 
-.chef-status-pill--prepared {
+.slip-status-pill--prepared {
   background: #dcfce7;
   color: #16a34a;
 }
 
-.chef-timer-pill {
+.slip-timer-pill {
   display: inline-flex;
   align-items: center;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
 }
 
-.chef-timer-pill--normal {
+.slip-timer-pill--normal {
   background: #f8fafc;
-  color: var(--color-text-secondary);
+  color: #64748b;
 }
 
-.chef-timer-pill--warning {
+.slip-timer-pill--warning {
   background: #fffbeb;
   border-color: #fde68a;
   color: #b45309;
   font-weight: 700;
 }
 
-.chef-timer-pill--danger {
+.slip-timer-pill--danger {
   background: #fef2f2;
   border-color: #fecaca;
   color: #dc2626;
@@ -2064,169 +2117,196 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   animation: pulse-danger 2s infinite;
 }
 
-.chef-revision-alert {
-  background: #fef3c7;
+.slip-revision-alert {
+  background: #fffbeb;
   border: 1px solid #fde68a;
   color: #92400e;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
-  font-size: 0.92rem;
 }
 
-/* Chef Card Body */
-.chef-card-body {
-  padding: 20px 24px;
-  min-height: 220px;
+.slip-divider-dashed {
+  border-bottom: 2px dashed #e2e8f0;
+  margin: 0 14px;
 }
 
-.chef-dishes-header {
+/* Slip Body */
+.slip-body {
+  padding: 12px 16px;
+  flex: 1;
+}
+
+.slip-dishes-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 10px;
-  margin-bottom: 14px;
-  border-bottom: 2px dashed var(--color-border);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed #cbd5e1;
 }
 
-.chef-dishes-title {
-  font-size: 1.05rem;
+.slip-dishes-title {
+  font-size: 0.9rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: #334155;
 }
 
-.chef-dishes-grid {
+.slip-dishes-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
-.chef-dish-row {
-  background: #fbf9f6;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 14px 18px;
+.slip-dish-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
   transition: background 0.15s ease;
 }
 
-.chef-dish-row:hover {
-  background: #f5efe9;
+.slip-dish-card:hover {
+  background: #f1f5f9;
 }
 
-.chef-dish-qty-box {
+.slip-dish-qty-box {
   background: var(--color-primary);
   color: #ffffff;
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  min-width: 52px;
-  height: 52px;
-  border-radius: var(--radius-sm);
+  min-width: 38px;
+  height: 38px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 8px rgba(224, 88, 54, 0.28);
+  box-shadow: 0 2px 6px rgba(224, 88, 54, 0.25);
+  flex-shrink: 0;
 }
 
-.chef-dish-name {
-  font-size: 1.32rem;
+.slip-dish-name {
+  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  line-height: 1.25;
+  color: #0f172a;
+  line-height: 1.3;
 }
 
-.chef-options-wrap {
+/* Slip Option Chips with High Clarity & Categorized Colors */
+.slip-options-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
-.chef-option-chip {
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: 0.85rem;
+.slip-option-chip {
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
+  line-height: 1.3;
 }
 
-.chef-option-chip--takeaway {
-  background: #ffedd5;
-  border: 1.5px solid #fed7aa;
-  color: #ea580c;
+.slip-option-chip--special {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
   font-weight: 700;
 }
 
-.chef-special-note {
+.slip-option-chip--egg {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+  font-weight: 700;
+}
+
+.slip-option-chip--spicy {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.slip-option-chip--takeaway {
+  background: #ffedd5;
+  border: 1px solid #fed7aa;
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.slip-option-chip--sweet {
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.slip-option-chip--addon {
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-weight: 600;
+}
+
+.slip-special-note {
   background: #fef2f2;
   border: 1px solid #fee2e2;
   color: #b91c1c;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: var(--radius-xs);
+  padding: 3px 8px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
+  line-height: 1.3;
 }
 
-/* Chef Card Footer & Large Action Buttons */
-.chef-card-footer {
-  padding: 18px 24px;
-  background: #fbf9f6;
-  border-top: 1px solid var(--color-border);
+/* Slip Footer */
+.slip-footer {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-top: 1.5px dashed #cbd5e1;
+  margin-top: auto;
 }
 
-.chef-main-btn {
-  height: 56px;
-  font-size: 1.15rem;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+.slip-action-btn {
+  height: 46px;
+  font-size: 0.98rem;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.chef-main-btn:hover {
+.slip-action-btn:hover {
   transform: translateY(-2px);
 }
 
-.chef-main-btn--start {
+.slip-action-btn--start {
   background: linear-gradient(135deg, #e05836 0%, #c84323 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(224, 88, 54, 0.35);
+  box-shadow: 0 4px 14px rgba(224, 88, 54, 0.35);
 }
 
-.chef-main-btn--done {
+.slip-action-btn--done {
   background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.35);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
 }
 
-.chef-main-btn--serve {
+.slip-action-btn--serve {
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
 }
 
-.chef-main-btn--disabled {
+.slip-action-btn--disabled {
   background: #cbd5e1 !important;
   color: #64748b !important;
-}
-
-.chef-secondary-btn {
-  height: 56px;
-  font-size: 0.98rem;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  background: #ffffff;
-  border-color: var(--color-border);
-  color: var(--color-text-secondary);
-}
-
-.chef-secondary-btn:hover {
-  background: #f1f5f9;
-  color: var(--color-text-primary);
 }
 
 /* Bottom Mini Thumbnails Strip */
@@ -2285,6 +2365,7 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   font-size: 0.72rem;
   color: var(--color-text-muted);
 }
+
 
 .focus-empty-card {
   background: #ffffff;

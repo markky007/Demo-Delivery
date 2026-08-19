@@ -150,3 +150,99 @@ export function getVisibleOptions<T extends { name?: string; snapshot_option_nam
     return !isDefaultOptionName(name);
   });
 }
+
+export interface OptionDisplayInfo {
+  label: string;
+  category: 'special' | 'egg' | 'spicy' | 'takeaway' | 'sweet' | 'addon';
+  icon: string;
+}
+
+/**
+ * Categorize and format options for clear and prominent kitchen display.
+ */
+export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo {
+  if (!rawName) {
+    return { label: '', category: 'addon', icon: 'add' };
+  }
+  const name = rawName.trim();
+  const lower = name.toLowerCase();
+
+  // 1. Takeaway / packaging
+  if (
+    isTakeawayOption(name) ||
+    name.includes('ใส่กล่อง') ||
+    name.includes('แยกน้ำ') ||
+    name.includes('แยกข้าว')
+  ) {
+    return {
+      label: name,
+      category: 'takeaway',
+      icon: 'shopping_bag',
+    };
+  }
+
+  // 2. Portion / Special size
+  if (
+    name.includes('พิเศษ') ||
+    name.includes('จัมโบ้') ||
+    name.includes('เพิ่มข้าว') ||
+    name.includes('เพิ่มเนื้อ') ||
+    lower.includes('extra') ||
+    lower.includes('jumbo') ||
+    lower.includes('special')
+  ) {
+    return {
+      label: name.startsWith('+') ? name : `⭐ ${name}`,
+      category: 'special',
+      icon: 'star',
+    };
+  }
+
+  // 3. Egg variations (ไข่ดาว, ไข่ข้น, ไข่เจียว, etc.)
+  if (
+    name.includes('ไข่ดาว') ||
+    name.includes('ไข่ข้น') ||
+    name.includes('ไข่เจียว') ||
+    name.includes('ไข่ต้ม') ||
+    name.includes('ไข่ลวก') ||
+    name.includes('ไข่') ||
+    lower.includes('egg')
+  ) {
+    return {
+      label: name.startsWith('+') ? name : `🍳 + ${name}`,
+      category: 'egg',
+      icon: 'egg',
+    };
+  }
+
+  // 4. Spicy level
+  if (
+    name.includes('เผ็ด') ||
+    name.includes('พริก') ||
+    lower.includes('spicy') ||
+    lower.includes('chili')
+  ) {
+    return {
+      label: name.startsWith('+') ? name : `🌶️ ${name}`,
+      category: 'spicy',
+      icon: 'local_fire_department',
+    };
+  }
+
+  // 5. Sweetness
+  if (name.includes('หวาน') || lower.includes('sweet') || lower.includes('sugar')) {
+    return {
+      label: name.startsWith('+') ? name : `💧 ${name}`,
+      category: 'sweet',
+      icon: 'water_drop',
+    };
+  }
+
+  // 6. Generic add-on or customization
+  return {
+    label: name.startsWith('+') ? name : `+ ${name}`,
+    category: 'addon',
+    icon: 'add_circle',
+  };
+}
+

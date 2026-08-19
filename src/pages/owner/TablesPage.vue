@@ -2,23 +2,55 @@
   <q-page class="tables-page q-pa-md">
     <div class="tables-container">
       <!-- Actions bar -->
-      <div class="row items-center justify-between q-mb-lg">
+      <div class="row items-center justify-between q-mb-lg flex-wrap q-gutter-y-sm">
         <div>
           <h5 class="q-my-none text-weight-bold page-title">จัดการโต๊ะและ QR Code</h5>
           <p class="text-caption text-grey-7 q-mb-none">
-            สร้างและพิมพ์ QR Code สำหรับติดประจำโต๊ะอาหาร
+            สร้างและพิมพ์ QR Code สำหรับติดประจำโต๊ะอาหาร (QR Code ถาวร ไม่เปลี่ยน)
           </p>
         </div>
-        <q-btn
-          color="primary"
-          unelevated
-          no-caps
-          rounded
-          icon="add"
-          label="เพิ่มโต๊ะใหม่"
-          @click="showCreateDialog = true"
-          class="add-table-btn"
-        />
+        <div class="row items-center q-gutter-sm">
+          <q-btn
+            outline
+            color="primary"
+            no-caps
+            rounded
+            icon="print"
+            label="พิมพ์ QR ทุกโต๊ะ (A4 / PDF)"
+            @click="printAllQRs"
+            :loading="isBatchProcessing"
+            :disable="tablesWithQR.length === 0"
+            class="action-btn"
+          >
+            <q-tooltip>พิมพ์แผ่นรวม QR ทุกโต๊ะในขนาด A4 พร้อมเส้นประสำหรับตัดแปะ</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            outline
+            color="secondary"
+            no-caps
+            rounded
+            icon="file_download"
+            label="ดาวน์โหลด QR ทั้งหมด (.ZIP)"
+            @click="downloadAllQRs"
+            :loading="isDownloadingZip"
+            :disable="tablesWithQR.length === 0"
+            class="action-btn"
+          >
+            <q-tooltip>ดาวน์โหลดรูปภาพ QR Code ของทุกโต๊ะรวมเป็นไฟล์ ZIP ในคลิกเดียว</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            color="primary"
+            unelevated
+            no-caps
+            rounded
+            icon="add"
+            label="เพิ่มโต๊ะใหม่"
+            @click="showCreateDialog = true"
+            class="add-table-btn"
+          />
+        </div>
       </div>
 
       <!-- Loading Skeleton -->
@@ -160,7 +192,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, watch } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue';
+import JSZip from 'jszip';
 import { useNotify } from 'src/composables/useNotify';
 import {
   fetchTables,
@@ -175,21 +208,29 @@ import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { TableWithQR } from 'src/types/database';
 
-const { notifySuccess, notifyError } = useNotify();
+const { notifySuccess, notifyError, notifyWarning } = useNotify();
 
 const tables = ref<TableWithQR[]>([]);
 const isLoading = ref(true);
 const showCreateDialog = ref(false);
 const newTableName = ref('');
 const isCreating = ref(false);
+const isBatchProcessing = ref(false);
+const isDownloadingZip = ref(false);
 const qrCanvasRefs = reactive<Record<string, HTMLCanvasElement | null>>({});
 
 let restaurantId = '';
+let restaurantName = 'DEMO Bang saen';
+
+const tablesWithQR = computed(() => tables.value.filter((t) => !!t.active_qr));
 
 onMounted(async () => {
   try {
-    const { data } = await supabase.from('restaurants').select('id').limit(1).single();
-    if (data) restaurantId = data.id;
+    const { data } = await supabase.from('restaurants').select('id, name').limit(1).single();
+    if (data) {
+      restaurantId = data.id;
+      if (data.name) restaurantName = data.name;
+    }
     await loadTables();
   } finally {
     isLoading.value = false;
@@ -250,7 +291,7 @@ async function regenerateQR(table: TableWithQR) {
   try {
     await generateQRToken(table.id);
     await loadTables();
-    notifySuccess('สร้าง QR Code ใหม่แล้ว (QR เดิมถูกยกเลิก)');
+    notifySuccess('สร้าง QR Code ใหม่แล้ว');
   } catch (err) {
     notifyError(err instanceof Error ? err.message : 'สร้าง QR ใหม่ไม่สำเร็จ');
   }
@@ -316,6 +357,273 @@ function printQR(table: TableWithQR) {
   );
 }
 
+/**
+ * Print all active table QR codes in an A4 sheet layout (2 columns x 3 rows grid)
+ * with dashed cut lines and table names, ready for printing or saving as PDF.
+ */
+async function printAllQRs() {
+  const activeTables = tablesWithQR.value;
+  if (activeTables.length === 0) {
+    notifyWarning('ไม่มีโต๊ะที่มี QR Code สำหรับพิมพ์');
+    return;
+  }
+
+  isBatchProcessing.value = true;
+
+  try {
+    const baseUrl = getAppUrl();
+    const tableCardsHtml: string[] = [];
+
+    for (const table of activeTables) {
+      const url = `${baseUrl}/t/${table.active_qr!.public_token}`;
+      const qrDataUrl = await QRCode.toDataURL(url, {
+        width: 300,
+        margin: 1,
+        color: {
+          dark: '#1e1b18',
+          light: '#ffffff',
+        },
+      });
+
+      tableCardsHtml.push(`
+        <div class="cut-card">
+          <div class="cut-guide-label">✂️ ตัดตามรอยประ</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="restaurant-title">${restaurantName}</div>
+              <div class="subtitle">สแกนเพื่อสั่งอาหาร</div>
+            </div>
+            <div class="qr-image-wrap">
+              <img class="qr-img" src="${qrDataUrl}" alt="${table.name}" />
+            </div>
+            <div class="card-footer">
+              <div class="table-badge">${table.name}</div>
+              <div class="welcome-text">ยินดีต้อนรับ</div>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      notifyError('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาตป๊อปอัปในเบราว์เซอร์');
+      return;
+    }
+
+    win.document.write(
+      `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>พิมพ์ QR Code ทุกโต๊ะ (A4) - ${restaurantName}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&display=swap');
+            
+            @page {
+              size: A4 portrait;
+              margin: 8mm;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              color: #2d231e;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+
+            .sheet-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 8mm;
+              width: 100%;
+            }
+
+            .cut-card {
+              position: relative;
+              border: 1.5px dashed #b0a49c;
+              border-radius: 16px;
+              padding: 10px;
+              page-break-inside: avoid;
+              break-inside: avoid;
+              background: #ffffff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 86mm;
+            }
+
+            .cut-guide-label {
+              position: absolute;
+              top: -8px;
+              right: 14px;
+              background: #ffffff;
+              padding: 0 6px;
+              font-size: 9px;
+              color: #9c8e84;
+              font-weight: 500;
+            }
+
+            .card-inner {
+              width: 100%;
+              border: 1px solid #f0e6dd;
+              border-radius: 12px;
+              padding: 12px 14px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              text-align: center;
+              background: #fdfaf7;
+            }
+
+            .card-header {
+              margin-bottom: 6px;
+            }
+
+            .restaurant-title {
+              font-size: 15px;
+              font-weight: 800;
+              color: #e05836;
+              letter-spacing: 0.2px;
+            }
+
+            .subtitle {
+              font-size: 11px;
+              color: #6e6259;
+              font-weight: 500;
+            }
+
+            .qr-image-wrap {
+              background: #ffffff;
+              border-radius: 10px;
+              padding: 6px;
+              border: 1px solid #ede4db;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+              margin: 4px 0;
+            }
+
+            .qr-img {
+              width: 150px;
+              height: 150px;
+              display: block;
+            }
+
+            .card-footer {
+              margin-top: 6px;
+              width: 100%;
+            }
+
+            .table-badge {
+              display: inline-block;
+              background: #e05836;
+              color: #ffffff;
+              font-size: 17px;
+              font-weight: 800;
+              padding: 4px 20px;
+              border-radius: 20px;
+              letter-spacing: 0.3px;
+            }
+
+            .welcome-text {
+              font-size: 10px;
+              color: #8c7f75;
+              font-weight: 500;
+              margin-top: 3px;
+            }
+
+            @media print {
+              body {
+                background: none;
+              }
+              .cut-card {
+                border-color: #999999;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="sheet-grid">
+            ${tableCardsHtml.join('')}
+          </div>
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+            };
+          </` +
+        `script>
+        </body>
+      </html>
+    `,
+    );
+    win.document.close();
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้างเอกสารพิมพ์');
+  } finally {
+    isBatchProcessing.value = false;
+  }
+}
+
+/**
+ * Download all active QR codes as a single ZIP file with individual high-resolution PNGs.
+ */
+async function downloadAllQRs() {
+  const activeTables = tablesWithQR.value;
+  if (activeTables.length === 0) {
+    notifyWarning('ไม่มีโต๊ะที่มี QR Code สำหรับดาวน์โหลด');
+    return;
+  }
+
+  isDownloadingZip.value = true;
+
+  try {
+    const zip = new JSZip();
+    const baseUrl = getAppUrl();
+
+    for (const table of activeTables) {
+      const url = `${baseUrl}/t/${table.active_qr!.public_token}`;
+      const qrDataUrl = await QRCode.toDataURL(url, {
+        width: 500,
+        margin: 2,
+        color: {
+          dark: '#1e1b18',
+          light: '#ffffff',
+        },
+      });
+
+      // Extract base64 image data
+      const parts = qrDataUrl.split(',');
+      const base64Data = parts[1] ?? '';
+      const sanitizedName = table.name.replace(/[/\\?%*:|"<>]/g, '_').trim();
+      if (base64Data) {
+        zip.file(`QR_${sanitizedName}.png`, base64Data, { base64: true });
+      }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(zipBlob);
+    downloadLink.download = `QR_Codes_All_Tables_${new Date().toISOString().slice(0, 10)}.zip`;
+    downloadLink.click();
+    URL.revokeObjectURL(downloadLink.href);
+
+    notifySuccess(`ดาวน์โหลด QR Code รวม ${activeTables.length} โต๊ะเรียบร้อยแล้ว`);
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถดาวน์โหลดไฟล์ ZIP ได้');
+  } finally {
+    isDownloadingZip.value = false;
+  }
+}
+
 async function toggleTableStatus(table: TableWithQR) {
   try {
     await updateTable(table.id, { is_active: !table.is_active });
@@ -340,6 +648,12 @@ async function toggleTableStatus(table: TableWithQR) {
 .page-title {
   color: var(--color-text-primary);
   line-height: 1.2;
+}
+
+.action-btn {
+  padding: 6px 16px;
+  font-weight: 600;
+  font-size: 0.88rem;
 }
 
 .add-table-btn {

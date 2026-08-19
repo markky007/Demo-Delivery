@@ -70,11 +70,8 @@
                   {{ item.name }}
                 </div>
 
-                <!-- Selected Options Chips -->
-                <div
-                  v-if="item.selected_options && item.selected_options.length > 0"
-                  class="row items-center q-gutter-xs q-mt-xs"
-                >
+                <!-- Selected Options Chips & Edit Options Button -->
+                <div class="row items-center q-gutter-xs q-mt-xs">
                   <span
                     v-for="opt in item.selected_options"
                     :key="opt.option_id"
@@ -92,6 +89,22 @@
                       (+{{ formatPrice(opt.price_adjustment) }})
                     </template>
                   </span>
+
+                  <!-- Edit Options Trigger Button -->
+                  <button
+                    v-if="item.menu_item_id"
+                    type="button"
+                    class="edit-item-opt-btn"
+                    :disabled="isLoadingItemOptions"
+                    @click="openEditItemOptions(index)"
+                  >
+                    <q-icon name="tune" size="13px" class="q-mr-xs" />
+                    <span>{{
+                      item.selected_options && item.selected_options.length > 0
+                        ? 'แก้ไขตัวเลือก'
+                        : '+ เพิ่มตัวเลือก'
+                    }}</span>
+                  </button>
                 </div>
 
                 <!-- Special Instruction Input -->
@@ -198,10 +211,23 @@
   </q-dialog>
 
   <!-- Nested Dialog for Adding / Customizing a Menu Item -->
-  <q-dialog v-model="showAddItemDialog" position="bottom" maximized-mobile>
+  <q-dialog
+    v-model="showAddItemDialog"
+    position="bottom"
+    maximized-mobile
+    @hide="onAddItemDialogHide"
+  >
     <q-card class="add-menu-card">
       <q-card-section class="row items-center justify-between q-py-sm q-px-md">
-        <div class="text-weight-bold text-subtitle1">เลือกรายการอาหารเพื่อเพิ่ม</div>
+        <div class="text-weight-bold text-subtitle1">
+          {{
+            editingItemIndex !== null
+              ? `แก้ไขตัวเลือก — ${selectedMenuItem?.name || ''}`
+              : selectedMenuItem
+                ? `เลือกตัวเลือก — ${selectedMenuItem.name}`
+                : 'เลือกรายการอาหารเพื่อเพิ่ม'
+          }}
+        </div>
         <q-btn flat round dense icon="close" color="grey-7" v-close-popup />
       </q-card-section>
       <q-separator />
@@ -248,6 +274,7 @@
             </div>
           </div>
           <q-btn
+            v-if="editingItemIndex === null"
             flat
             dense
             no-caps
@@ -384,7 +411,9 @@
           @click="confirmAddDishToOrder"
         >
           <div class="row items-center justify-between full-width q-px-sm">
-            <span>เพิ่มเมนูนี้ลงในออเดอร์</span>
+            <span>{{
+              editingItemIndex !== null ? 'บันทึกการแก้ไขตัวเลือก' : 'เพิ่มเมนูนี้ลงในออเดอร์'
+            }}</span>
             <span>{{ formatPrice(newDishTotal) }}</span>
           </div>
         </q-btn>
@@ -445,8 +474,10 @@ const sessionStore = useSessionStore();
 const isSaving = ref(false);
 const items = ref<LocalEditableItem[]>([]);
 
-// Nested Add Item dialog states
+// Nested Add/Edit Item dialog states
 const showAddItemDialog = ref(false);
+const editingItemIndex = ref<number | null>(null);
+const isLoadingItemOptions = ref(false);
 const selectedMenuItem = ref<MenuItemWithOptions | null>(null);
 const newDishQuantity = ref(1);
 const newDishInstruction = ref('');
@@ -490,12 +521,74 @@ function removeItem(index: number) {
   items.value.splice(index, 1);
 }
 
+function onAddItemDialogHide() {
+  selectedMenuItem.value = null;
+  editingItemIndex.value = null;
+}
+
 // ─── Add Menu Dish Flow ───────────────────────────────────
 async function openAddMenuDialog() {
+  editingItemIndex.value = null;
   selectedMenuItem.value = null;
   showAddItemDialog.value = true;
   if (menuStore.categories.length === 0) {
     await menuStore.loadMenu();
+  }
+}
+
+async function openEditItemOptions(index: number) {
+  const item = items.value[index];
+  if (!item || !item.menu_item_id) {
+    notifyWarning('ไม่สามารถแก้ไขตัวเลือกของรายการนี้ได้');
+    return;
+  }
+
+  isLoadingItemOptions.value = true;
+  try {
+    const fullItem = await menuStore.fetchItemWithOptions(item.menu_item_id);
+    if (!fullItem) {
+      notifyError('ไม่สามารถโหลดข้อมูลตัวเลือกของเมนูนี้ได้');
+      return;
+    }
+
+    editingItemIndex.value = index;
+    selectedMenuItem.value = fullItem;
+    newDishQuantity.value = item.quantity;
+    newDishInstruction.value = item.special_instruction;
+
+    // Clear options
+    for (const k in newDishSingleOptions) delete newDishSingleOptions[k];
+    for (const k in newDishMultiOptions) delete newDishMultiOptions[k];
+
+    // Map existing selected_options back to single and multi options
+    const selectedOptIdSet = new Set((item.selected_options || []).map((o) => o.option_id));
+
+    for (const group of fullItem.option_groups) {
+      if (group.selection_type === SelectionType.SINGLE) {
+        const found = group.options.find((o) => selectedOptIdSet.has(o.id));
+        if (found) {
+          newDishSingleOptions[group.id] = found.id;
+        } else if (group.is_required) {
+          const firstAvail = group.options.find((o) => o.is_available);
+          if (firstAvail) {
+            newDishSingleOptions[group.id] = firstAvail.id;
+          }
+        }
+      } else {
+        const founds = group.options
+          .filter((o) => selectedOptIdSet.has(o.id))
+          .map((o) => o.id);
+        if (founds.length > 0) {
+          newDishMultiOptions[group.id] = founds;
+        }
+      }
+    }
+
+    showAddItemDialog.value = true;
+  } catch (err) {
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดตัวเลือกได้');
+  } finally {
+    isLoadingItemOptions.value = false;
   }
 }
 
@@ -640,19 +733,30 @@ function confirmAddDishToOrder() {
     }
   }
 
-  items.value.push({
-    temp_id: crypto.randomUUID(),
-    menu_item_id: selectedMenuItem.value.id,
-    name: selectedMenuItem.value.name,
-    base_price: selectedMenuItem.value.base_price,
-    quantity: newDishQuantity.value,
-    special_instruction: newDishInstruction.value,
-    selected_options: chosenOptions,
-  });
+  const targetItem =
+    editingItemIndex.value !== null ? items.value[editingItemIndex.value] : null;
+
+  if (targetItem) {
+    targetItem.quantity = newDishQuantity.value;
+    targetItem.special_instruction = newDishInstruction.value;
+    targetItem.selected_options = chosenOptions;
+    notifySuccess(`แก้ไขตัวเลือก "${targetItem.name}" เรียบร้อยแล้ว`);
+  } else {
+    items.value.push({
+      temp_id: crypto.randomUUID(),
+      menu_item_id: selectedMenuItem.value.id,
+      name: selectedMenuItem.value.name,
+      base_price: selectedMenuItem.value.base_price,
+      quantity: newDishQuantity.value,
+      special_instruction: newDishInstruction.value,
+      selected_options: chosenOptions,
+    });
+    notifySuccess('เพิ่มรายการลงในออเดอร์แล้ว');
+  }
 
   showAddItemDialog.value = false;
   selectedMenuItem.value = null;
-  notifySuccess('เพิ่มรายการลงในออเดอร์แล้ว');
+  editingItemIndex.value = null;
 }
 
 // ─── Save Changes via RPC ─────────────────────────────────
@@ -778,6 +882,33 @@ async function saveOrderChanges() {
   color: #ea580c;
   font-weight: 600;
   border: 1px solid #fed7aa;
+}
+
+.edit-item-opt-btn {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #ea580c;
+  font-family: var(--app-font-family);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 2px;
+}
+
+.edit-item-opt-btn:hover {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+.edit-item-opt-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .item-instruction-input {

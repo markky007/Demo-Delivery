@@ -10,12 +10,25 @@
       <!-- Header -->
       <q-card-section class="edit-order-header row items-center justify-between q-py-sm q-px-md">
         <div class="row items-center">
-          <q-icon name="edit_note" color="primary" size="24px" class="q-mr-sm" />
+          <q-icon
+            :name="isKitchen ? 'restaurant_menu' : 'edit_note'"
+            :color="isKitchen ? 'deep-orange' : 'primary'"
+            size="24px"
+            class="q-mr-sm"
+          />
           <div>
             <div class="text-weight-bold text-subtitle1 text-dark">
-              แก้ไขออเดอร์ #{{ formatQueueNumber(order.queue_number) }}
+              {{ isKitchen ? 'แก้ไขออเดอร์ในครัว' : 'แก้ไขออเดอร์' }} #{{
+                formatQueueNumber(order.queue_number)
+              }}
             </div>
-            <div class="text-caption text-grey-7">สามารถแก้ไขได้ก่อนร้านเริ่มทำอาหาร</div>
+            <div class="text-caption text-grey-7">
+              {{
+                isKitchen
+                  ? 'แก้ไขเมนู จำนวน ตัวเลือก หรือหมายเหตุได้โดยตรง'
+                  : 'สามารถแก้ไขได้ก่อนร้านเริ่มทำอาหาร'
+              }}
+            </div>
           </div>
         </div>
         <q-btn flat round dense icon="close" color="grey-7" v-close-popup />
@@ -26,9 +39,20 @@
       <!-- Body / Items List -->
       <q-card-section class="edit-order-body q-pa-md scroll">
         <!-- Notice Banner -->
-        <div class="edit-notice-banner q-mb-md">
-          <q-icon name="info" size="18px" class="q-mr-xs text-primary flex-shrink-0" />
-          <span> ปรับเปลี่ยนจำนวน แก้ไขหมายเหตุ หรือเพิ่ม/ลดรายการได้ตามต้องการ </span>
+        <div class="edit-notice-banner q-mb-md" :class="{ 'edit-notice-banner--kitchen': isKitchen }">
+          <q-icon
+            :name="isKitchen ? 'restaurant_menu' : 'info'"
+            size="18px"
+            class="q-mr-xs flex-shrink-0"
+            :class="isKitchen ? 'text-deep-orange' : 'text-primary'"
+          />
+          <span>
+            {{
+              isKitchen
+                ? 'โหมดครัว: ปรับเปลี่ยนจำนวน แก้ไขหมายเหตุ หรือเพิ่ม/ลดรายการในออเดอร์ได้ตามต้องการ'
+                : 'ปรับเปลี่ยนจำนวน แก้ไขหมายเหตุ หรือเพิ่ม/ลดรายการได้ตามต้องการ'
+            }}
+          </span>
         </div>
 
         <div v-if="items.length === 0" class="text-center q-pa-lg text-grey-6">
@@ -374,7 +398,7 @@ import { ref, reactive, computed, watch } from 'vue';
 import { useNotify } from 'src/composables/useNotify';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useSessionStore } from 'src/stores/sessionStore';
-import { updateOrder } from 'src/services/orderService';
+import { updateOrder, kitchenUpdateOrder } from 'src/services/orderService';
 import { formatPrice, formatQueueNumber, isTakeawayOption } from 'src/utils/formatters';
 import { isTakeawayName } from 'src/services/tableService';
 import { SelectionType } from 'src/types/enums';
@@ -398,10 +422,16 @@ interface LocalEditableItem {
   selected_options: SelectedOpt[];
 }
 
-const props = defineProps<{
-  modelValue: boolean;
-  order: OrderWithItems;
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    order: OrderWithItems;
+    isKitchen?: boolean;
+  }>(),
+  {
+    isKitchen: false,
+  },
+);
 
 const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
@@ -482,7 +512,9 @@ async function selectDishToAdd(dishId: string) {
   for (const k in newDishMultiOptions) delete newDishMultiOptions[k];
 
   // Auto-select defaults
-  const isTakeawaySession = isTakeawayName(sessionStore.tableName);
+  const isTakeawaySession = isTakeawayName(
+    props.order?.table_session?.table?.name || sessionStore.tableName,
+  );
   for (const group of fullItem.option_groups) {
     if (group.selection_type === SelectionType.SINGLE && group.is_required) {
       const isDiningGroup = group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
@@ -630,7 +662,7 @@ async function saveOrderChanges() {
     return;
   }
 
-  if (!sessionStore.guestSession?.session_token) {
+  if (!props.isKitchen && !sessionStore.guestSession?.session_token) {
     notifyError('ไม่พบเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง');
     return;
   }
@@ -649,11 +681,15 @@ async function saveOrderChanges() {
       };
     });
 
-    await updateOrder({
-      order_id: props.order.id,
-      guest_session_token: sessionStore.guestSession.session_token,
-      items: payloadItems,
-    });
+    if (props.isKitchen) {
+      await kitchenUpdateOrder(props.order.id, payloadItems);
+    } else {
+      await updateOrder({
+        order_id: props.order.id,
+        guest_session_token: sessionStore.guestSession!.session_token,
+        items: payloadItems,
+      });
+    }
 
     notifySuccess('บันทึกการแก้ไขออเดอร์เรียบร้อยแล้ว');
     emit('saved');
@@ -702,6 +738,12 @@ async function saveOrderChanges() {
   padding: 8px 12px;
   font-size: 0.8rem;
   color: #1e40af;
+}
+
+.edit-notice-banner--kitchen {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
 }
 
 .edit-item-card {

@@ -3,7 +3,11 @@
  */
 import { supabase } from './supabase';
 import type { Order, OrderWithItems } from 'src/types/database';
-import type { CreateOrderPayload, UpdateOrderPayload } from 'src/types/cart';
+import type {
+  CreateOrderPayload,
+  UpdateOrderPayload,
+  CreateOrderItemPayload,
+} from 'src/types/cart';
 import { OrderStatus } from 'src/types/enums';
 
 /**
@@ -30,6 +34,23 @@ export async function updateOrder(payload: UpdateOrderPayload): Promise<Order> {
     p_order_id: payload.order_id,
     p_guest_session_token: payload.guest_session_token,
     p_items: payload.items,
+  });
+
+  if (error) throw new Error(error.message);
+  return data as Order;
+}
+
+/**
+ * Update an existing order directly from kitchen / owner (without guest session token).
+ * Allows modifying quantities, options, and items freely in Focus Mode.
+ */
+export async function kitchenUpdateOrder(
+  orderId: string,
+  items: CreateOrderItemPayload[],
+): Promise<Order> {
+  const { data, error } = await supabase.rpc('kitchen_update_order', {
+    p_order_id: orderId,
+    p_items: items,
   });
 
   if (error) throw new Error(error.message);

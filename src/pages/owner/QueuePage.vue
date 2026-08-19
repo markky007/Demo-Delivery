@@ -469,29 +469,44 @@
                         }}</span>
                       </div>
 
-                      <!-- Table Badge -->
-                      <div
-                        class="slip-table-badge"
-                        :class="{
-                          'slip-table-badge--takeaway': isTakeawayName(getTableName(order)),
-                        }"
-                      >
-                        <q-icon
-                          :name="
-                            isTakeawayName(getTableName(order))
-                              ? 'shopping_bag'
-                              : 'table_restaurant'
-                          "
-                          size="18px"
-                          class="q-mr-xs"
-                          :color="isTakeawayName(getTableName(order)) ? 'orange-9' : 'primary'"
-                        />
-                        <span
-                          class="slip-table-name"
-                          :class="{ 'text-orange-9': isTakeawayName(getTableName(order)) }"
+                      <!-- Table Badge & Quick Edit Button -->
+                      <div class="row items-center q-gutter-x-xs">
+                        <div
+                          class="slip-table-badge"
+                          :class="{
+                            'slip-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                          }"
                         >
-                          {{ getTableName(order) }}
-                        </span>
+                          <q-icon
+                            :name="
+                              isTakeawayName(getTableName(order))
+                                ? 'shopping_bag'
+                                : 'table_restaurant'
+                            "
+                            size="18px"
+                            class="q-mr-xs"
+                            :color="isTakeawayName(getTableName(order)) ? 'orange-9' : 'primary'"
+                          />
+                          <span
+                            class="slip-table-name"
+                            :class="{ 'text-orange-9': isTakeawayName(getTableName(order)) }"
+                          >
+                            {{ getTableName(order) }}
+                          </span>
+                        </div>
+
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          color="primary"
+                          icon="edit_note"
+                          class="slip-quick-edit-btn"
+                          @click.stop="openEditOrderDialog(order)"
+                        >
+                          <q-tooltip>แก้ไขเมนูในออเดอร์นี้ (กรณีลูกค้าสั่งผิด)</q-tooltip>
+                        </q-btn>
                       </div>
                     </div>
 
@@ -531,13 +546,28 @@
 
                   <!-- Slip Body: Dish Items List with crystal clear option badges -->
                   <div class="slip-body">
-                    <div class="slip-dishes-header">
+                    <div class="slip-dishes-header row items-center justify-between">
                       <span class="slip-dishes-title">
                         รายการอาหาร ({{ getTotalDishesCount(order) }} จาน)
                       </span>
-                      <span class="text-caption text-grey-6">
-                        {{ formatTime(order.created_at) }}
-                      </span>
+                      <div class="row items-center q-gutter-x-xs">
+                        <q-btn
+                          outline
+                          dense
+                          no-caps
+                          size="xs"
+                          color="primary"
+                          icon="edit"
+                          label="แก้ไขเมนู"
+                          class="slip-edit-menu-btn q-px-xs"
+                          @click.stop="openEditOrderDialog(order)"
+                        >
+                          <q-tooltip>แก้ไข/เพิ่ม/ลบ รายการอาหาร (กรณีลูกค้าสั่งผิด)</q-tooltip>
+                        </q-btn>
+                        <span class="text-caption text-grey-6 q-ml-xs">
+                          {{ formatTime(order.created_at) }}
+                        </span>
+                      </div>
                     </div>
 
                     <div class="slip-dishes-list">
@@ -587,36 +617,54 @@
                     </div>
                   </div>
 
-                  <!-- Slip Footer & Action Button (Reduced 2-Step Flow: รับ order -> ส่ง order) -->
+                  <!-- Slip Footer & Action Button (Reduced 2-Step Flow + Edit Action) -->
                   <div class="slip-footer">
-                    <!-- Step 1: QUEUED -> กดรับออเดอร์ (เริ่มทำ) -->
-                    <q-btn
-                      v-if="order.status === OrderStatus.QUEUED"
-                      unelevated
-                      no-caps
-                      size="md"
-                      class="full-width slip-action-btn slip-action-btn--start"
-                      @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
-                    >
-                      <q-icon name="soup_kitchen" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">🍳 กดรับออเดอร์</span>
-                    </q-btn>
+                    <div class="row q-gutter-x-xs items-stretch full-width no-wrap">
+                      <!-- Step 1: QUEUED -> กดรับออเดอร์ (เริ่มทำ) -->
+                      <div class="col">
+                        <q-btn
+                          v-if="order.status === OrderStatus.QUEUED"
+                          unelevated
+                          no-caps
+                          size="md"
+                          class="full-width slip-action-btn slip-action-btn--start"
+                          @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
+                        >
+                          <q-icon name="soup_kitchen" size="20px" class="q-mr-xs" />
+                          <span class="text-weight-bold">🍳 กดรับออเดอร์</span>
+                        </q-btn>
 
-                    <!-- Step 2: PREPARING or PREPARED -> กดส่งออเดอร์ (เสร็จสิ้น) -->
-                    <q-btn
-                      v-else-if="
-                        order.status === OrderStatus.PREPARING ||
-                        order.status === OrderStatus.PREPARED
-                      "
-                      unelevated
-                      no-caps
-                      size="md"
-                      class="full-width slip-action-btn slip-action-btn--serve"
-                      @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
-                    >
-                      <q-icon name="done_all" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">🍽️ กดส่งออเดอร์</span>
-                    </q-btn>
+                        <!-- Step 2: PREPARING or PREPARED -> กดส่งออเดอร์ (เสร็จสิ้น) -->
+                        <q-btn
+                          v-else-if="
+                            order.status === OrderStatus.PREPARING ||
+                            order.status === OrderStatus.PREPARED
+                          "
+                          unelevated
+                          no-caps
+                          size="md"
+                          class="full-width slip-action-btn slip-action-btn--serve"
+                          @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
+                        >
+                          <q-icon name="done_all" size="20px" class="q-mr-xs" />
+                          <span class="text-weight-bold">🍽️ กดส่งออเดอร์</span>
+                        </q-btn>
+                      </div>
+
+                      <!-- Edit Order Button in slip footer -->
+                      <q-btn
+                        outline
+                        dense
+                        no-caps
+                        color="grey-4"
+                        text-color="primary"
+                        class="slip-footer-edit-btn q-px-sm"
+                        @click.stop="openEditOrderDialog(order)"
+                      >
+                        <q-icon name="edit_note" size="22px" />
+                        <q-tooltip>แก้ไขเมนูในออเดอร์ (กรณีลูกค้าสั่งผิด)</q-tooltip>
+                      </q-btn>
+                    </div>
                   </div>
 
                   <!-- Slip Bottom Perforation Edge -->
@@ -727,9 +775,23 @@
                       {{ getTableName(order) }}
                     </span>
                   </div>
-                  <div class="elapsed-badge">
-                    <q-icon name="timer" size="13px" class="q-mr-xs" />
-                    <span>{{ formatElapsed(order.created_at) }}</span>
+                  <div class="row items-center q-gutter-x-xs">
+                    <div class="elapsed-badge">
+                      <q-icon name="timer" size="13px" class="q-mr-xs" />
+                      <span>{{ formatElapsed(order.created_at) }}</span>
+                    </div>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      size="xs"
+                      color="grey-7"
+                      icon="edit_note"
+                      class="q-ml-xs"
+                      @click.stop="openEditOrderDialog(order)"
+                    >
+                      <q-tooltip>แก้ไขเมนูในออเดอร์นี้</q-tooltip>
+                    </q-btn>
                   </div>
                 </div>
 
@@ -837,9 +899,23 @@
                       {{ getTableName(order) }}
                     </span>
                   </div>
-                  <div class="elapsed-badge elapsed-badge--amber">
-                    <q-icon name="timer" size="13px" class="q-mr-xs" />
-                    <span>{{ formatElapsed(order.preparing_at || order.created_at) }}</span>
+                  <div class="row items-center q-gutter-x-xs">
+                    <div class="elapsed-badge elapsed-badge--amber">
+                      <q-icon name="timer" size="13px" class="q-mr-xs" />
+                      <span>{{ formatElapsed(order.preparing_at || order.created_at) }}</span>
+                    </div>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      size="xs"
+                      color="grey-7"
+                      icon="edit_note"
+                      class="q-ml-xs"
+                      @click.stop="openEditOrderDialog(order)"
+                    >
+                      <q-tooltip>แก้ไขเมนูในออเดอร์นี้</q-tooltip>
+                    </q-btn>
                   </div>
                 </div>
 
@@ -1656,6 +1732,15 @@
           </div>
         </div>
       </div>
+
+      <!-- Kitchen Order Edit Dialog (Focus Mode & Overview) -->
+      <EditOrderModal
+        v-if="editingOrder"
+        v-model="showEditModal"
+        :order="editingOrder"
+        :is-kitchen="true"
+        @saved="onOrderEdited"
+      />
     </template>
   </q-page>
 </template>
@@ -1691,6 +1776,7 @@ import {
 import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems } from 'src/types/database';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import EditOrderModal from 'src/components/EditOrderModal.vue';
 import {
   playNewOrderChime,
   playStatusDoneChime,
@@ -1714,6 +1800,26 @@ const FOCUS_PAGE_SIZE = 3;
 const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
 const soundVolume = ref<number>(getSoundVolume());
+
+// Kitchen Order Edit Modal States
+const showEditModal = ref(false);
+const editingOrder = ref<OrderWithItems | null>(null);
+
+function openEditOrderDialog(order: OrderWithItems) {
+  editingOrder.value = order;
+  showEditModal.value = true;
+}
+
+async function onOrderEdited() {
+  const orders = await fetchTodayOrders();
+  queueStore.setOrders(orders);
+  if (editingOrder.value) {
+    const updated = orders.find((o) => o.id === editingOrder.value?.id);
+    if (updated) {
+      editingOrder.value = updated;
+    }
+  }
+}
 
 function loadPersistedFryCompletedIds(): string[] {
   try {
@@ -2746,6 +2852,49 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
 .slip-action-btn--disabled {
   background: #cbd5e1 !important;
   color: #64748b !important;
+}
+
+.slip-quick-edit-btn {
+  background: #ffedd5;
+  color: #ea580c !important;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.slip-quick-edit-btn:hover {
+  background: #fed7aa;
+  transform: scale(1.05);
+}
+
+.slip-edit-menu-btn {
+  font-size: 0.78rem;
+  border-radius: 6px;
+  font-weight: 600;
+  border-color: #fdba74 !important;
+  background: #fff7ed;
+  color: #c2410c !important;
+}
+
+.slip-edit-menu-btn:hover {
+  background: #ffedd5;
+}
+
+.slip-footer-edit-btn {
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1 !important;
+  min-width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.slip-footer-edit-btn:hover {
+  background: #fff7ed;
+  border-color: #ea580c !important;
+  transform: translateY(-2px);
 }
 
 /* Bottom Mini Thumbnails Strip */

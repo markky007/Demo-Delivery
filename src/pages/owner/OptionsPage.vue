@@ -99,6 +99,16 @@
                       class="q-mr-sm"
                     />
                     <span class="text-weight-medium opt-name">{{ opt.name }}</span>
+                    <q-badge
+                      v-if="isOptionFried(opt)"
+                      color="deep-orange-1"
+                      text-color="deep-orange-9"
+                      class="q-ml-sm text-weight-bold"
+                      rounded
+                    >
+                      <q-icon name="local_fire_department" size="12px" class="q-mr-xs" />
+                      ของทอด
+                    </q-badge>
                   </div>
 
                   <div class="row items-center q-gutter-md">
@@ -268,8 +278,17 @@ import { formatPrice } from 'src/utils/formatters';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { OptionGroup, Option } from 'src/types/database';
+import { inferFryConfigFromName } from 'src/utils/fryHelper';
 
 const { notifySuccess, notifyError } = useNotify();
+
+function isOptionFried(opt: Option): boolean {
+  if (opt.fry_config && typeof opt.fry_config.is_fried === 'boolean') {
+    return opt.fry_config.is_fried;
+  }
+  const inferred = inferFryConfigFromName(opt.name);
+  return Boolean(inferred?.is_fried);
+}
 
 const optionGroups = ref<OptionGroup[]>([]);
 const options = ref<Option[]>([]);

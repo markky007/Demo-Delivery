@@ -127,7 +127,7 @@
           <div class="stat-chip stat-chip--fry" @click="viewMode = 'fry'">
             <q-icon name="local_fire_department" size="16px" class="q-mr-xs text-deep-orange-8" />
             <span
-              >ของทอดรอทำ: <strong>{{ pendingFryCount }}</strong> ชิ้น</span
+              >ของทอดรอทำ: <strong>{{ pendingFryCount }}</strong> ออเดอร์</span
             >
           </div>
           <div class="stat-chip stat-chip--served" @click="viewMode = 'overview'">
@@ -999,7 +999,7 @@
                     เตาทอด & เตรียมของทอด (Fry Station)
                   </h6>
                   <q-badge color="deep-orange-9" rounded class="q-px-sm">
-                    <span>รอทอด {{ pendingFryCount }} ชิ้น</span>
+                    <span>รอทอด {{ pendingFryCount }} ออเดอร์</span>
                   </q-badge>
                 </div>
                 <p class="text-caption text-grey-7 q-mb-none q-mt-xs">

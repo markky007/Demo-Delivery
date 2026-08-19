@@ -442,7 +442,7 @@
                     outline
                     color="deep-orange-8"
                     icon="add"
-                    @click="applyFryPreset('ไก่ทอด', 'ชิ้น', 'ไก่ทอดพิเศษ')"
+                    @click="applyFryPreset('ไก่ทอด', 'ออเดอร์', 'ไก่ทอดพิเศษ')"
                   >
                     ไก่ทอด
                   </q-chip>
@@ -452,7 +452,7 @@
                     outline
                     color="deep-orange-8"
                     icon="add"
-                    @click="applyFryPreset('เอ็นไก่ทอด', 'ที่', 'เอ็นไก่ทอดพิเศษ')"
+                    @click="applyFryPreset('เอ็นไก่ทอด', 'ออเดอร์', 'เอ็นไก่ทอดพิเศษ')"
                   >
                     เอ็นไก่ทอด
                   </q-chip>
@@ -462,7 +462,9 @@
                     outline
                     color="deep-orange-8"
                     icon="add"
-                    @click="applyFryPreset('ปีกไก่ทอด (2 ปีก)', 'ชุด', 'ปีกไก่ทอดพิเศษ (3 ปีก)')"
+                    @click="
+                      applyFryPreset('ปีกไก่ทอด (3 ปีก)', 'ออเดอร์', 'ปีกไก่ทอดพิเศษ (4 ปีก)')
+                    "
                   >
                     ปีกไก่
                   </q-chip>
@@ -472,7 +474,7 @@
                     outline
                     color="deep-orange-8"
                     icon="add"
-                    @click="applyFryPreset('สามชั้นทอด', 'ที่', 'สามชั้นทอดพิเศษ')"
+                    @click="applyFryPreset('สามชั้นทอด', 'ออเดอร์', 'สามชั้นทอดพิเศษ')"
                   >
                     สามชั้นทอด
                   </q-chip>
@@ -709,7 +711,7 @@ const itemFryConfig = reactive<FryConfig>({
   fry_qty: 1,
   special_fry_name: '',
   special_fry_qty: 1,
-  unit: 'ชิ้น',
+  unit: 'ออเดอร์',
 });
 
 // File input refs for image upload
@@ -750,7 +752,7 @@ function getFryLabel(item: MenuItem): string {
   return inferred?.fry_name || item.name;
 }
 
-function applyFryPreset(name: string, unit = 'ชิ้น', specialName?: string) {
+function applyFryPreset(name: string, unit = 'ออเดอร์', specialName?: string) {
   itemFryConfig.is_fried = true;
   itemFryConfig.fry_name = name;
   itemFryConfig.unit = unit;
@@ -988,7 +990,7 @@ function editItem(item: MenuItem) {
     itemFryConfig.fry_qty = item.fry_config.fry_qty || 1;
     itemFryConfig.special_fry_name = item.fry_config.special_fry_name || '';
     itemFryConfig.special_fry_qty = item.fry_config.special_fry_qty || 1;
-    itemFryConfig.unit = item.fry_config.unit || 'ชิ้น';
+    itemFryConfig.unit = item.fry_config.unit || 'ออเดอร์';
   } else {
     const inferred = inferFryConfigFromName(item.name);
     if (inferred) {
@@ -997,14 +999,14 @@ function editItem(item: MenuItem) {
       itemFryConfig.fry_qty = inferred.fry_qty || 1;
       itemFryConfig.special_fry_name = inferred.special_fry_name || '';
       itemFryConfig.special_fry_qty = inferred.special_fry_qty || 1;
-      itemFryConfig.unit = inferred.unit || 'ชิ้น';
+      itemFryConfig.unit = inferred.unit || 'ออเดอร์';
     } else {
       itemFryConfig.is_fried = false;
       itemFryConfig.fry_name = item.name;
       itemFryConfig.fry_qty = 1;
       itemFryConfig.special_fry_name = '';
       itemFryConfig.special_fry_qty = 1;
-      itemFryConfig.unit = 'ชิ้น';
+      itemFryConfig.unit = 'ออเดอร์';
     }
   }
 
@@ -1046,7 +1048,7 @@ async function saveItem() {
         itemFryConfig.special_fry_name?.trim() ||
         `${itemFryConfig.fry_name || itemForm.name.trim()}พิเศษ`,
       special_fry_qty: itemFryConfig.special_fry_qty || 1,
-      unit: itemFryConfig.unit || 'ชิ้น',
+      unit: itemFryConfig.unit || 'ออเดอร์',
     };
 
     const payload: Record<string, unknown> = {
@@ -1123,7 +1125,7 @@ function resetItemForm() {
   itemFryConfig.fry_qty = 1;
   itemFryConfig.special_fry_name = '';
   itemFryConfig.special_fry_qty = 1;
-  itemFryConfig.unit = 'ชิ้น';
+  itemFryConfig.unit = 'ออเดอร์';
   pendingImageFile.value = null;
   previewImageUrl.value = '';
   selectedOptionGroupIds.value = [];

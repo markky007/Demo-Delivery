@@ -33,6 +33,19 @@ export interface FrySummaryItem {
 export function inferFryConfigFromName(name: string): FryConfig | null {
   const cleanName = name.trim();
 
+  // 1. เต้าหู้ไข่ (ตัวเลือกเพิ่มเติม)
+  if (cleanName.includes('เต้าหู้ไข่')) {
+    return {
+      is_fried: true,
+      fry_name: 'เต้าหู้ไข่',
+      fry_qty: 1,
+      special_fry_name: 'เต้าหู้ไข่พิเศษ',
+      special_fry_qty: 1,
+      unit: 'ออเดอร์',
+    };
+  }
+
+  // 2. เอ็นไก่ทอด
   if (cleanName.includes('เอ็นไก่ทอด')) {
     return {
       is_fried: true,
@@ -40,40 +53,73 @@ export function inferFryConfigFromName(name: string): FryConfig | null {
       fry_qty: 1,
       special_fry_name: 'เอ็นไก่ทอดพิเศษ',
       special_fry_qty: 1,
-      unit: 'ที่',
+      unit: 'ออเดอร์',
     };
   }
 
+  // 3. ปีกไก่
   if (cleanName.includes('ปีกไก่')) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'ปีกไก่ราดซอส (2 ปีก)',
+        fry_qty: 1,
+        special_fry_name: 'ปีกไก่ราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
     return {
       is_fried: true,
-      fry_name: 'ปีกไก่ทอด (2 ปีก)',
+      fry_name: 'ปีกไก่ทอด (3 ปีก)',
       fry_qty: 1,
-      special_fry_name: 'ปีกไก่ทอดพิเศษ (3 ปีก)',
+      special_fry_name: 'ปีกไก่ทอดพิเศษ (4 ปีก)',
       special_fry_qty: 1,
-      unit: 'ชุด',
+      unit: 'ออเดอร์',
     };
   }
 
+  // 4. สามชั้น
   if (cleanName.includes('สามชั้น')) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'สามชั้นทอดราดซอส',
+        fry_qty: 1,
+        special_fry_name: 'สามชั้นทอดราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
     return {
       is_fried: true,
       fry_name: 'สามชั้นทอด',
       fry_qty: 1,
       special_fry_name: 'สามชั้นทอดพิเศษ',
       special_fry_qty: 1,
-      unit: 'ที่',
+      unit: 'ออเดอร์',
     };
   }
 
+  // 5. ไก่ทอด
   if (cleanName.includes('ไก่ทอด')) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'ไก่ทอดราดซอส',
+        fry_qty: 1,
+        special_fry_name: 'ไก่ทอดราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
     return {
       is_fried: true,
       fry_name: 'ไก่ทอด',
       fry_qty: 1,
       special_fry_name: 'ไก่ทอดพิเศษ',
       special_fry_qty: 1,
-      unit: 'ชิ้น',
+      unit: 'ออเดอร์',
     };
   }
 
@@ -138,7 +184,7 @@ export function extractFryRequirementsFromOrders(
           dishName: item.snapshot_name,
           fryName,
           quantity: qtyPerDish * item.quantity,
-          unit: fryConfig.unit || 'ชิ้น',
+          unit: fryConfig.unit || 'ออเดอร์',
           isSpecial: hasSpecialOption,
           isAddon: false,
           specialInstruction: item.special_instruction,
@@ -163,7 +209,7 @@ export function extractFryRequirementsFromOrders(
             dishName: item.snapshot_name,
             fryName: `${optName} (เพิ่ม)`,
             quantity: (optFryConfig.fry_qty || 1) * item.quantity,
-            unit: optFryConfig.unit || 'ชิ้น',
+            unit: optFryConfig.unit || 'ออเดอร์',
             isSpecial: false,
             isAddon: true,
             specialInstruction: item.special_instruction,

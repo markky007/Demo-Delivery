@@ -19,7 +19,8 @@ SET fry_config = jsonb_build_object(
   'fry_name', 'ไก่ทอด',
   'fry_qty', 1,
   'special_fry_name', 'ไก่ทอดพิเศษ',
-  'special_fry_qty', 1
+  'special_fry_qty', 1,
+  'unit', 'ออเดอร์'
 )
 WHERE name LIKE '%ไก่ทอด%'
   AND name NOT LIKE '%เอ็นไก่ทอด%'
@@ -32,7 +33,8 @@ SET fry_config = jsonb_build_object(
   'fry_name', 'เอ็นไก่ทอด',
   'fry_qty', 1,
   'special_fry_name', 'เอ็นไก่ทอดพิเศษ',
-  'special_fry_qty', 1
+  'special_fry_qty', 1,
+  'unit', 'ออเดอร์'
 )
 WHERE name LIKE '%เอ็นไก่ทอด%';
 
@@ -43,7 +45,8 @@ SET fry_config = jsonb_build_object(
   'fry_name', 'ปีกไก่ทอด (3 ปีก)',
   'fry_qty', 1,
   'special_fry_name', 'ปีกไก่ทอดพิเศษ (4 ปีก)',
-  'special_fry_qty', 1
+  'special_fry_qty', 1,
+  'unit', 'ออเดอร์'
 )
 WHERE name LIKE '%ปีกไก่%';
 
@@ -54,17 +57,20 @@ SET fry_config = jsonb_build_object(
   'fry_name', 'สามชั้นทอด',
   'fry_qty', 1,
   'special_fry_name', 'สามชั้นทอดพิเศษ',
-  'special_fry_qty', 1
+  'special_fry_qty', 1,
+  'unit', 'ออเดอร์'
 )
 WHERE name LIKE '%สามชั้น%';
 
--- 4. Populate fry_config for existing options (เนื้อสัตว์เพิ่มเติมที่เป็นของทอด)
+-- 4. Populate fry_config for existing options (เต้าหู้ไข่ และเนื้อสัตว์เพิ่มเติมที่เป็นของทอด)
 UPDATE options
 SET fry_config = jsonb_build_object(
   'is_fried', true,
   'fry_name', name,
-  'fry_qty', 1
+  'fry_qty', 1,
+  'unit', 'ออเดอร์'
 )
-WHERE name LIKE '%ไก่ทอด%'
+WHERE name = 'เต้าหู้ไข่'
+   OR name LIKE '%ไก่ทอด%'
    OR name LIKE '%สามชั้นทอด%'
    OR name LIKE '%ปีกไก่%';

@@ -164,4 +164,3 @@ export function playStatusDoneChime(overrideVol?: number): void {
     playChimeNote(ctx, freq, now + time, duration, volumeFactor, 'sine');
   });
 }
-

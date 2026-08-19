@@ -245,4 +245,3 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
     icon: 'add_circle',
   };
 }
-

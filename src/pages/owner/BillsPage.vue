@@ -792,7 +792,10 @@
 
       <!-- Transfer Table Modal Dialog -->
       <q-dialog v-model="showTransferModal">
-        <q-card style="min-width: 360px; max-width: 480px" class="q-pa-md border-radius-lg transfer-dialog-card">
+        <q-card
+          style="min-width: 360px; max-width: 480px"
+          class="q-pa-md border-radius-lg transfer-dialog-card"
+        >
           <q-card-section class="q-pb-xs">
             <div class="row items-center no-wrap q-mb-sm">
               <div class="transfer-modal-icon-wrap q-mr-sm">
@@ -820,7 +823,8 @@
                   </span>
                 </div>
                 <span class="text-caption text-grey-7">
-                  {{ tableToTransfer.orderCount }} ออเดอร์ • {{ formatPrice(tableToTransfer.totalAmount) }}
+                  {{ tableToTransfer.orderCount }} ออเดอร์ •
+                  {{ formatPrice(tableToTransfer.totalAmount) }}
                 </span>
               </div>
             </div>
@@ -839,7 +843,8 @@
                 <q-icon name="do_not_disturb_on" size="32px" color="amber-9" class="q-mb-xs" />
                 <div class="text-weight-bold text-amber-10">ไม่มีโต๊ะว่างในขณะนี้</div>
                 <div class="text-caption text-grey-7 q-mt-xs">
-                  โต๊ะอื่นในร้านมีลูกค้านั่งเต็มทั้งหมดแล้ว กรุณาเคลียร์โต๊ะที่ชำระเงินแล้ว หรือรอให้มีโต๊ะว่างก่อน
+                  โต๊ะอื่นในร้านมีลูกค้านั่งเต็มทั้งหมดแล้ว กรุณาเคลียร์โต๊ะที่ชำระเงินแล้ว
+                  หรือรอให้มีโต๊ะว่างก่อน
                 </div>
               </div>
 
@@ -854,7 +859,11 @@
                 >
                   <div class="row items-center justify-between">
                     <div class="row items-center">
-                      <q-icon name="table_restaurant" size="18px" class="target-table-icon q-mr-xs" />
+                      <q-icon
+                        name="table_restaurant"
+                        size="18px"
+                        class="target-table-icon q-mr-xs"
+                      />
                       <span class="target-table-name text-weight-bold">{{ targetTbl.name }}</span>
                     </div>
                     <q-icon

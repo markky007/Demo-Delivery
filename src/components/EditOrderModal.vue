@@ -15,9 +15,7 @@
             <div class="text-weight-bold text-subtitle1 text-dark">
               แก้ไขออเดอร์ #{{ formatQueueNumber(order.queue_number) }}
             </div>
-            <div class="text-caption text-grey-7">
-              สามารถแก้ไขได้ก่อนร้านเริ่มทำอาหาร
-            </div>
+            <div class="text-caption text-grey-7">สามารถแก้ไขได้ก่อนร้านเริ่มทำอาหาร</div>
           </div>
         </div>
         <q-btn flat round dense icon="close" color="grey-7" v-close-popup />
@@ -30,9 +28,7 @@
         <!-- Notice Banner -->
         <div class="edit-notice-banner q-mb-md">
           <q-icon name="info" size="18px" class="q-mr-xs text-primary flex-shrink-0" />
-          <span>
-            ปรับเปลี่ยนจำนวน แก้ไขหมายเหตุ หรือเพิ่ม/ลดรายการได้ตามต้องการ
-          </span>
+          <span> ปรับเปลี่ยนจำนวน แก้ไขหมายเหตุ หรือเพิ่ม/ลดรายการได้ตามต้องการ </span>
         </div>
 
         <div v-if="items.length === 0" class="text-center q-pa-lg text-grey-6">
@@ -43,11 +39,7 @@
 
         <!-- Editable Items List -->
         <div class="q-gutter-y-sm">
-          <div
-            v-for="(item, index) in items"
-            :key="item.temp_id"
-            class="edit-item-card"
-          >
+          <div v-for="(item, index) in items" :key="item.temp_id" class="edit-item-card">
             <div class="row justify-between items-start">
               <div class="col">
                 <div class="text-weight-bold text-body1 text-dark">
@@ -115,11 +107,7 @@
                 {{ formatPrice(calculateItemSubtotal(item)) }}
               </div>
               <div class="row items-center">
-                <QuantityStepper
-                  v-model="item.quantity"
-                  :min="1"
-                  dense
-                />
+                <QuantityStepper v-model="item.quantity" :min="1" dense />
               </div>
             </div>
           </div>
@@ -235,11 +223,22 @@
               {{ formatPrice(selectedMenuItem.base_price) }}
             </div>
           </div>
-          <q-btn flat dense no-caps color="primary" label="เปลี่ยนเมนู" @click="selectedMenuItem = null" />
+          <q-btn
+            flat
+            dense
+            no-caps
+            color="primary"
+            label="เปลี่ยนเมนู"
+            @click="selectedMenuItem = null"
+          />
         </div>
 
         <!-- Option groups -->
-        <div v-for="group in selectedMenuItem.option_groups" :key="group.id" class="option-group-card q-mt-sm">
+        <div
+          v-for="group in selectedMenuItem.option_groups"
+          :key="group.id"
+          class="option-group-card q-mt-sm"
+        >
           <div class="row items-center justify-between q-mb-xs">
             <div class="option-group-name">{{ group.name }}</div>
             <span
@@ -274,8 +273,12 @@
                 <span class="option-name">{{ opt.name }}</span>
               </div>
               <div class="option-price-adjust">
-                <span v-if="opt.price_adjustment > 0">+{{ formatPrice(opt.price_adjustment) }}</span>
-                <span v-else-if="opt.price_adjustment < 0">{{ formatPrice(opt.price_adjustment) }}</span>
+                <span v-if="opt.price_adjustment > 0"
+                  >+{{ formatPrice(opt.price_adjustment) }}</span
+                >
+                <span v-else-if="opt.price_adjustment < 0">{{
+                  formatPrice(opt.price_adjustment)
+                }}</span>
                 <span v-else class="text-grey-5">—</span>
               </div>
             </div>
@@ -313,8 +316,12 @@
                 <span class="option-name">{{ opt.name }}</span>
               </div>
               <div class="option-price-adjust">
-                <span v-if="opt.price_adjustment > 0">+{{ formatPrice(opt.price_adjustment) }}</span>
-                <span v-else-if="opt.price_adjustment < 0">{{ formatPrice(opt.price_adjustment) }}</span>
+                <span v-if="opt.price_adjustment > 0"
+                  >+{{ formatPrice(opt.price_adjustment) }}</span
+                >
+                <span v-else-if="opt.price_adjustment < 0">{{
+                  formatPrice(opt.price_adjustment)
+                }}</span>
                 <span v-else class="text-grey-5">—</span>
               </div>
             </div>
@@ -478,8 +485,7 @@ async function selectDishToAdd(dishId: string) {
   const isTakeawaySession = isTakeawayName(sessionStore.tableName);
   for (const group of fullItem.option_groups) {
     if (group.selection_type === SelectionType.SINGLE && group.is_required) {
-      const isDiningGroup =
-        group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
+      const isDiningGroup = group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
 
       if (isDiningGroup) {
         if (isTakeawaySession) {

@@ -308,9 +308,7 @@ const isLoading = ref(true);
 const showEditModal = ref(false);
 let realtimeChannel: RealtimeChannel | null = null;
 
-const isEditable = computed(
-  () => !!order.value && EditableStatuses.includes(order.value.status),
-);
+const isEditable = computed(() => !!order.value && EditableStatuses.includes(order.value.status));
 
 const queueInfo = computed(() => {
   if (!order.value) {

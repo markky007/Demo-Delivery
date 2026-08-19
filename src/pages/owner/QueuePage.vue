@@ -204,6 +204,22 @@
                   {{ pendingFryCount }}
                 </q-badge>
               </q-btn>
+
+              <q-btn
+                no-caps
+                :unelevated="viewMode === 'rice'"
+                :flat="viewMode !== 'rice'"
+                :color="viewMode === 'rice' ? 'amber-9' : 'grey-3'"
+                :text-color="viewMode === 'rice' ? 'white' : 'grey-8'"
+                class="view-toggle-btn"
+                @click="viewMode = 'rice'"
+              >
+                <q-icon name="rice_bowl" size="18px" class="q-mr-xs" />
+                <span class="text-weight-bold">คิวตักข้าว</span>
+                <q-badge v-if="pendingRiceCount > 0" color="amber-9" floating rounded>
+                  {{ pendingRiceCount }}
+                </q-badge>
+              </q-btn>
             </q-btn-group>
           </div>
         </div>
@@ -250,6 +266,12 @@
             <q-icon name="local_fire_department" size="16px" class="q-mr-xs text-deep-orange-8" />
             <span
               >ของทอดรอทำ: <strong>{{ pendingFryCount }}</strong> ออเดอร์</span
+            >
+          </div>
+          <div class="stat-chip stat-chip--rice" @click="viewMode = 'rice'">
+            <q-icon name="rice_bowl" size="16px" class="q-mr-xs text-amber-9" />
+            <span
+              >ข้าวรอตัก: <strong>{{ pendingRiceCount }}</strong> จาน</span
             >
           </div>
           <div class="stat-chip stat-chip--served" @click="viewMode = 'overview'">
@@ -327,7 +349,9 @@
             <div v-if="filteredFocusOrders.length > 0" class="row items-center q-gutter-sm">
               <span class="slide-counter-label">
                 หน้า <strong>{{ focusPage + 1 }}</strong> / <strong>{{ totalFocusPages }}</strong>
-                <span class="text-caption text-grey-6 q-ml-xs">({{ getPageRangeText(focusPage) }})</span>
+                <span class="text-caption text-grey-6 q-ml-xs"
+                  >({{ getPageRangeText(focusPage) }})</span
+                >
               </span>
 
               <q-btn
@@ -628,9 +652,7 @@
               <div class="text-caption text-grey-7 text-weight-medium">
                 รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
               </div>
-              <div class="text-caption text-grey-6">
-                แสดงผลทีละสูงสุด 3 ออเดอร์ / หน้า
-              </div>
+              <div class="text-caption text-grey-6">แสดงผลทีละสูงสุด 3 ออเดอร์ / หน้า</div>
             </div>
             <div class="thumbnails-scroll-row">
               <div
@@ -1356,6 +1378,304 @@
           </div>
         </div>
       </div>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 4: RICE STATION QUEUE MODE (มุมมองจุดตักข้าว / ฝ่ายตักข้าว) -->
+      <!-- ========================================================================= -->
+      <div v-else-if="viewMode === 'rice'" class="rice-mode-container animate-fade-in">
+        <!-- Station Banner / Top Controls -->
+        <div class="rice-top-card q-pa-md q-mb-md">
+          <div class="row items-center justify-between wrap q-gutter-md">
+            <div class="row items-center">
+              <div class="rice-hero-icon-box q-mr-md">
+                <q-icon name="rice_bowl" size="32px" color="white" />
+              </div>
+              <div>
+                <div class="row items-center q-gutter-xs">
+                  <h6 class="q-my-none text-weight-bold rice-page-title">
+                    จุดตักข้าว & เตรียมข้าว (Rice Station)
+                  </h6>
+                  <q-badge color="amber-9" rounded class="q-px-sm text-weight-bold">
+                    <span>รอตัก {{ pendingRiceCount }} จาน</span>
+                  </q-badge>
+                </div>
+                <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
+                  สรุปจำนวนจานข้าวธรรมดา/พิเศษ และข้าวผัด ที่ต้องตักจากออเดอร์ในครัว
+                </p>
+              </div>
+            </div>
+
+            <div class="row items-center q-gutter-sm">
+              <q-btn
+                v-if="completedRiceItemIds.size > 0"
+                outline
+                dense
+                no-caps
+                color="grey-7"
+                icon="refresh"
+                label="ล้างที่ติ๊กเสร็จแล้ว"
+                @click="clearCompletedRiceItems"
+                class="q-px-sm"
+              />
+              <q-btn
+                unelevated
+                no-caps
+                color="amber-9"
+                icon="view_carousel"
+                label="สลับไปโหมดโฟกัสทำอาหาร"
+                class="text-weight-bold"
+                @click="viewMode = 'focus'"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Live Rice Summary KPI Cards -->
+        <div class="q-mb-md">
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-weight-bold text-subtitle2 row items-center text-grey-9">
+              <q-icon name="analytics" size="18px" color="amber-9" class="q-mr-xs" />
+              <span>สรุปรวมจานข้าวทั้งหมดที่ต้องตัก (Live Summary)</span>
+            </div>
+            <div class="text-caption text-grey-6">คำนวณจากทุกออเดอร์ที่ยังไม่เสิร์ฟในครัว</div>
+          </div>
+
+          <div v-if="riceSummaryList.length > 0" class="rice-summary-grid">
+            <div
+              v-for="sum in riceSummaryList"
+              :key="sum.riceName"
+              class="rice-summary-card"
+              :class="{
+                'rice-summary-card--all-done': sum.pendingQuantity === 0,
+                'rice-summary-card--fried': sum.riceType === 'fried',
+              }"
+            >
+              <div class="row items-center justify-between no-wrap">
+                <div class="row items-center q-gutter-xs ellipsis">
+                  <q-icon
+                    :name="sum.riceType === 'fried' ? 'outdoor_grill' : 'rice_bowl'"
+                    size="18px"
+                    :color="sum.riceType === 'fried' ? 'deep-orange-7' : 'amber-9'"
+                  />
+                  <span class="text-weight-bold text-body2 rice-sum-name ellipsis">{{
+                    sum.riceName
+                  }}</span>
+                </div>
+                <span
+                  class="rice-sum-badge"
+                  :class="
+                    sum.pendingQuantity === 0 ? 'rice-sum-badge--done' : 'rice-sum-badge--pending'
+                  "
+                >
+                  {{
+                    sum.pendingQuantity === 0
+                      ? 'ตักครบแล้ว'
+                      : `รอ ${sum.pendingQuantity} ${sum.unit}`
+                  }}
+                </span>
+              </div>
+              <div class="row items-baseline justify-between q-mt-xs">
+                <div class="text-caption text-grey-6">
+                  ยอดรวม: <strong>{{ sum.totalQuantity }}</strong> {{ sum.unit }}
+                </div>
+                <div class="text-caption text-green-7 text-weight-medium">
+                  เสร็จแล้ว {{ sum.completedQuantity }}/{{ sum.totalQuantity }}
+                </div>
+              </div>
+              <q-linear-progress
+                :value="sum.totalQuantity > 0 ? sum.completedQuantity / sum.totalQuantity : 0"
+                :color="sum.riceType === 'fried' ? 'deep-orange-7' : 'amber-8'"
+                track-color="amber-1"
+                class="q-mt-xs rounded-borders"
+                size="4px"
+              />
+            </div>
+          </div>
+
+          <div v-else class="rice-summary-empty q-pa-md text-center">
+            <q-icon name="check_circle" size="28px" color="green-6" class="q-mr-xs" />
+            <span class="text-weight-medium text-grey-8">ไม่มีรายการจานข้าวที่ต้องตักในขณะนี้</span>
+          </div>
+        </div>
+
+        <!-- 2. Filter Tabs for Orders -->
+        <div class="row items-center justify-between q-mb-md">
+          <div class="row items-center q-gutter-xs">
+            <q-btn
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              class="q-px-md filter-tab-btn"
+              :class="{ 'filter-tab-btn--active': riceFilter === 'all' }"
+              @click="riceFilter = 'all'"
+            >
+              ทั้งหมด ({{ allRiceRequirements.length }})
+            </q-btn>
+            <q-btn
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              class="q-px-md filter-tab-btn"
+              :class="{ 'filter-tab-btn--active': riceFilter === 'pending' }"
+              @click="riceFilter = 'pending'"
+            >
+              <q-badge color="amber-9" rounded class="q-mr-xs" />
+              รอตัก ({{ pendingRiceRequirements.length }})
+            </q-btn>
+            <q-btn
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              class="q-px-md filter-tab-btn"
+              :class="{ 'filter-tab-btn--active': riceFilter === 'completed' }"
+              @click="riceFilter = 'completed'"
+            >
+              <q-badge color="green-7" rounded class="q-mr-xs" />
+              ตักเสร็จแล้ว ({{ completedRiceRequirements.length }})
+            </q-btn>
+          </div>
+        </div>
+
+        <!-- 3. Order-by-Order Rice Cards Grid -->
+        <div v-if="groupedRiceOrders.length > 0" class="rice-orders-grid">
+          <div
+            v-for="orderGroup in groupedRiceOrders"
+            :key="orderGroup.orderId"
+            class="rice-order-card"
+            :class="{ 'rice-order-card--all-done': orderGroup.allCompleted }"
+          >
+            <!-- Order Header -->
+            <div class="row items-center justify-between q-pb-sm rice-order-header">
+              <div class="row items-center q-gutter-xs">
+                <span class="rice-order-queue-badge">
+                  #{{ formatQueueNumber(orderGroup.queueNumber) }}
+                </span>
+                <span class="rice-order-table-title text-weight-bold">
+                  {{ orderGroup.tableName }}
+                </span>
+                <span v-if="orderGroup.customerName" class="text-caption text-grey-7">
+                  ({{ orderGroup.customerName }})
+                </span>
+              </div>
+
+              <div class="row items-center q-gutter-xs">
+                <span class="rice-order-time-badge">
+                  {{ formatElapsed(orderGroup.queuedAt) }}
+                </span>
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  :color="orderGroup.allCompleted ? 'grey-6' : 'amber-9'"
+                  :label="orderGroup.allCompleted ? 'ยกเลิกติ๊ก' : 'เสร็จทั้งหมด'"
+                  @click="toggleOrderAllRiceItems(orderGroup.orderId)"
+                  class="rice-check-all-btn"
+                />
+              </div>
+            </div>
+
+            <!-- Items List -->
+            <div class="rice-items-checklist q-mt-sm q-gutter-y-xs">
+              <div
+                v-for="req in orderGroup.items"
+                :key="req.id"
+                class="rice-item-row"
+                :class="{
+                  'rice-item-row--done': completedRiceItemIds.has(req.id),
+                  'rice-item-row--fried': req.isFriedRice,
+                }"
+                @click="toggleRiceItem(req.id)"
+              >
+                <div class="row items-center justify-between no-wrap">
+                  <div class="row items-center no-wrap col">
+                    <q-checkbox
+                      :model-value="completedRiceItemIds.has(req.id)"
+                      @update:model-value="toggleRiceItem(req.id)"
+                      color="amber-9"
+                      dense
+                      class="q-mr-sm"
+                      @click.stop
+                    />
+                    <div class="col ellipsis">
+                      <div class="row items-center q-gutter-xs wrap">
+                        <!-- Main display label (e.g. ธรรมดา 1 จาน / พิเศษ 2 จาน / ธรรมดา (ข้าวผัด) 1 จาน) -->
+                        <span
+                          class="text-weight-bold rice-item-name"
+                          :class="{ 'text-strike text-grey-6': completedRiceItemIds.has(req.id) }"
+                        >
+                          {{ req.displayLabel }}
+                        </span>
+
+                        <!-- Portion & Category Badges -->
+                        <q-badge
+                          v-if="req.isFriedRice"
+                          color="deep-orange-7"
+                          rounded
+                          class="q-px-xs text-weight-bold"
+                        >
+                          ข้าวผัด
+                        </q-badge>
+                        <q-badge
+                          v-if="req.isSpecial"
+                          color="amber-9"
+                          rounded
+                          class="q-px-xs text-weight-bold"
+                        >
+                          พิเศษ
+                        </q-badge>
+                        <q-badge
+                          v-else-if="!req.isFriedRice"
+                          color="grey-7"
+                          outline
+                          rounded
+                          class="q-px-xs"
+                        >
+                          ธรรมดา
+                        </q-badge>
+                        <q-badge v-if="req.isAddonRice" color="purple-7" rounded class="q-px-xs">
+                          เพิ่มข้าว
+                        </q-badge>
+                      </div>
+                      <div class="text-caption text-grey-6 ellipsis q-mt-xs">
+                        เมนู: <strong class="text-grey-8">{{ req.dishName }}</strong>
+                        <span
+                          v-if="req.specialInstruction"
+                          class="text-deep-orange-9 text-weight-medium q-ml-xs"
+                        >
+                          ({{ req.specialInstruction }})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rice-qty-box text-right q-ml-sm">
+                    <span class="text-weight-bolder rice-qty-num">{{ req.quantity }}</span>
+                    <span class="text-caption text-grey-6 q-ml-xs">{{ req.unit }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State for Orders -->
+        <div v-else class="rice-all-empty-card text-center q-pa-xl">
+          <div class="rice-empty-icon-wrap q-mx-auto q-mb-md">
+            <q-icon name="rice_bowl" size="48px" color="amber-7" />
+          </div>
+          <div class="text-weight-bold text-h6 text-grey-8">ไม่มีรายการจานข้าวที่ต้องตัก</div>
+          <div class="text-caption text-grey-6 q-mt-xs">
+            ออเดอร์ในครัวขณะนี้ไม่มีเมนูข้าว หรือข้าวทุกจานถูกตักเตรียมเรียบร้อยแล้ว
+          </div>
+        </div>
+      </div>
     </template>
   </q-page>
 </template>
@@ -1382,6 +1702,12 @@ import {
   type FryRequirement,
   type FrySummaryItem,
 } from 'src/utils/fryHelper';
+import {
+  extractRiceRequirementsFromOrders,
+  aggregateRiceSummary,
+  type RiceRequirement,
+  type RiceSummaryItem,
+} from 'src/utils/riceHelper';
 import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems } from 'src/types/database';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
@@ -1400,9 +1726,10 @@ const menuStore = useMenuStore();
 const { notifySuccess, notifyError, notifyWarning } = useNotify();
 
 const isLoading = ref(true);
-const viewMode = ref<'focus' | 'overview' | 'fry'>('focus');
+const viewMode = ref<'focus' | 'overview' | 'fry' | 'rice'>('focus');
 const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
 const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
+const riceFilter = ref<'all' | 'pending' | 'completed'>('all');
 const FOCUS_PAGE_SIZE = 3;
 const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
@@ -1417,7 +1744,17 @@ function loadPersistedFryCompletedIds(): string[] {
   }
 }
 
+function loadPersistedRiceCompletedIds(): string[] {
+  try {
+    const raw = localStorage.getItem('demo_delivery_completed_rice_ids');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 const completedFryItemIds = ref<Set<string>>(new Set(loadPersistedFryCompletedIds()));
+const completedRiceItemIds = ref<Set<string>>(new Set(loadPersistedRiceCompletedIds()));
 
 let realtimeChannel: RealtimeChannel | null = null;
 let elapsedInterval: ReturnType<typeof setInterval>;
@@ -1519,7 +1856,6 @@ function setFocusFilter(filter: 'all' | 'queued' | 'preparing' | 'prepared') {
   focusPage.value = 0;
 }
 
-
 function onSoundToggle(val: boolean) {
   setSoundEnabled(val);
   if (val) {
@@ -1606,6 +1942,7 @@ function getTimerColorClass(createdAtStr: string): string {
 
 // Fry Station Computeds & Handlers
 const menuItemsMap = computed(() => new Map(menuStore.items.map((i) => [i.id, i])));
+const categoriesMap = computed(() => new Map(menuStore.categories.map((c) => [c.id, c])));
 
 const allFryRequirements = computed<FryRequirement[]>(() => {
   return extractFryRequirementsFromOrders(queueStore.orders, menuItemsMap.value);
@@ -1711,6 +2048,117 @@ function clearCompletedFryItems() {
   completedFryItemIds.value = new Set();
   persistFryCompletedIds();
   notifySuccess('ล้างรายการที่ติ๊กเสร็จแล้วเรียบร้อย');
+}
+
+// Rice Station Computeds & Handlers
+const allRiceRequirements = computed<RiceRequirement[]>(() => {
+  return extractRiceRequirementsFromOrders(
+    queueStore.orders,
+    menuItemsMap.value,
+    categoriesMap.value,
+  );
+});
+
+const pendingRiceRequirements = computed(() =>
+  allRiceRequirements.value.filter((r) => !completedRiceItemIds.value.has(r.id)),
+);
+
+const completedRiceRequirements = computed(() =>
+  allRiceRequirements.value.filter((r) => completedRiceItemIds.value.has(r.id)),
+);
+
+const pendingRiceCount = computed(() =>
+  pendingRiceRequirements.value.reduce((sum, r) => sum + r.quantity, 0),
+);
+
+const riceSummaryList = computed<RiceSummaryItem[]>(() => {
+  return aggregateRiceSummary(allRiceRequirements.value, completedRiceItemIds.value);
+});
+
+const groupedRiceOrders = computed(() => {
+  const list =
+    riceFilter.value === 'pending'
+      ? pendingRiceRequirements.value
+      : riceFilter.value === 'completed'
+        ? completedRiceRequirements.value
+        : allRiceRequirements.value;
+
+  const map = new Map<
+    string,
+    {
+      orderId: string;
+      queueNumber: number;
+      tableName: string;
+      customerName?: string | null | undefined;
+      orderStatus: string;
+      queuedAt: string;
+      items: RiceRequirement[];
+      allCompleted: boolean;
+    }
+  >();
+
+  for (const req of list) {
+    if (!map.has(req.orderId)) {
+      map.set(req.orderId, {
+        orderId: req.orderId,
+        queueNumber: req.queueNumber,
+        tableName: req.tableName,
+        customerName: req.customerName,
+        orderStatus: req.orderStatus,
+        queuedAt: req.queuedAt,
+        items: [],
+        allCompleted: true,
+      });
+    }
+    const group = map.get(req.orderId)!;
+    group.items.push(req);
+    if (!completedRiceItemIds.value.has(req.id)) {
+      group.allCompleted = false;
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.queueNumber - b.queueNumber);
+});
+
+function persistRiceCompletedIds() {
+  try {
+    localStorage.setItem(
+      'demo_delivery_completed_rice_ids',
+      JSON.stringify([...completedRiceItemIds.value]),
+    );
+  } catch (e) {
+    console.error('Failed to save rice completed ids:', e);
+  }
+}
+
+function toggleRiceItem(reqId: string) {
+  if (completedRiceItemIds.value.has(reqId)) {
+    completedRiceItemIds.value.delete(reqId);
+  } else {
+    completedRiceItemIds.value.add(reqId);
+  }
+  completedRiceItemIds.value = new Set(completedRiceItemIds.value);
+  persistRiceCompletedIds();
+}
+
+function toggleOrderAllRiceItems(orderId: string) {
+  const orderReqs = allRiceRequirements.value.filter((r) => r.orderId === orderId);
+  const allDone = orderReqs.every((r) => completedRiceItemIds.value.has(r.id));
+  for (const req of orderReqs) {
+    if (allDone) {
+      completedRiceItemIds.value.delete(req.id);
+    } else {
+      completedRiceItemIds.value.add(req.id);
+    }
+  }
+  completedRiceItemIds.value = new Set(completedRiceItemIds.value);
+  persistRiceCompletedIds();
+}
+
+function clearCompletedRiceItems() {
+  completedRiceItemIds.value = new Set();
+  persistRiceCompletedIds();
+  notifySuccess('ล้างรายการตักข้าวที่ติ๊กเสร็จแล้วเรียบร้อย');
 }
 
 // Keyboard shortcuts for kitchen navigation (Left/Right to slide pages)
@@ -1826,7 +2274,6 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
     playStatusDoneChime();
   }
 }
-
 </script>
 
 <style scoped>
@@ -2380,7 +2827,6 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   color: var(--color-text-muted);
 }
 
-
 .focus-empty-card {
   background: #ffffff;
   border: 2px dashed var(--color-border);
@@ -2876,6 +3322,218 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   height: 72px;
   border-radius: 50%;
   background: #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================================================= */
+/* Rice Station Styles */
+/* ========================================================================= */
+.stat-chip--rice {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.stat-chip--rice:hover {
+  background: #fef3c7;
+}
+
+.rice-mode-container {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.rice-top-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.rice-hero-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.rice-page-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+/* Rice Summary Grid */
+.rice-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.rice-summary-card {
+  background: #ffffff;
+  border: 1.5px solid #fde68a;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s ease;
+}
+
+.rice-summary-card--fried {
+  border-color: #fdba74;
+  background: #fffaf5;
+}
+
+.rice-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.rice-summary-card--all-done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  opacity: 0.85;
+}
+
+.rice-sum-name {
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.rice-sum-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.rice-sum-badge--pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.rice-sum-badge--done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.rice-summary-empty {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Rice Orders Grid */
+.rice-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.rice-order-card {
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.rice-order-card--all-done {
+  border-color: #86efac;
+  background: #f8fafc;
+  opacity: 0.8;
+}
+
+.rice-order-header {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rice-order-queue-badge {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.rice-order-table-title {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.rice-order-time-badge {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.rice-check-all-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 6px;
+}
+
+.rice-item-row {
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rice-item-row:hover {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.rice-item-row--fried {
+  border-left: 3px solid #f97316;
+}
+
+.rice-item-row--done {
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+  border-left-color: #86efac !important;
+  opacity: 0.75;
+}
+
+.rice-item-name {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.rice-qty-box {
+  flex-shrink: 0;
+}
+
+.rice-qty-num {
+  font-size: 1.15rem;
+  color: #d97706;
+}
+
+.rice-all-empty-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--color-border);
+  box-shadow: var(--shadow-subtle);
+}
+
+.rice-empty-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #fef3c7;
   display: flex;
   align-items: center;
   justify-content: center;

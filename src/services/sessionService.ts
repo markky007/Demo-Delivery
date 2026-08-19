@@ -294,4 +294,3 @@ export async function transferTableSession(
     targetTableName: targetTable.name,
   };
 }
-

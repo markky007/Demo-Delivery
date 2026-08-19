@@ -46,4 +46,3 @@ export const OrderTransitions: Record<OrderStatus, OrderStatus | null> = {
 
 /** Which order statuses allow customer editing (only before restaurant starts) */
 export const EditableStatuses: OrderStatus[] = [OrderStatus.QUEUED];
-

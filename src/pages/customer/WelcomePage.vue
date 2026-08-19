@@ -28,7 +28,7 @@
 
       <div class="welcome-table-badge q-my-md">
         <q-icon name="table_restaurant" size="20px" class="q-mr-xs" />
-        <span>โต๊ะ {{ sessionStore.tableName }}</span>
+        <span>{{ sessionStore.tableName }}</span>
       </div>
 
       <p class="welcome-tagline text-grey-7 q-mb-xl">

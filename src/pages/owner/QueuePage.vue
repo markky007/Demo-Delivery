@@ -22,18 +22,140 @@
 
           <!-- Quick Stats & View Switcher & Audio Controls -->
           <div class="row items-center q-gutter-sm">
-            <!-- Sound Toggle Button -->
+            <!-- Sound Controls & Volume Menu -->
             <q-btn
               flat
               dense
               round
-              :icon="soundEnabled ? 'volume_up' : 'volume_off'"
-              :color="soundEnabled ? 'primary' : 'grey-6'"
-              @click="toggleSound"
+              :icon="
+                !soundEnabled
+                  ? 'volume_off'
+                  : soundVolume === 0
+                    ? 'volume_mute'
+                    : soundVolume <= 50
+                      ? 'volume_down'
+                      : 'volume_up'
+              "
+              :color="soundEnabled && soundVolume > 0 ? 'primary' : 'grey-6'"
             >
-              <q-tooltip>{{
-                soundEnabled ? 'เปิดเสียงเตือนอยู่ (คลิกเพื่อปิด)' : 'ปิดเสียงเตือน (คลิกเพื่อเปิด)'
-              }}</q-tooltip>
+              <q-tooltip>
+                {{
+                  soundEnabled
+                    ? `เสียงเตือนออเดอร์ (ความดัง ${soundVolume}%)`
+                    : 'ปิดเสียงเตือน (คลิกเพื่อตั้งค่า)'
+                }}
+              </q-tooltip>
+
+              <q-menu
+                anchor="bottom right"
+                self="top right"
+                class="q-pa-md shadow-4"
+                style="min-width: 260px; border-radius: 12px"
+              >
+                <div class="column q-gutter-y-sm">
+                  <!-- Header with Switch -->
+                  <div class="row items-center justify-between">
+                    <div class="row items-center q-gutter-x-xs">
+                      <q-icon
+                        :name="soundEnabled ? 'notifications_active' : 'notifications_off'"
+                        :color="soundEnabled ? 'primary' : 'grey-6'"
+                        size="20px"
+                      />
+                      <span class="text-weight-bold text-subtitle2">เสียงเตือนออเดอร์</span>
+                    </div>
+                    <q-toggle
+                      v-model="soundEnabled"
+                      color="primary"
+                      dense
+                      @update:model-value="onSoundToggle"
+                    />
+                  </div>
+
+                  <q-separator class="q-my-xs" />
+
+                  <!-- Volume Slider Section -->
+                  <div class="column q-gutter-y-xs" :class="{ 'text-grey-5': !soundEnabled }">
+                    <div class="row items-center justify-between text-caption">
+                      <span class="text-weight-medium">ระดับความดัง</span>
+                      <span class="text-weight-bold text-primary">{{
+                        soundEnabled ? soundVolume + '%' : 'ปิด'
+                      }}</span>
+                    </div>
+
+                    <div class="row items-center q-gutter-x-sm no-wrap">
+                      <q-icon
+                        name="volume_mute"
+                        size="18px"
+                        :color="soundEnabled ? 'grey-7' : 'grey-5'"
+                      />
+                      <q-slider
+                        v-model="soundVolume"
+                        :min="0"
+                        :max="100"
+                        :step="5"
+                        :disable="!soundEnabled"
+                        color="primary"
+                        class="col"
+                        @change="onVolumeChange"
+                      />
+                      <q-icon
+                        name="volume_up"
+                        size="18px"
+                        :color="soundEnabled ? 'grey-7' : 'grey-5'"
+                      />
+                    </div>
+
+                    <!-- Volume Presets -->
+                    <div class="row q-gutter-xs justify-between q-mt-xs">
+                      <q-btn
+                        size="xs"
+                        outline
+                        dense
+                        :disable="!soundEnabled"
+                        :color="soundVolume === 50 ? 'primary' : 'grey-6'"
+                        label="50%"
+                        class="q-px-sm"
+                        @click="setPresetVolume(50)"
+                      />
+                      <q-btn
+                        size="xs"
+                        outline
+                        dense
+                        :disable="!soundEnabled"
+                        :color="soundVolume === 80 ? 'primary' : 'grey-6'"
+                        label="80%"
+                        class="q-px-sm"
+                        @click="setPresetVolume(80)"
+                      />
+                      <q-btn
+                        size="xs"
+                        outline
+                        dense
+                        :disable="!soundEnabled"
+                        :color="soundVolume === 100 ? 'primary' : 'grey-6'"
+                        label="100% (ดังสุด)"
+                        class="q-px-sm"
+                        @click="setPresetVolume(100)"
+                      />
+                    </div>
+                  </div>
+
+                  <q-separator class="q-my-xs" />
+
+                  <!-- Test Sound Button -->
+                  <q-btn
+                    unelevated
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    icon="volume_up"
+                    label="ทดสอบเสียงกริ่ง"
+                    class="full-width"
+                    :disable="!soundEnabled"
+                    @click="testSound"
+                  />
+                </div>
+              </q-menu>
             </q-btn>
 
             <!-- Mode Switcher Buttons -->
@@ -1276,6 +1398,8 @@ import {
   playStatusDoneChime,
   isSoundEnabled,
   setSoundEnabled,
+  getSoundVolume,
+  setSoundVolume,
 } from 'src/utils/audioService';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -1289,6 +1413,7 @@ const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
 const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
 const currentSlideId = ref<string>('');
 const soundEnabled = ref<boolean>(isSoundEnabled());
+const soundVolume = ref<number>(getSoundVolume());
 
 function loadPersistedFryCompletedIds(): string[] {
   try {
@@ -1385,15 +1510,31 @@ function setFocusFilter(filter: 'all' | 'queued' | 'preparing' | 'prepared') {
   focusFilter.value = filter;
 }
 
-function toggleSound() {
-  soundEnabled.value = !soundEnabled.value;
-  setSoundEnabled(soundEnabled.value);
-  if (soundEnabled.value) {
-    playNewOrderChime();
-    notifySuccess('เปิดเสียงแจ้งเตือนออเดอร์ใหม่แล้ว');
+function onSoundToggle(val: boolean) {
+  setSoundEnabled(val);
+  if (val) {
+    playNewOrderChime(soundVolume.value);
+    notifySuccess('เปิดเสียงแจ้งเตือนออเดอร์แล้ว');
   } else {
     notifyWarning('ปิดเสียงแจ้งเตือนแล้ว');
   }
+}
+
+function onVolumeChange(val: number | null) {
+  if (val !== null) {
+    setSoundVolume(val);
+    playNewOrderChime(val);
+  }
+}
+
+function setPresetVolume(vol: number) {
+  soundVolume.value = vol;
+  setSoundVolume(vol);
+  playNewOrderChime(vol);
+}
+
+function testSound() {
+  playNewOrderChime(soundVolume.value);
 }
 
 function getTableName(order: OrderWithItems): string {

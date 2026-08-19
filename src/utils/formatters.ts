@@ -106,7 +106,7 @@ export function formatRemainingExpiry(expiresAt: string | null | undefined): {
 
 /**
  * Check whether an option is a default/regular portion option that should be omitted from display.
- * (e.g. "ธรรมดา", "ปกติ", "ขนาดธรรมดา")
+ * (e.g. "ธรรมดา", "ปกติ", "ขนาดธรรมดา", "ทานที่ร้าน")
  */
 export function isDefaultOptionName(name?: string | null): boolean {
   if (!name) return false;
@@ -118,12 +118,28 @@ export function isDefaultOptionName(name?: string | null): boolean {
     trimmed === 'ปกติ (ธรรมดา)' ||
     trimmed === 'ขนาดธรรมดา' ||
     trimmed === 'ไซส์ธรรมดา' ||
-    trimmed === 'จานธรรมดา'
+    trimmed === 'จานธรรมดา' ||
+    trimmed === 'ทานที่ร้าน' ||
+    trimmed === 'Dine-in'
   );
 }
 
 /**
- * Filter out default options (like "ธรรมดา") so that only special / non-default options are displayed.
+ * Check whether an option is a takeaway / packaging option.
+ */
+export function isTakeawayOption(name?: string | null): boolean {
+  if (!name) return false;
+  const trimmed = name.trim().toLowerCase();
+  return (
+    trimmed === 'สั่งกลับบ้าน' ||
+    trimmed === 'กลับบ้าน' ||
+    trimmed === 'takeaway' ||
+    trimmed.includes('กลับบ้าน')
+  );
+}
+
+/**
+ * Filter out default options (like "ธรรมดา", "ทานที่ร้าน") so that only special / non-default options are displayed.
  */
 export function getVisibleOptions<T extends { name?: string; snapshot_option_name?: string }>(
   options?: T[] | null,
@@ -134,4 +150,5 @@ export function getVisibleOptions<T extends { name?: string; snapshot_option_nam
     return !isDefaultOptionName(name);
   });
 }
+
 

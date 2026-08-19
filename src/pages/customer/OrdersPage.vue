@@ -74,8 +74,10 @@
                       v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="order-opt-chip"
+                      :class="{ 'order-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name) }"
                     >
-                      + {{ opt.snapshot_option_name }}
+                      <q-icon v-if="isTakeawayOption(opt.snapshot_option_name)" name="shopping_bag" size="12px" class="q-mr-xs" />
+                      {{ isTakeawayOption(opt.snapshot_option_name) ? opt.snapshot_option_name : `+ ${opt.snapshot_option_name}` }}
                       <template v-if="opt.snapshot_price_adjustment > 0">
                         (+{{ formatPrice(opt.snapshot_price_adjustment) }})
                       </template>
@@ -152,8 +154,10 @@
                       v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="order-opt-chip"
+                      :class="{ 'order-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name) }"
                     >
-                      + {{ opt.snapshot_option_name }}
+                      <q-icon v-if="isTakeawayOption(opt.snapshot_option_name)" name="shopping_bag" size="12px" class="q-mr-xs" />
+                      {{ isTakeawayOption(opt.snapshot_option_name) ? opt.snapshot_option_name : `+ ${opt.snapshot_option_name}` }}
                       <template v-if="opt.snapshot_price_adjustment > 0">
                         (+{{ formatPrice(opt.snapshot_price_adjustment) }})
                       </template>
@@ -203,7 +207,13 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { fetchSessionOrders } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
-import { formatPrice, formatTime, formatQueueNumber, getVisibleOptions } from 'src/utils/formatters';
+import {
+  formatPrice,
+  formatTime,
+  formatQueueNumber,
+  getVisibleOptions,
+  isTakeawayOption,
+} from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import EmptyState from 'src/components/EmptyState.vue';
@@ -374,6 +384,13 @@ onUnmounted(() => {
   border-radius: 4px;
   margin-right: 4px;
   margin-top: 2px;
+}
+
+.order-opt-chip--takeaway {
+  background: #ffedd5;
+  color: #ea580c;
+  font-weight: 600;
+  border: 1px solid #fed7aa;
 }
 
 .order-note-text {

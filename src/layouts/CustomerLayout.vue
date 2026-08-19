@@ -20,8 +20,16 @@
 
         <q-toolbar-title class="text-center customer-title">
           <div v-if="pageTitle" class="customer-page-name">{{ pageTitle }}</div>
-          <div v-if="tableName" class="customer-table-pill">
-            <q-icon name="table_restaurant" size="16px" class="q-mr-xs" />
+          <div
+            v-if="tableName"
+            class="customer-table-pill"
+            :class="{ 'customer-table-pill--takeaway': isTakeawayName(tableName) }"
+          >
+            <q-icon
+              :name="isTakeawayName(tableName) ? 'shopping_bag' : 'table_restaurant'"
+              size="16px"
+              class="q-mr-xs"
+            />
             <span>{{ tableName }}</span>
           </div>
         </q-toolbar-title>
@@ -82,6 +90,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useCartStore } from 'src/stores/cartStore';
+import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import logoMarkSvg from 'src/assets/logo-mark.svg';
 
@@ -206,6 +215,12 @@ onUnmounted(() => {
   padding: 2px 10px;
   border-radius: var(--radius-pill);
   margin-top: 2px;
+}
+
+.customer-table-pill--takeaway {
+  background: #ffedd5;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
 }
 
 .customer-page-container {

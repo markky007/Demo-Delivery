@@ -804,7 +804,10 @@ async function saveCategory() {
 function openAddItemDialog() {
   editingItem.value = null;
   resetItemForm();
-  selectedOptionGroupIds.value = [];
+  const diningGroup = allOptionGroups.value.find(
+    (g) => g.name === 'รูปแบบการทาน' || g.name === 'ทานที่ร้าน / กลับบ้าน',
+  );
+  selectedOptionGroupIds.value = diningGroup ? [diningGroup.id] : [];
   if (menuStore.categories.length > 0) {
     itemForm.category_id = menuStore.categories[0]?.id ?? '';
   }

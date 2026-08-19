@@ -290,9 +290,20 @@
                         }}</span>
                       </div>
 
-                      <div class="chef-table-badge">
-                        <q-icon name="table_restaurant" size="20px" class="q-mr-xs text-primary" />
-                        <span class="chef-table-name">
+                      <div
+                        class="chef-table-badge"
+                        :class="{ 'chef-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                      >
+                        <q-icon
+                          :name="isTakeawayName(getTableName(order)) ? 'shopping_bag' : 'table_restaurant'"
+                          size="20px"
+                          class="q-mr-xs"
+                          :color="isTakeawayName(getTableName(order)) ? 'orange-9' : 'primary'"
+                        />
+                        <span
+                          class="chef-table-name"
+                          :class="{ 'text-orange-9': isTakeawayName(getTableName(order)) }"
+                        >
                           {{ getTableName(order) }}
                         </span>
                       </div>
@@ -369,8 +380,23 @@
                               v-for="opt in getVisibleOptions(item.options)"
                               :key="opt.id"
                               class="chef-option-chip"
+                              :class="{
+                                'chef-option-chip--takeaway': isTakeawayOption(
+                                  opt.snapshot_option_name,
+                                ),
+                              }"
                             >
-                              + {{ opt.snapshot_option_name }}
+                              <q-icon
+                                v-if="isTakeawayOption(opt.snapshot_option_name)"
+                                name="shopping_bag"
+                                size="13px"
+                                class="q-mr-xs"
+                              />
+                              {{
+                                isTakeawayOption(opt.snapshot_option_name)
+                                  ? opt.snapshot_option_name
+                                  : `+ ${opt.snapshot_option_name}`
+                              }}
                             </span>
                           </div>
 
@@ -543,7 +569,18 @@
                     <span class="queue-seq-number">{{
                       formatQueueNumber(order.queue_number)
                     }}</span>
-                    <span class="queue-table-badge">{{ getTableName(order) }}</span>
+                    <span
+                      class="queue-table-badge"
+                      :class="{ 'queue-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                    >
+                      <q-icon
+                        v-if="isTakeawayName(getTableName(order))"
+                        name="shopping_bag"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
+                      {{ getTableName(order) }}
+                    </span>
                   </div>
                   <div class="elapsed-badge">
                     <q-icon name="timer" size="13px" class="q-mr-xs" />
@@ -565,8 +602,25 @@
                       v-if="item.options && getVisibleOptions(item.options).length > 0"
                       class="dish-options-line text-grey-7"
                     >
-                      <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="q-mr-xs">
-                        +{{ opt.snapshot_option_name }}
+                      <span
+                        v-for="opt in getVisibleOptions(item.options)"
+                        :key="opt.id"
+                        class="dish-opt-chip q-mr-xs"
+                        :class="{
+                          'dish-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
+                        }"
+                      >
+                        <q-icon
+                          v-if="isTakeawayOption(opt.snapshot_option_name)"
+                          name="shopping_bag"
+                          size="11px"
+                          class="q-mr-xs"
+                        />
+                        {{
+                          isTakeawayOption(opt.snapshot_option_name)
+                            ? opt.snapshot_option_name
+                            : `+${opt.snapshot_option_name}`
+                        }}
                       </span>
                     </div>
                     <!-- Special note -->
@@ -623,7 +677,18 @@
                     <span class="queue-seq-number">{{
                       formatQueueNumber(order.queue_number)
                     }}</span>
-                    <span class="queue-table-badge">{{ getTableName(order) }}</span>
+                    <span
+                      class="queue-table-badge"
+                      :class="{ 'queue-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                    >
+                      <q-icon
+                        v-if="isTakeawayName(getTableName(order))"
+                        name="shopping_bag"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
+                      {{ getTableName(order) }}
+                    </span>
                   </div>
                   <div class="elapsed-badge elapsed-badge--amber">
                     <q-icon name="timer" size="13px" class="q-mr-xs" />
@@ -651,8 +716,25 @@
                       v-if="item.options && getVisibleOptions(item.options).length > 0"
                       class="dish-options-line text-grey-7"
                     >
-                      <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="q-mr-xs">
-                        +{{ opt.snapshot_option_name }}
+                      <span
+                        v-for="opt in getVisibleOptions(item.options)"
+                        :key="opt.id"
+                        class="dish-opt-chip q-mr-xs"
+                        :class="{
+                          'dish-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
+                        }"
+                      >
+                        <q-icon
+                          v-if="isTakeawayOption(opt.snapshot_option_name)"
+                          name="shopping_bag"
+                          size="11px"
+                          class="q-mr-xs"
+                        />
+                        {{
+                          isTakeawayOption(opt.snapshot_option_name)
+                            ? opt.snapshot_option_name
+                            : `+${opt.snapshot_option_name}`
+                        }}
                       </span>
                     </div>
                     <div v-if="item.special_instruction" class="dish-special-note">
@@ -711,7 +793,18 @@
                     <span class="queue-seq-number">{{
                       formatQueueNumber(order.queue_number)
                     }}</span>
-                    <span class="queue-table-badge">{{ getTableName(order) }}</span>
+                    <span
+                      class="queue-table-badge"
+                      :class="{ 'queue-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                    >
+                      <q-icon
+                        v-if="isTakeawayName(getTableName(order))"
+                        name="shopping_bag"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
+                      {{ getTableName(order) }}
+                    </span>
                   </div>
                   <div class="elapsed-badge elapsed-badge--green">
                     <q-icon name="timer" size="13px" class="q-mr-xs" />
@@ -733,8 +826,25 @@
                       v-if="item.options && getVisibleOptions(item.options).length > 0"
                       class="dish-options-line text-grey-7"
                     >
-                      <span v-for="opt in getVisibleOptions(item.options)" :key="opt.id" class="q-mr-xs">
-                        +{{ opt.snapshot_option_name }}
+                      <span
+                        v-for="opt in getVisibleOptions(item.options)"
+                        :key="opt.id"
+                        class="dish-opt-chip q-mr-xs"
+                        :class="{
+                          'dish-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
+                        }"
+                      >
+                        <q-icon
+                          v-if="isTakeawayOption(opt.snapshot_option_name)"
+                          name="shopping_bag"
+                          size="11px"
+                          class="q-mr-xs"
+                        />
+                        {{
+                          isTakeawayOption(opt.snapshot_option_name)
+                            ? opt.snapshot_option_name
+                            : `+${opt.snapshot_option_name}`
+                        }}
                       </span>
                     </div>
                     <div v-if="item.special_instruction" class="dish-special-note">
@@ -802,7 +912,21 @@
                     <span class="queue-seq-number text-grey-7">
                       {{ formatQueueNumber(order.queue_number) }}
                     </span>
-                    <span class="queue-table-badge queue-table-badge--muted q-ml-xs">
+                    <span
+                      class="queue-table-badge"
+                      :class="[
+                        isTakeawayName(getTableName(order))
+                          ? 'queue-table-badge--takeaway'
+                          : 'queue-table-badge--muted',
+                        'q-ml-xs',
+                      ]"
+                    >
+                      <q-icon
+                        v-if="isTakeawayName(getTableName(order))"
+                        name="shopping_bag"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
                       {{ getTableName(order) }}
                     </span>
                     <span class="text-caption text-grey-6 q-ml-sm">
@@ -833,7 +957,14 @@ import { useQueueStore } from 'src/stores/queueStore';
 import { useNotify } from 'src/composables/useNotify';
 import { fetchTodayOrders, advanceOrderStatus } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
-import { formatQueueNumber, formatElapsed, formatTime, getVisibleOptions } from 'src/utils/formatters';
+import {
+  formatQueueNumber,
+  formatElapsed,
+  formatTime,
+  getVisibleOptions,
+  isTakeawayOption,
+} from 'src/utils/formatters';
+import { isTakeawayName } from 'src/services/tableService';
 import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems } from 'src/types/database';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
@@ -1292,6 +1423,11 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   border-radius: var(--radius-sm);
 }
 
+.chef-table-badge--takeaway {
+  background: #ffedd5;
+  border: 1.5px solid #fed7aa;
+}
+
 .chef-table-name {
   font-size: 1.25rem;
   font-weight: 700;
@@ -1437,6 +1573,15 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+}
+
+.chef-option-chip--takeaway {
+  background: #ffedd5;
+  border: 1.5px solid #fed7aa;
+  color: #ea580c;
+  font-weight: 700;
 }
 
 .chef-special-note {
@@ -1706,11 +1851,32 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   border-radius: var(--radius-xs);
   background: var(--color-primary-soft);
   color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+}
+
+.queue-table-badge--takeaway {
+  background: #ffedd5;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
 }
 
 .queue-table-badge--muted {
   background: #e2e8f0;
   color: #64748b;
+}
+
+.dish-opt-chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+.dish-opt-chip--takeaway {
+  color: #ea580c;
+  font-weight: 700;
+  background: #ffedd5;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 .elapsed-badge {

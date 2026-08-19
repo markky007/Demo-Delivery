@@ -62,47 +62,66 @@ export const useMenuStore = defineStore('menu', () => {
 
     if (itemErr || !item) return null;
 
-    // Fetch option groups linked to this item
+    // 1. Fetch option groups linked to this item
     const { data: links } = await supabase
       .from('menu_item_option_groups')
       .select('option_group_id, sort_order')
       .eq('menu_item_id', itemId)
       .order('sort_order');
 
-    if (!links || links.length === 0) {
+    const linkedGroupIds = (links ?? []).map((l) => l.option_group_id);
+
+    // 2. Fetch universal Dining Option Group (รูปแบบการทาน)
+    const { data: diningGroups } = await supabase
+      .from('option_groups')
+      .select('*')
+      .or('name.eq.รูปแบบการทาน,name.eq.ทานที่ร้าน / กลับบ้าน')
+      .eq('is_active', true)
+      .limit(1);
+
+    const diningGroupId = diningGroups && diningGroups.length > 0 ? diningGroups[0]?.id : null;
+    const allGroupIds = Array.from(
+      new Set([...(diningGroupId ? [diningGroupId] : []), ...linkedGroupIds]),
+    );
+
+    if (allGroupIds.length === 0) {
       return { ...item, option_groups: [] } as MenuItemWithOptions;
     }
 
-    const groupIds = links.map((l) => l.option_group_id);
-
-    // Fetch option groups
+    // 3. Fetch all relevant option groups
     const { data: groups } = await supabase
       .from('option_groups')
       .select('*')
-      .in('id', groupIds)
+      .in('id', allGroupIds)
       .eq('is_active', true);
 
-    if (!groups) {
+    if (!groups || groups.length === 0) {
       return { ...item, option_groups: [] } as MenuItemWithOptions;
     }
 
-    // Fetch options for these groups
+    // 4. Fetch options for these groups
     const { data: options } = await supabase
       .from('options')
       .select('*')
-      .in('option_group_id', groupIds)
+      .in('option_group_id', allGroupIds)
       .eq('is_active', true)
       .order('sort_order');
 
-    // Assemble the result
+    // 5. Assemble and prioritize Dining Option group first
     const optionGroups = groups
       .map((g) => ({
         ...g,
         options: (options ?? []).filter((o) => o.option_group_id === g.id),
       }))
       .sort((a, b) => {
-        const aOrder = links.find((l) => l.option_group_id === a.id)?.sort_order ?? 0;
-        const bOrder = links.find((l) => l.option_group_id === b.id)?.sort_order ?? 0;
+        // Universal Dining group always goes first
+        const isADining = a.name === 'รูปแบบการทาน' || a.name === 'ทานที่ร้าน / กลับบ้าน';
+        const isBDining = b.name === 'รูปแบบการทาน' || b.name === 'ทานที่ร้าน / กลับบ้าน';
+        if (isADining && !isBDining) return -1;
+        if (!isADining && isBDining) return 1;
+
+        const aOrder = links?.find((l) => l.option_group_id === a.id)?.sort_order ?? a.sort_order;
+        const bOrder = links?.find((l) => l.option_group_id === b.id)?.sort_order ?? b.sort_order;
         return aOrder - bOrder;
       });
 

@@ -189,6 +189,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useNotify } from 'src/composables/useNotify';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
+import { useSessionStore } from 'src/stores/sessionStore';
+import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import { MAX_SPECIAL_INSTRUCTION_LENGTH } from 'src/utils/constants';
 import { SelectionType } from 'src/types/enums';
@@ -201,6 +203,7 @@ const route = useRoute();
 const router = useRouter();
 const menuStore = useMenuStore();
 const cartStore = useCartStore();
+const sessionStore = useSessionStore();
 const { notifySuccess } = useNotify();
 
 const item = ref<MenuItemWithOptions | null>(null);
@@ -216,8 +219,31 @@ onMounted(async () => {
   isLoading.value = false;
 
   if (item.value) {
+    const isTakeawaySession = isTakeawayName(sessionStore.tableName);
+
     for (const group of item.value.option_groups) {
       if (group.selection_type === SelectionType.SINGLE && group.is_required) {
+        const isDiningGroup =
+          group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
+
+        if (isDiningGroup) {
+          if (isTakeawaySession) {
+            const takeawayOpt = group.options.find(
+              (o) => (o.name === 'สั่งกลับบ้าน' || o.name === 'กลับบ้าน') && o.is_available,
+            );
+            if (takeawayOpt) {
+              selectedOptions[group.id] = takeawayOpt.id;
+              continue;
+            }
+          }
+
+          const dineInOpt = group.options.find((o) => o.name === 'ทานที่ร้าน' && o.is_available);
+          if (dineInOpt) {
+            selectedOptions[group.id] = dineInOpt.id;
+            continue;
+          }
+        }
+
         const firstAvailable = group.options.find((o) => o.is_available);
         if (firstAvailable) {
           selectedOptions[group.id] = firstAvailable.id;

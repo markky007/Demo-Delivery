@@ -26,13 +26,20 @@
         {{ sessionStore.restaurantName || 'ร้านอาหาร' }}
       </h4>
 
-      <div class="welcome-table-badge q-my-md">
-        <q-icon name="table_restaurant" size="20px" class="q-mr-xs" />
-        <span>{{ sessionStore.tableName }}</span>
+      <div
+        class="welcome-table-badge q-my-md"
+        :class="{ 'welcome-table-badge--takeaway': isTakeaway }"
+      >
+        <q-icon :name="isTakeaway ? 'shopping_bag' : 'table_restaurant'" size="20px" class="q-mr-xs" />
+        <span>{{ isTakeaway ? 'สั่งกลับบ้าน (Takeaway)' : sessionStore.tableName }}</span>
       </div>
 
       <p class="welcome-tagline text-grey-7 q-mb-xl">
-        พร้อมสั่งอาหารแล้วหรือยัง? เลือกเมนูอร่อยได้ทันที
+        {{
+          isTakeaway
+            ? 'เลือกเมนูอร่อยและสั่งนำกลับบ้านได้ทันที'
+            : 'พร้อมสั่งอาหารแล้วหรือยัง? เลือกเมนูอร่อยได้ทันที'
+        }}
       </p>
 
       <q-btn
@@ -44,19 +51,19 @@
         @click="startOrdering"
         :loading="isJoining"
       >
-        <q-icon name="restaurant_menu" class="q-mr-sm" />
-        <span>เริ่มสั่งอาหาร</span>
+        <q-icon :name="isTakeaway ? 'shopping_bag' : 'restaurant_menu'" class="q-mr-sm" />
+        <span>{{ isTakeaway ? 'เริ่มสั่งกลับบ้าน' : 'เริ่มสั่งอาหาร' }}</span>
       </q-btn>
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useCartStore } from 'src/stores/cartStore';
-import { resolveTableFromToken } from 'src/services/tableService';
+import { resolveTableFromToken, isTakeawayName } from 'src/services/tableService';
 import { joinOrCreateSession, getOrCreateGuestToken } from 'src/services/sessionService';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import logoSvg from 'src/assets/logo.svg';
@@ -65,6 +72,8 @@ const route = useRoute();
 const router = useRouter();
 const sessionStore = useSessionStore();
 const cartStore = useCartStore();
+
+const isTakeaway = computed(() => isTakeawayName(sessionStore.tableName));
 
 const isLoading = ref(true);
 const isJoining = ref(false);
@@ -198,6 +207,12 @@ async function startOrdering() {
   border-radius: var(--radius-pill);
   font-weight: 600;
   font-size: 1.15rem;
+}
+
+.welcome-table-badge--takeaway {
+  background: #ffedd5;
+  color: #ea580c;
+  border: 1.5px solid #fed7aa;
 }
 
 .welcome-tagline {

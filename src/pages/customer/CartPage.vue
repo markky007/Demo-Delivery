@@ -60,7 +60,9 @@
                     v-for="opt in getVisibleOptions(item.selected_options)"
                     :key="opt.option_id"
                     class="option-chip"
+                    :class="{ 'option-chip--takeaway': isTakeawayOption(opt.name) }"
                   >
+                    <q-icon v-if="isTakeawayOption(opt.name)" name="shopping_bag" size="12px" class="q-mr-xs" />
                     {{ opt.name }}
                     <template v-if="opt.price_adjustment > 0"
                       >+{{ formatPrice(opt.price_adjustment) }}</template
@@ -135,7 +137,7 @@ import { useCartStore } from 'src/stores/cartStore';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
-import { formatPrice, getVisibleOptions } from 'src/utils/formatters';
+import { formatPrice, getVisibleOptions, isTakeawayOption } from 'src/utils/formatters';
 import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
@@ -292,6 +294,13 @@ async function confirmOrder() {
   font-size: 0.76rem;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
+}
+
+.option-chip--takeaway {
+  background: #ffedd5;
+  color: #ea580c;
+  font-weight: 600;
+  border: 1px solid #fed7aa;
 }
 
 .cart-item-note {

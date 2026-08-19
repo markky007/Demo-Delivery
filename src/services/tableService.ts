@@ -175,6 +175,70 @@ export async function generateQRToken(
   return data as TableQRToken;
 }
 
+export async function ensureTakeawayTable(restaurantId: string): Promise<TableWithQR> {
+  // 1. Look for existing takeaway table
+  const { data: existingTables } = await supabase
+    .from('tables')
+    .select('*, active_qr:table_qr_tokens (*)')
+    .eq('restaurant_id', restaurantId)
+    .eq('name', 'สั่งกลับบ้าน')
+    .limit(1);
+
+  let table: Table;
+
+  if (existingTables && existingTables.length > 0) {
+    table = existingTables[0] as Table;
+  } else {
+    // Create new takeaway table
+    const { data: newTable, error } = await supabase
+      .from('tables')
+      .insert({
+        restaurant_id: restaurantId,
+        name: 'สั่งกลับบ้าน',
+        sort_order: 0,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    table = newTable as Table;
+  }
+
+  // 2. Check if active QR token exists
+  const { data: tokens } = await supabase
+    .from('table_qr_tokens')
+    .select('*')
+    .eq('table_id', table.id)
+    .eq('is_active', true)
+    .limit(1);
+
+  let activeQr = tokens && tokens.length > 0 ? (tokens[0] as TableQRToken) : null;
+  if (!activeQr) {
+    activeQr = await generateQRToken(table.id);
+  }
+
+  return {
+    ...table,
+    active_qr: activeQr,
+  };
+}
+
+/**
+ * Check if a table name is for takeaway.
+ */
+export function isTakeawayName(name?: string | null): boolean {
+  if (!name) return false;
+  const trimmed = name.trim().toLowerCase();
+  return (
+    trimmed === 'สั่งกลับบ้าน' ||
+    trimmed === 'กลับบ้าน' ||
+    trimmed === 'takeaway' ||
+    trimmed.includes('กลับบ้าน') ||
+    trimmed.includes('takeaway')
+  );
+}
+
 /**
  * Generate a short, URL-safe random token.
  */
@@ -184,3 +248,4 @@ function generatePublicToken(): string {
   crypto.getRandomValues(arr);
   return Array.from(arr, (b) => chars[b % chars.length]).join('');
 }
+

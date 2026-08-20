@@ -14,25 +14,25 @@ export interface IngredientGroupInfo {
 }
 
 export const STANDARD_INGREDIENTS = [
-  { name: 'ไก่ทอด', icon: 'lunch_dining', keywords: ['ไก่ทอด'] },
-  { name: 'เอ็นไก่ทอด', icon: 'lunch_dining', keywords: ['เอ็นไก่ทอด'] },
-  { name: 'ปีกไก่', icon: 'lunch_dining', keywords: ['ปีกไก่', 'ปีกไก่ทอด'] },
-  { name: 'หมูกรอบ', icon: 'bakery_dining', keywords: ['หมูกรอบ'] },
-  { name: 'สามชั้น', icon: 'bakery_dining', keywords: ['สามชั้น', 'สามชั้นทอด'] },
-  { name: 'หมูสับ', icon: 'restaurant', keywords: ['หมูสับ'] },
-  { name: 'หมูชิ้น', icon: 'restaurant', keywords: ['หมูชิ้น', 'หมุชิ้น'] },
-  { name: 'กุ้ง', icon: 'set_meal', keywords: ['กุ้ง'] },
-  { name: 'ปลาหมึก', icon: 'set_meal', keywords: ['ปลาหมึก', 'หมึก'] },
-  { name: 'ทะเล', icon: 'set_meal', keywords: ['ทะเล'] },
-  { name: 'ไก่', icon: 'restaurant', keywords: ['ไก่'] },
-  { name: 'กระดูกอ่อน', icon: 'restaurant', keywords: ['กระดูกอ่อน'] },
-  { name: 'ไข่ดาว', icon: 'egg', keywords: ['ไข่ดาว'] },
-  { name: 'ไข่เจียว', icon: 'egg', keywords: ['ไข่เจียว'] },
-  { name: 'ไข่ข้น', icon: 'egg', keywords: ['ไข่ข้น'] },
-  { name: 'ไข่เยี่ยวม้า', icon: 'egg', keywords: ['ไข่เยี่ยวม้า'] },
-  { name: 'หมูยอ', icon: 'restaurant', keywords: ['หมูยอ'] },
-  { name: 'วุ้นเส้น', icon: 'ramen_dining', keywords: ['วุ้นเส้น'] },
-  { name: 'มาม่า', icon: 'ramen_dining', keywords: ['มาม่า'] },
+  { name: 'ไก่ทอด', icon: 'mdi-food-drumstick', keywords: ['ไก่ทอด'] },
+  { name: 'เอ็นไก่ทอด', icon: 'mdi-food-drumstick', keywords: ['เอ็นไก่ทอด'] },
+  { name: 'ปีกไก่', icon: 'mdi-food-drumstick', keywords: ['ปีกไก่', 'ปีกไก่ทอด'] },
+  { name: 'หมูกรอบ', icon: 'mdi-pig', keywords: ['หมูกรอบ'] },
+  { name: 'สามชั้น', icon: 'mdi-pig', keywords: ['สามชั้น', 'สามชั้นทอด'] },
+  { name: 'หมูสับ', icon: 'mdi-pig', keywords: ['หมูสับ'] },
+  { name: 'หมูชิ้น', icon: 'mdi-pig', keywords: ['หมูชิ้น', 'หมุชิ้น'] },
+  { name: 'กุ้ง', icon: 'fa-solid fa-shrimp', keywords: ['กุ้ง'] },
+  { name: 'ปลาหมึก', icon: 'fa-solid fa-fish', keywords: ['ปลาหมึก', 'หมึก'] },
+  { name: 'ทะเล', icon: 'fa-solid fa-fish', keywords: ['ทะเล'] },
+  { name: 'ไก่', icon: 'mdi-food-drumstick', keywords: ['ไก่'] },
+  { name: 'กระดูกอ่อน', icon: 'mdi-pig', keywords: ['กระดูกอ่อน'] },
+  { name: 'ไข่ดาว', icon: 'mdi-egg-fried', keywords: ['ไข่ดาว'] },
+  { name: 'ไข่เจียว', icon: 'mdi-egg-fried', keywords: ['ไข่เจียว'] },
+  { name: 'ไข่ข้น', icon: 'mdi-egg-fried', keywords: ['ไข่ข้น'] },
+  { name: 'ไข่เยี่ยวม้า', icon: 'mdi-egg-fried', keywords: ['ไข่เยี่ยวม้า'] },
+  { name: 'หมูยอ', icon: 'mdi-pig', keywords: ['หมูยอ'] },
+  { name: 'วุ้นเส้น', icon: 'mdi-noodles', keywords: ['วุ้นเส้น'] },
+  { name: 'มาม่า', icon: 'mdi-noodles', keywords: ['มาม่า'] },
 ];
 
 /**
@@ -64,14 +64,19 @@ export function inferMainIngredient(dishName: string, customIngredient?: string 
 export function getIngredientIcon(ingredientName: string): string {
   const found = STANDARD_INGREDIENTS.find((i) => i.name === ingredientName);
   if (found) return found.icon;
-  if (ingredientName.includes('ไก่')) return 'lunch_dining';
-  if (ingredientName.includes('หมู')) return 'restaurant';
+  if (ingredientName.includes('ไก่')) return 'mdi-food-drumstick';
+  if (ingredientName.includes('หมู') || ingredientName.includes('สามชั้น')) return 'mdi-pig';
+  if (ingredientName.includes('กุ้ง')) return 'fa-solid fa-shrimp';
+  if (ingredientName.includes('เนื้อ') || ingredientName.includes('วัว')) return 'mdi-cow';
+  if (ingredientName.includes('เป็ด')) return 'mdi-duck';
   if (
-    ingredientName.includes('กุ้ง') ||
+    ingredientName.includes('ปลาหมึก') ||
+    ingredientName.includes('หมึก') ||
     ingredientName.includes('ปลา') ||
     ingredientName.includes('ทะเล')
   )
-    return 'set_meal';
-  if (ingredientName.includes('ไข่')) return 'egg';
+    return 'fa-solid fa-fish';
+  if (ingredientName.includes('ไข่')) return 'mdi-egg-fried';
+  if (ingredientName.includes('เส้น') || ingredientName.includes('มาม่า')) return 'mdi-noodles';
   return 'inventory_2';
 }

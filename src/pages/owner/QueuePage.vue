@@ -2288,12 +2288,6 @@ onMounted(async () => {
           if (payload.eventType === 'INSERT') {
             playNewOrderChime();
             notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
-            // Auto switch to focus view and jump to the page containing new order
-            const newOrder = payload.new as { id?: string };
-            if (newOrder.id) {
-              jumpToOrder(newOrder.id);
-            }
-            viewMode.value = 'focus';
           }
           if (payload.eventType === 'UPDATE') {
             const newData = payload.new as { revision?: number; status?: OrderStatus };

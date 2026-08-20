@@ -81,9 +81,7 @@
                 <span class="option-name" :class="{ 'text-grey-6': !opt.is_available }">
                   {{ opt.name }}
                 </span>
-                <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm">
-                  หมด
-                </span>
+                <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm"> หมด </span>
               </div>
               <div class="option-price-adjust">
                 <span v-if="!opt.is_available" class="text-caption text-grey-5">หมดชั่วคราว</span>
@@ -130,9 +128,7 @@
                 <span class="option-name" :class="{ 'text-grey-6': !opt.is_available }">
                   {{ opt.name }}
                 </span>
-                <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm">
-                  หมด
-                </span>
+                <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm"> หมด </span>
               </div>
               <div class="option-price-adjust">
                 <span v-if="!opt.is_available" class="text-caption text-grey-5">หมดชั่วคราว</span>

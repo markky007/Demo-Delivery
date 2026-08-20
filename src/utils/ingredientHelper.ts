@@ -66,7 +66,11 @@ export function getIngredientIcon(ingredientName: string): string {
   if (found) return found.icon;
   if (ingredientName.includes('ไก่')) return 'lunch_dining';
   if (ingredientName.includes('หมู')) return 'restaurant';
-  if (ingredientName.includes('กุ้ง') || ingredientName.includes('ปลา') || ingredientName.includes('ทะเล'))
+  if (
+    ingredientName.includes('กุ้ง') ||
+    ingredientName.includes('ปลา') ||
+    ingredientName.includes('ทะเล')
+  )
     return 'set_meal';
   if (ingredientName.includes('ไข่')) return 'egg';
   return 'inventory_2';

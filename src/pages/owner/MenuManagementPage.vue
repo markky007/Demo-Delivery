@@ -146,7 +146,11 @@
                       text-color="blue-grey-9"
                       class="text-weight-medium"
                     >
-                      <q-icon :name="getIngredientIcon(getItemMainIngredient(item))" size="12px" class="q-mr-xs" />
+                      <q-icon
+                        :name="getIngredientIcon(getItemMainIngredient(item))"
+                        size="12px"
+                        class="q-mr-xs"
+                      />
                       {{ getItemMainIngredient(item) }}
                     </q-badge>
                     <q-badge
@@ -230,7 +234,8 @@
                 <div>
                   <div class="text-caption text-grey-7">วัตถุดิบทั้งหมด</div>
                   <div class="text-h5 text-weight-bold text-dark q-mt-xs">
-                    {{ ingredientStats.total }} <span class="text-caption text-weight-normal">ชนิด</span>
+                    {{ ingredientStats.total }}
+                    <span class="text-caption text-weight-normal">ชนิด</span>
                   </div>
                 </div>
                 <div class="ing-stat-icon-wrap bg-blue-1 text-primary">
@@ -246,7 +251,8 @@
                 <div>
                   <div class="text-caption text-grey-7">วัตถุดิบพร้อมขาย</div>
                   <div class="text-h5 text-weight-bold text-positive q-mt-xs">
-                    {{ ingredientStats.available }} <span class="text-caption text-weight-normal">ชนิด</span>
+                    {{ ingredientStats.available }}
+                    <span class="text-caption text-weight-normal">ชนิด</span>
                   </div>
                 </div>
                 <div class="ing-stat-icon-wrap bg-green-1 text-positive">
@@ -262,7 +268,8 @@
                 <div>
                   <div class="text-caption text-grey-7">วัตถุดิบที่หมด (ปิดเมนูอยู่)</div>
                   <div class="text-h5 text-weight-bold text-negative q-mt-xs">
-                    {{ ingredientStats.soldOut }} <span class="text-caption text-weight-normal">ชนิด</span>
+                    {{ ingredientStats.soldOut }}
+                    <span class="text-caption text-weight-normal">ชนิด</span>
                   </div>
                 </div>
                 <div class="ing-stat-icon-wrap bg-red-1 text-negative">
@@ -334,7 +341,8 @@
           <!-- Filter Meta Info -->
           <div class="row items-center justify-between q-mt-sm text-caption text-grey-7 q-px-xs">
             <span>
-              แสดง <strong>{{ filteredIngredientGroups.length }}</strong> จาก {{ ingredientGroups.length }} กลุ่มวัตถุดิบ
+              แสดง <strong>{{ filteredIngredientGroups.length }}</strong> จาก
+              {{ ingredientGroups.length }} กลุ่มวัตถุดิบ
             </span>
             <span
               v-if="filterIngredientStatus !== 'all' || searchIngredientQuery"
@@ -383,8 +391,10 @@
                 </div>
                 <div class="col ellipsis">
                   <div class="row items-center flex-wrap q-gutter-xs">
-                    <span class="text-weight-bold text-subtitle1 ingredient-name-text">{{ grp.name }}</span>
-                    
+                    <span class="text-weight-bold text-subtitle1 ingredient-name-text">{{
+                      grp.name
+                    }}</span>
+
                     <span
                       class="ingredient-status-pill"
                       :class="{
@@ -394,7 +404,13 @@
                       }"
                     >
                       <q-icon
-                        :name="grp.isAllSoldOut ? 'block' : grp.isAllAvailable ? 'check_circle' : 'warning'"
+                        :name="
+                          grp.isAllSoldOut
+                            ? 'block'
+                            : grp.isAllAvailable
+                              ? 'check_circle'
+                              : 'warning'
+                        "
                         size="13px"
                         class="q-mr-xs"
                       />
@@ -410,7 +426,8 @@
                     </span>
                   </div>
                   <div class="text-caption text-grey-7 q-mt-xs">
-                    มี <strong>{{ grp.totalCount }}</strong> เมนูอาหารที่ใช้วัตถุดิบนี้ (พร้อมขาย {{ grp.availableCount }} / หมด {{ grp.soldOutCount }})
+                    มี <strong>{{ grp.totalCount }}</strong> เมนูอาหารที่ใช้วัตถุดิบนี้ (พร้อมขาย
+                    {{ grp.availableCount }} / หมด {{ grp.soldOutCount }})
                   </div>
                 </div>
               </div>
@@ -467,9 +484,7 @@
                   <div class="text-caption text-weight-bold text-grey-8">
                     รายชื่อเมนูอาหารที่ใช้วัตถุดิบ "{{ grp.name }}":
                   </div>
-                  <div class="text-caption text-grey-6">
-                    คลิกสลับสถานะทีละเมนูได้
-                  </div>
+                  <div class="text-caption text-grey-6">คลิกสลับสถานะทีละเมนูได้</div>
                 </div>
 
                 <div class="dishes-subgrid">
@@ -486,7 +501,9 @@
                           <q-icon v-else name="restaurant" size="18px" color="grey-4" />
                         </div>
                         <div class="col ellipsis">
-                          <div class="text-weight-bold text-body2 subdish-name ellipsis">{{ item.name }}</div>
+                          <div class="text-weight-bold text-body2 subdish-name ellipsis">
+                            {{ item.name }}
+                          </div>
                           <div class="row items-center q-gutter-xs q-mt-xs">
                             <span class="text-caption text-primary text-weight-bold">
                               {{ formatPrice(item.base_price) }}

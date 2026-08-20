@@ -306,10 +306,7 @@ export async function deleteTableSession(sessionId: string): Promise<void> {
   if (!rpcErr) return;
 
   // Fallback direct delete
-  const { error } = await supabase
-    .from('table_sessions')
-    .delete()
-    .eq('id', sessionId);
+  const { error } = await supabase.from('table_sessions').delete().eq('id', sessionId);
 
   if (error) throw new Error(error.message);
 }

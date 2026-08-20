@@ -9,7 +9,23 @@
             ติดตามสถานะโต๊ะ ความคืบหน้าอาหารในครัว และการเช็กบิลชำระเงินแบบเรียลไทม์
           </p>
         </div>
-        <div class="row items-center q-gutter-sm">
+        <div class="row items-center q-gutter-sm flex-wrap">
+          <!-- View Mode Switcher (q-tabs) -->
+          <div class="view-mode-tabs-pill">
+            <q-tabs
+              v-model="viewMode"
+              dense
+              no-caps
+              active-color="white"
+              active-bg-color="primary"
+              indicator-color="transparent"
+              class="view-mode-qtabs"
+            >
+              <q-tab name="card" icon="grid_view" label="มุมมองการ์ด" />
+              <q-tab name="floorplan" icon="table_restaurant" label="ผังโต๊ะอาหาร" />
+            </q-tabs>
+          </div>
+
           <q-badge color="positive" rounded class="q-px-sm q-py-xs realtime-badge">
             <span class="pulse-dot pulse-dot--green q-mr-xs"></span>
             <span>อัปเดตเรียลไทม์</span>
@@ -251,403 +267,422 @@
           </div>
         </div>
 
-        <!-- Cards Grid -->
-        <div v-if="filteredTableCards.length > 0" class="cards-grid">
-          <div
-            v-for="item in filteredTableCards"
-            :key="item.session?.id || item.table.id"
-            class="table-status-card"
-            :class="`table-status-card--${item.tableStatus.toLowerCase().replace(/_/g, '-')}`"
-          >
-            <!-- Card Header -->
-            <div class="card-top-bar">
-              <div class="row items-center">
-                <div class="table-icon-avatar" :class="item.avatarClass">
-                  <q-icon
-                    :name="item.isTakeaway ? 'shopping_bag' : 'table_restaurant'"
-                    size="20px"
-                  />
-                </div>
-                <div class="q-ml-sm">
-                  <div class="row items-center q-gutter-xs">
-                    <span class="table-card-title">{{
-                      item.isTakeaway && item.session?.customer_name
-                        ? `สั่งกลับบ้าน (${item.session.customer_name})`
-                        : item.table.name
-                    }}</span>
-                    <q-badge
-                      v-if="item.isTakeaway"
-                      color="orange-9"
-                      rounded
-                      class="q-px-xs text-caption text-weight-medium"
-                    >
-                      กลับบ้าน
-                    </q-badge>
-                    <q-badge
-                      v-if="item.session?.customer_name"
-                      color="amber-9"
-                      rounded
-                      class="q-px-xs text-caption text-weight-bold"
-                    >
-                      {{ item.session.customer_name }}
-                    </q-badge>
-                  </div>
-                  <div class="text-caption text-grey-6">
-                    <template v-if="item.session">
-                      <q-icon name="schedule" size="12px" class="q-mr-xs" />
-                      <span>เริ่ม {{ item.startedAtTime }}</span>
-                    </template>
-                    <template v-else>
-                      <span class="text-positive text-weight-medium">พร้อมรับลูกค้า</span>
-                    </template>
-                  </div>
-                </div>
-              </div>
+        <!-- Content Area: Floor Plan View vs Card Grid View -->
+        <DiningFloorPlan
+          v-if="viewMode === 'floorplan'"
+          :items="tableCards"
+          :selected-filter="selectedFilter"
+          :search-query="searchQuery"
+          :clearing-session-id="clearingSessionId"
+          :cancelling-session-id="cancellingSessionId"
+          @update-filter="handleFilterChange"
+          @open-bill="openBill"
+          @clear-table="promptClearTable"
+          @cancel-session="promptCancelSession"
+          @transfer-table="promptTransferTable"
+          @show-qr="showTableQR"
+          @open-customer-link="openDirectCustomerLink"
+        />
 
-              <!-- Status Badge (High Visibility & Clear Meaning) -->
-              <div class="status-badge-container">
-                <div class="table-main-status-badge" :class="item.statusBadge.badgeClass">
-                  <span
-                    v-if="item.statusBadge.isPulse"
-                    class="live-status-dot"
-                    :class="`live-status-dot--${item.statusBadge.dotColor}`"
-                  ></span>
-                  <q-icon :name="item.statusBadge.icon" size="14px" class="q-mr-xs" />
-                  <span>{{ item.statusBadge.label }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Card Body: ACTIVE SESSION -->
-            <div v-if="item.session" class="card-body-active column justify-between">
-              <div>
-                <!-- Duration & Orders metadata chips -->
-                <div class="meta-tags-row q-mt-sm">
-                  <div class="meta-tag">
-                    <q-icon name="timer" size="14px" class="q-mr-xs text-grey-7" />
-                    <span>นั่งมาแล้ว {{ item.elapsedTime }}</span>
+        <template v-else>
+          <!-- Cards Grid -->
+          <div v-if="filteredTableCards.length > 0" class="cards-grid">
+            <div
+              v-for="item in filteredTableCards"
+              :key="item.session?.id || item.table.id"
+              class="table-status-card"
+              :class="`table-status-card--${item.tableStatus.toLowerCase().replace(/_/g, '-')}`"
+            >
+              <!-- Card Header -->
+              <div class="card-top-bar">
+                <div class="row items-center">
+                  <div class="table-icon-avatar" :class="item.avatarClass">
+                    <q-icon
+                      :name="item.isTakeaway ? 'shopping_bag' : 'table_restaurant'"
+                      size="20px"
+                    />
                   </div>
-                  <div v-if="item.orderCount > 0" class="meta-tag">
-                    <q-icon name="receipt_long" size="14px" class="q-mr-xs text-grey-7" />
-                    <span>{{ item.orderCount }} ออเดอร์ ({{ item.totalItemCount }} จาน)</span>
-                  </div>
-                  <div v-else class="meta-tag text-cyan-9 bg-cyan-1">
-                    <q-icon name="edit_note" size="14px" class="q-mr-xs" />
-                    <span>ยังไม่มีการสั่งอาหาร</span>
-                  </div>
-                </div>
-
-                <!-- Kitchen Progress Status Box -->
-                <div class="serving-progress-box q-my-sm">
-                  <div class="row items-center justify-between text-caption q-mb-xs">
-                    <div class="row items-center">
-                      <q-icon
-                        :name="item.kitchenIcon"
-                        size="16px"
-                        :class="item.kitchenIconColor"
-                        class="q-mr-xs"
-                      />
-                      <span class="text-weight-bold" :class="item.kitchenTextColor">
-                        {{ item.kitchenText }}
-                      </span>
+                  <div class="q-ml-sm">
+                    <div class="row items-center q-gutter-xs">
+                      <span class="table-card-title">{{
+                        item.isTakeaway && item.session?.customer_name
+                          ? `สั่งกลับบ้าน (${item.session.customer_name})`
+                          : item.table.name
+                      }}</span>
+                      <q-badge
+                        v-if="item.isTakeaway"
+                        color="orange-9"
+                        rounded
+                        class="q-px-xs text-caption text-weight-medium"
+                      >
+                        กลับบ้าน
+                      </q-badge>
+                      <q-badge
+                        v-if="item.session?.customer_name"
+                        color="amber-9"
+                        rounded
+                        class="q-px-xs text-caption text-weight-bold"
+                      >
+                        {{ item.session.customer_name }}
+                      </q-badge>
                     </div>
-                    <span v-if="item.orderCount > 0" class="text-weight-medium text-grey-7">
-                      เสิร์ฟแล้ว {{ item.servedOrdersCount }}/{{ item.orderCount }} คิว
-                    </span>
-                  </div>
-
-                  <!-- Mini Progress Bar (if orders exist) -->
-                  <div v-if="item.orderCount > 0" class="progress-bar-track">
-                    <div
-                      class="progress-bar-fill"
-                      :class="item.progressBarColorClass"
-                      :style="{ width: `${item.servingPercentage}%` }"
-                    ></div>
-                  </div>
-
-                  <!-- Kitchen stage breakdown badges -->
-                  <div
-                    v-if="item.orderCount > 0"
-                    class="row items-center q-gutter-x-xs q-mt-xs text-caption"
-                  >
-                    <span v-if="item.servedOrdersCount > 0" class="stage-tag stage-tag--served">
-                      เสิร์ฟครบ {{ item.servedOrdersCount }}
-                    </span>
-                    <span
-                      v-if="item.preparingOrdersCount > 0"
-                      class="stage-tag stage-tag--preparing"
-                    >
-                      กำลังทำ {{ item.preparingOrdersCount }}
-                    </span>
-                    <span v-if="item.queuedOrdersCount > 0" class="stage-tag stage-tag--queued">
-                      รอทำ {{ item.queuedOrdersCount }}
-                    </span>
+                    <div class="text-caption text-grey-6">
+                      <template v-if="item.session">
+                        <q-icon name="schedule" size="12px" class="q-mr-xs" />
+                        <span>เริ่ม {{ item.startedAtTime }}</span>
+                      </template>
+                      <template v-else>
+                        <span class="text-positive text-weight-medium">พร้อมรับลูกค้า</span>
+                      </template>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Total Amount Highlight Box -->
-                <div
-                  class="bill-amount-box q-my-sm"
-                  :class="{
-                    'bill-amount-box--ready-pay': item.tableStatus === 'READY_TO_PAY',
-                    'bill-amount-box--paid': item.tableStatus === 'PAID',
-                  }"
-                >
-                  <div class="row items-center justify-between">
-                    <div>
-                      <span class="text-caption text-grey-7 font-weight-500">
-                        {{ item.isPaid ? 'ยอดชำระแล้ว' : 'ยอดรวมบิลปัจจุบัน' }}
-                      </span>
-                      <div v-if="item.isPaid" class="text-caption text-positive font-size-11">
-                        <q-icon name="check_circle" size="12px" class="q-mr-xs" />
-                        ชำระเงินเรียบร้อย
+                <!-- Status Badge (High Visibility & Clear Meaning) -->
+                <div class="status-badge-container">
+                  <div class="table-main-status-badge" :class="item.statusBadge.badgeClass">
+                    <span
+                      v-if="item.statusBadge.isPulse"
+                      class="live-status-dot"
+                      :class="`live-status-dot--${item.statusBadge.dotColor}`"
+                    ></span>
+                    <q-icon :name="item.statusBadge.icon" size="14px" class="q-mr-xs" />
+                    <span>{{ item.statusBadge.label }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Body: ACTIVE SESSION -->
+              <div v-if="item.session" class="card-body-active column justify-between">
+                <div>
+                  <!-- Duration & Orders metadata chips -->
+                  <div class="meta-tags-row q-mt-sm">
+                    <div class="meta-tag">
+                      <q-icon name="timer" size="14px" class="q-mr-xs text-grey-7" />
+                      <span>นั่งมาแล้ว {{ item.elapsedTime }}</span>
+                    </div>
+                    <div v-if="item.orderCount > 0" class="meta-tag">
+                      <q-icon name="receipt_long" size="14px" class="q-mr-xs text-grey-7" />
+                      <span>{{ item.orderCount }} ออเดอร์ ({{ item.totalItemCount }} จาน)</span>
+                    </div>
+                    <div v-else class="meta-tag text-cyan-9 bg-cyan-1">
+                      <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                      <span>ยังไม่มีการสั่งอาหาร</span>
+                    </div>
+                  </div>
+
+                  <!-- Kitchen Progress Status Box -->
+                  <div class="serving-progress-box q-my-sm">
+                    <div class="row items-center justify-between text-caption q-mb-xs">
+                      <div class="row items-center">
+                        <q-icon
+                          :name="item.kitchenIcon"
+                          size="16px"
+                          :class="item.kitchenIconColor"
+                          class="q-mr-xs"
+                        />
+                        <span class="text-weight-bold" :class="item.kitchenTextColor">
+                          {{ item.kitchenText }}
+                        </span>
                       </div>
+                      <span v-if="item.orderCount > 0" class="text-weight-medium text-grey-7">
+                        เสิร์ฟแล้ว {{ item.servedOrdersCount }}/{{ item.orderCount }} คิว
+                      </span>
                     </div>
-                    <span
-                      class="text-h6 text-weight-bolder"
-                      :class="
-                        item.isPaid
-                          ? 'text-purple-9'
-                          : item.isReadyToPay
-                            ? 'text-green-8'
-                            : 'text-primary'
-                      "
+
+                    <!-- Mini Progress Bar (if orders exist) -->
+                    <div v-if="item.orderCount > 0" class="progress-bar-track">
+                      <div
+                        class="progress-bar-fill"
+                        :class="item.progressBarColorClass"
+                        :style="{ width: `${item.servingPercentage}%` }"
+                      ></div>
+                    </div>
+
+                    <!-- Kitchen stage breakdown badges -->
+                    <div
+                      v-if="item.orderCount > 0"
+                      class="row items-center q-gutter-x-xs q-mt-xs text-caption"
                     >
-                      {{ formatPrice(item.totalAmount) }}
-                    </span>
+                      <span v-if="item.servedOrdersCount > 0" class="stage-tag stage-tag--served">
+                        เสิร์ฟครบ {{ item.servedOrdersCount }}
+                      </span>
+                      <span
+                        v-if="item.preparingOrdersCount > 0"
+                        class="stage-tag stage-tag--preparing"
+                      >
+                        กำลังทำ {{ item.preparingOrdersCount }}
+                      </span>
+                      <span v-if="item.queuedOrdersCount > 0" class="stage-tag stage-tag--queued">
+                        รอทำ {{ item.queuedOrdersCount }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Total Amount Highlight Box -->
+                  <div
+                    class="bill-amount-box q-my-sm"
+                    :class="{
+                      'bill-amount-box--ready-pay': item.tableStatus === 'READY_TO_PAY',
+                      'bill-amount-box--paid': item.tableStatus === 'PAID',
+                    }"
+                  >
+                    <div class="row items-center justify-between">
+                      <div>
+                        <span class="text-caption text-grey-7 font-weight-500">
+                          {{ item.isPaid ? 'ยอดชำระแล้ว' : 'ยอดรวมบิลปัจจุบัน' }}
+                        </span>
+                        <div v-if="item.isPaid" class="text-caption text-positive font-size-11">
+                          <q-icon name="check_circle" size="12px" class="q-mr-xs" />
+                          ชำระเงินเรียบร้อย
+                        </div>
+                      </div>
+                      <span
+                        class="text-h6 text-weight-bolder"
+                        :class="
+                          item.isPaid
+                            ? 'text-purple-9'
+                            : item.isReadyToPay
+                              ? 'text-green-8'
+                              : 'text-primary'
+                        "
+                      >
+                        {{ formatPrice(item.totalAmount) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Contextual Action Buttons -->
+                <div class="card-footer-actions q-mt-md">
+                  <!-- 1. PAID: Quick Clear Table Button & Receipt -->
+                  <div v-if="item.tableStatus === 'PAID'" class="row q-gutter-xs">
+                    <q-btn
+                      unelevated
+                      no-caps
+                      color="purple-8"
+                      class="col action-main-btn action-main-btn--paid"
+                      @click="promptClearTable(item)"
+                      :loading="clearingSessionId === item.session.id"
+                    >
+                      <q-icon name="cleaning_services" size="16px" class="q-mr-xs" />
+                      <span>เคลียร์โต๊ะ (เปิดโต๊ะใหม่)</span>
+                    </q-btn>
+                    <q-btn
+                      outline
+                      no-caps
+                      color="grey-8"
+                      class="action-secondary-btn"
+                      @click="openBill(item.session.id)"
+                    >
+                      <q-icon name="receipt" size="15px" class="q-mr-xs" />
+                      <span>ใบเสร็จ</span>
+                    </q-btn>
+                  </div>
+
+                  <!-- 2. READY_TO_PAY: Check Bill Button -->
+                  <div v-else-if="item.tableStatus === 'READY_TO_PAY'" class="row q-gutter-xs">
+                    <q-btn
+                      unelevated
+                      no-caps
+                      color="positive"
+                      class="col action-main-btn action-main-btn--ready-pay"
+                      @click="openBill(item.session.id)"
+                    >
+                      <q-icon name="payments" size="17px" class="q-mr-xs" />
+                      <span>เช็กบิล / รับเงิน ({{ formatPrice(item.totalAmount) }})</span>
+                      <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      color="primary"
+                      icon="swap_horiz"
+                      class="action-icon-btn"
+                      @click="promptTransferTable(item)"
+                    >
+                      <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      color="grey-7"
+                      icon="qr_code_2"
+                      class="action-icon-btn"
+                      @click="showTableQR(item.table)"
+                    >
+                      <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
+                    </q-btn>
+                  </div>
+
+                  <!-- 3. SEATED_NO_ORDER: Cancel Session / Reset to Available & Manage -->
+                  <div v-else-if="item.tableStatus === 'SEATED_NO_ORDER'" class="row q-gutter-xs">
+                    <q-btn
+                      unelevated
+                      no-caps
+                      color="negative"
+                      class="col action-main-btn action-main-btn--cancel"
+                      @click="promptCancelSession(item)"
+                      :loading="cancellingSessionId === item.session.id"
+                    >
+                      <q-icon name="person_remove" size="16px" class="q-mr-xs" />
+                      <span>ยกเลิกเซสชัน (คืนโต๊ะว่าง)</span>
+                    </q-btn>
+                    <q-btn
+                      outline
+                      no-caps
+                      color="primary"
+                      class="action-secondary-btn"
+                      @click="openBill(item.session.id)"
+                    >
+                      <q-icon name="receipt" size="15px" class="q-mr-xs" />
+                      <span>ดูบิล</span>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      color="primary"
+                      icon="swap_horiz"
+                      class="action-icon-btn"
+                      @click="promptTransferTable(item)"
+                    >
+                      <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      color="grey-7"
+                      icon="qr_code_2"
+                      class="action-icon-btn"
+                      @click="showTableQR(item.table)"
+                    >
+                      <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
+                    </q-btn>
+                  </div>
+
+                  <!-- 4. COOKING: Manage Bill -->
+                  <div v-else class="row q-gutter-xs">
+                    <q-btn
+                      unelevated
+                      no-caps
+                      color="primary"
+                      class="col action-main-btn"
+                      @click="openBill(item.session.id)"
+                    >
+                      <q-icon name="receipt" size="16px" class="q-mr-xs" />
+                      <span>ดูบิล / จัดการบิล</span>
+                      <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      color="primary"
+                      icon="swap_horiz"
+                      class="action-icon-btn"
+                      @click="promptTransferTable(item)"
+                    >
+                      <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      color="grey-7"
+                      icon="qr_code_2"
+                      class="action-icon-btn"
+                      @click="showTableQR(item.table)"
+                    >
+                      <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
+                    </q-btn>
                   </div>
                 </div>
               </div>
 
-              <!-- Contextual Action Buttons -->
-              <div class="card-footer-actions q-mt-md">
-                <!-- 1. PAID: Quick Clear Table Button & Receipt -->
-                <div v-if="item.tableStatus === 'PAID'" class="row q-gutter-xs">
-                  <q-btn
-                    unelevated
-                    no-caps
-                    color="purple-8"
-                    class="col action-main-btn action-main-btn--paid"
-                    @click="promptClearTable(item)"
-                    :loading="clearingSessionId === item.session.id"
-                  >
-                    <q-icon name="cleaning_services" size="16px" class="q-mr-xs" />
-                    <span>เคลียร์โต๊ะ (เปิดโต๊ะใหม่)</span>
-                  </q-btn>
-                  <q-btn
-                    outline
-                    no-caps
-                    color="grey-8"
-                    class="action-secondary-btn"
-                    @click="openBill(item.session.id)"
-                  >
-                    <q-icon name="receipt" size="15px" class="q-mr-xs" />
-                    <span>ใบเสร็จ</span>
-                  </q-btn>
+              <!-- Card Body: AVAILABLE TABLE (โต๊ะว่าง) -->
+              <div v-else class="card-body-empty column justify-between">
+                <div class="empty-table-placeholder q-my-md text-center">
+                  <div class="empty-table-icon-circle q-mx-auto q-mb-sm">
+                    <q-icon name="chair_alt" size="30px" color="grey-6" />
+                  </div>
+                  <div class="text-subtitle2 font-weight-600 text-grey-8">
+                    โต๊ะว่าง พร้อมให้บริการ
+                  </div>
+                  <div class="text-caption text-grey-5 font-size-11 q-mt-xs">
+                    เมื่อลูกค้าสแกน QR หรือเปิดสั่งอาหาร ระบบจะเปิดบิลและนับเวลาอัตโนมัติ
+                  </div>
                 </div>
 
-                <!-- 2. READY_TO_PAY: Check Bill Button -->
-                <div v-else-if="item.tableStatus === 'READY_TO_PAY'" class="row q-gutter-xs">
-                  <q-btn
-                    unelevated
-                    no-caps
-                    color="positive"
-                    class="col action-main-btn action-main-btn--ready-pay"
-                    @click="openBill(item.session.id)"
-                  >
-                    <q-icon name="payments" size="17px" class="q-mr-xs" />
-                    <span>เช็กบิล / รับเงิน ({{ formatPrice(item.totalAmount) }})</span>
-                    <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    color="primary"
-                    icon="swap_horiz"
-                    class="action-icon-btn"
-                    @click="promptTransferTable(item)"
-                  >
-                    <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    color="grey-7"
-                    icon="qr_code_2"
-                    class="action-icon-btn"
-                    @click="showTableQR(item.table)"
-                  >
-                    <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
-                  </q-btn>
-                </div>
-
-                <!-- 3. SEATED_NO_ORDER: Cancel Session / Reset to Available & Manage -->
-                <div v-else-if="item.tableStatus === 'SEATED_NO_ORDER'" class="row q-gutter-xs">
-                  <q-btn
-                    unelevated
-                    no-caps
-                    color="negative"
-                    class="col action-main-btn action-main-btn--cancel"
-                    @click="promptCancelSession(item)"
-                    :loading="cancellingSessionId === item.session.id"
-                  >
-                    <q-icon name="person_remove" size="16px" class="q-mr-xs" />
-                    <span>ยกเลิกเซสชัน (คืนโต๊ะว่าง)</span>
-                  </q-btn>
+                <div class="card-footer-actions q-mt-auto row q-gutter-xs">
                   <q-btn
                     outline
                     no-caps
                     color="primary"
-                    class="action-secondary-btn"
-                    @click="openBill(item.session.id)"
-                  >
-                    <q-icon name="receipt" size="15px" class="q-mr-xs" />
-                    <span>ดูบิล</span>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    color="primary"
-                    icon="swap_horiz"
-                    class="action-icon-btn"
-                    @click="promptTransferTable(item)"
-                  >
-                    <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    color="grey-7"
-                    icon="qr_code_2"
-                    class="action-icon-btn"
+                    class="col action-secondary-btn"
                     @click="showTableQR(item.table)"
                   >
-                    <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
+                    <q-icon name="qr_code_2" size="16px" class="q-mr-xs" />
+                    <span>ดู QR โต๊ะ</span>
                   </q-btn>
-                </div>
-
-                <!-- 4. COOKING: Manage Bill -->
-                <div v-else class="row q-gutter-xs">
                   <q-btn
                     unelevated
                     no-caps
-                    color="primary"
-                    class="col action-main-btn"
-                    @click="openBill(item.session.id)"
+                    color="secondary"
+                    class="col action-secondary-btn"
+                    @click="openDirectCustomerLink(item.table)"
                   >
-                    <q-icon name="receipt" size="16px" class="q-mr-xs" />
-                    <span>ดูบิล / จัดการบิล</span>
-                    <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    color="primary"
-                    icon="swap_horiz"
-                    class="action-icon-btn"
-                    @click="promptTransferTable(item)"
-                  >
-                    <q-tooltip>ขอย้ายโต๊ะ (สลับไปโต๊ะว่าง)</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    color="grey-7"
-                    icon="qr_code_2"
-                    class="action-icon-btn"
-                    @click="showTableQR(item.table)"
-                  >
-                    <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
+                    <q-icon name="open_in_new" size="15px" class="q-mr-xs" />
+                    <span>เปิดสั่งอาหาร</span>
                   </q-btn>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Card Body: AVAILABLE TABLE (โต๊ะว่าง) -->
-            <div v-else class="card-body-empty column justify-between">
-              <div class="empty-table-placeholder q-my-md text-center">
-                <div class="empty-table-icon-circle q-mx-auto q-mb-sm">
-                  <q-icon name="chair_alt" size="30px" color="grey-6" />
-                </div>
-                <div class="text-subtitle2 font-weight-600 text-grey-8">
-                  โต๊ะว่าง พร้อมให้บริการ
-                </div>
-                <div class="text-caption text-grey-5 font-size-11 q-mt-xs">
-                  เมื่อลูกค้าสแกน QR หรือเปิดสั่งอาหาร ระบบจะเปิดบิลและนับเวลาอัตโนมัติ
-                </div>
-              </div>
-
-              <div class="card-footer-actions q-mt-auto row q-gutter-xs">
-                <q-btn
-                  outline
-                  no-caps
-                  color="primary"
-                  class="col action-secondary-btn"
-                  @click="showTableQR(item.table)"
-                >
-                  <q-icon name="qr_code_2" size="16px" class="q-mr-xs" />
-                  <span>ดู QR โต๊ะ</span>
-                </q-btn>
-                <q-btn
-                  unelevated
-                  no-caps
-                  color="secondary"
-                  class="col action-secondary-btn"
-                  @click="openDirectCustomerLink(item.table)"
-                >
-                  <q-icon name="open_in_new" size="15px" class="q-mr-xs" />
-                  <span>เปิดสั่งอาหาร</span>
-                </q-btn>
-              </div>
+          <!-- Empty Result State -->
+          <div v-else class="empty-results-card q-pa-xl text-center">
+            <div class="empty-icon-circle q-mx-auto q-mb-md">
+              <q-icon name="table_restaurant" size="44px" color="primary" />
             </div>
+            <div class="text-h6 text-weight-bold q-mb-xs">
+              <template v-if="tables.length === 0"> ยังไม่มีโต๊ะในระบบ </template>
+              <template v-else> ไม่พบโต๊ะที่ตรงกับสถานะ "{{ currentFilterLabel }}" </template>
+            </div>
+            <p class="text-caption text-grey-7 q-mb-lg max-w-400 q-mx-auto">
+              <template v-if="tables.length === 0">
+                เริ่มต้นด้วยการเพิ่มโต๊ะและสร้าง QR Code เพื่อให้ลูกค้าสามารถสแกนสั่งอาหารได้ทันที
+              </template>
+              <template v-else>
+                ลองเปลี่ยนคำค้นหา หรือกดเลือกแท็บ "ทั้งหมด" เพื่อดูสถานะโต๊ะทั้งหมดในร้าน
+              </template>
+            </p>
+            <q-btn
+              v-if="tables.length === 0"
+              color="primary"
+              unelevated
+              rounded
+              no-caps
+              icon="add"
+              label="ไปที่หน้าจัดการโต๊ะ"
+              to="/owner/tables"
+              class="q-px-lg"
+            />
+            <q-btn
+              v-else
+              outline
+              color="primary"
+              rounded
+              no-caps
+              label="แสดงโต๊ะทั้งหมด"
+              @click="resetFilter"
+              class="q-px-lg"
+            />
           </div>
-        </div>
-
-        <!-- Empty Result State -->
-        <div v-else class="empty-results-card q-pa-xl text-center">
-          <div class="empty-icon-circle q-mx-auto q-mb-md">
-            <q-icon name="table_restaurant" size="44px" color="primary" />
-          </div>
-          <div class="text-h6 text-weight-bold q-mb-xs">
-            <template v-if="tables.length === 0"> ยังไม่มีโต๊ะในระบบ </template>
-            <template v-else> ไม่พบโต๊ะที่ตรงกับสถานะ "{{ currentFilterLabel }}" </template>
-          </div>
-          <p class="text-caption text-grey-7 q-mb-lg max-w-400 q-mx-auto">
-            <template v-if="tables.length === 0">
-              เริ่มต้นด้วยการเพิ่มโต๊ะและสร้าง QR Code เพื่อให้ลูกค้าสามารถสแกนสั่งอาหารได้ทันที
-            </template>
-            <template v-else>
-              ลองเปลี่ยนคำค้นหา หรือกดเลือกแท็บ "ทั้งหมด" เพื่อดูสถานะโต๊ะทั้งหมดในร้าน
-            </template>
-          </p>
-          <q-btn
-            v-if="tables.length === 0"
-            color="primary"
-            unelevated
-            rounded
-            no-caps
-            icon="add"
-            label="ไปที่หน้าจัดการโต๊ะ"
-            to="/owner/tables"
-            class="q-px-lg"
-          />
-          <q-btn
-            v-else
-            outline
-            color="primary"
-            rounded
-            no-caps
-            label="แสดงโต๊ะทั้งหมด"
-            @click="resetFilter"
-            class="q-px-lg"
-          />
-        </div>
+        </template>
       </template>
 
       <!-- Quick QR Code Dialog -->
@@ -936,87 +971,21 @@ import { getAppUrl } from 'src/utils/constants';
 import { useNotify } from 'src/composables/useNotify';
 import QRCode from 'qrcode';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import DiningFloorPlan from 'src/components/DiningFloorPlan.vue';
 import type { TableWithQR } from 'src/types/database';
 import { OrderStatus } from 'src/types/enums';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import type {
+  TableOperationalStatus,
+  RawSession,
+  TableCardItem,
+  StatusBadgeInfo,
+} from 'src/types/tableCard';
 
 const router = useRouter();
 const { notifySuccess, notifyInfo, notifyError } = useNotify();
 
-export type TableOperationalStatus =
-  | 'AVAILABLE' // โต๊ะว่าง
-  | 'SEATED_NO_ORDER' // เปิดโต๊ะแล้ว • รอลูกค้าสั่งอาหาร
-  | 'COOKING' // กำลังทำอาหาร / รอเสิร์ฟ
-  | 'READY_TO_PAY' // เสิร์ฟครบ 100% • รอเช็กบิล
-  | 'PAID'; // ชำระเงินแล้ว • รอเคลียร์โต๊ะ
-
-interface RawSessionOrder {
-  id: string;
-  queue_number: number;
-  status: OrderStatus;
-  total_amount: number;
-  created_at: string;
-  items: {
-    id: string;
-    quantity: number;
-    snapshot_name: string;
-    subtotal: number;
-    options?: { id: string; snapshot_option_name: string; snapshot_price_adjustment: number }[];
-  }[];
-}
-
-interface RawSessionBill {
-  id: string;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  paid_at: string | null;
-}
-
-interface RawSession {
-  id: string;
-  table_id: string;
-  customer_name?: string | null;
-  status: string;
-  created_at: string;
-  table: { id: string; name: string } | null;
-  orders: RawSessionOrder[];
-  bill: RawSessionBill[] | null;
-}
-
-interface StatusBadgeInfo {
-  label: string;
-  subLabel: string;
-  icon: string;
-  badgeClass: string;
-  isPulse: boolean;
-  dotColor: string;
-}
-
-interface TableCardItem {
-  table: TableWithQR;
-  session: RawSession | null;
-  tableStatus: TableOperationalStatus;
-  statusBadge: StatusBadgeInfo;
-  orderCount: number;
-  totalItemCount: number;
-  totalAmount: number;
-  isPaid: boolean;
-  isReadyToPay: boolean;
-  servedOrdersCount: number;
-  preparingOrdersCount: number;
-  queuedOrdersCount: number;
-  servingPercentage: number;
-  kitchenText: string;
-  kitchenTextColor: string;
-  kitchenIcon: string;
-  kitchenIconColor: string;
-  progressBarColorClass: string;
-  elapsedTime: string;
-  startedAtTime: string;
-  avatarClass: string;
-  isTakeaway: boolean;
-}
+const viewMode = ref<'card' | 'floorplan'>('card');
 
 const tables = ref<TableWithQR[]>([]);
 const activeSessions = ref<RawSession[]>([]);
@@ -1455,6 +1424,16 @@ function resetFilter() {
   searchQuery.value = '';
 }
 
+function handleFilterChange(val: string) {
+  selectedFilter.value = val as
+    | 'ALL'
+    | 'COOKING'
+    | 'READY_TO_PAY'
+    | 'PAID'
+    | 'SEATED_NO_ORDER'
+    | 'AVAILABLE';
+}
+
 // Clear table prompt & action
 function promptClearTable(item: TableCardItem) {
   tableToClear.value = item;
@@ -1613,6 +1592,41 @@ function openDirectCustomerLink(table: TableWithQR) {
 .header-section {
   flex-wrap: wrap;
   gap: 12px;
+}
+
+/* View Mode Switcher */
+.view-mode-tabs-pill {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #ede5dc);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 3px 4px;
+  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.05));
+  display: inline-flex;
+}
+
+.view-mode-qtabs {
+  min-height: 32px;
+}
+
+.view-mode-qtabs :deep(.q-tab) {
+  min-height: 32px;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #64748b);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.view-mode-qtabs :deep(.q-tab--active) {
+  background: var(--color-primary, #e05836) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(224, 88, 54, 0.25);
+}
+
+.view-mode-qtabs :deep(.q-tab__icon) {
+  font-size: 18px;
+  margin-right: 4px;
 }
 
 .realtime-badge {

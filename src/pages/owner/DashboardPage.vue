@@ -57,7 +57,9 @@
             </div>
             <div class="stat-content">
               <div class="stat-label">ยอดขายวันนี้</div>
-              <div class="stat-value text-primary font-mono">{{ formatPrice(stats.totalSales) }}</div>
+              <div class="stat-value text-primary font-mono">
+                {{ formatPrice(stats.totalSales) }}
+              </div>
             </div>
           </div>
 
@@ -79,7 +81,9 @@
             </div>
             <div class="stat-content">
               <div class="stat-label">จำนวนจานที่ขาย</div>
-              <div class="stat-value font-mono">{{ stats.itemsSold }} <span class="stat-unit">จาน</span></div>
+              <div class="stat-value font-mono">
+                {{ stats.itemsSold }} <span class="stat-unit">จาน</span>
+              </div>
             </div>
           </div>
 
@@ -123,7 +127,9 @@
                 <span class="queue-stat-label">รับออเดอร์แล้ว</span>
                 <q-icon name="schedule" size="20px" class="queue-stat-icon text-light-blue-8" />
               </div>
-              <div class="queue-stat-count text-light-blue-8 font-mono">{{ queueCounts.queued }}</div>
+              <div class="queue-stat-count text-light-blue-8 font-mono">
+                {{ queueCounts.queued }}
+              </div>
               <div class="text-caption text-grey-6">รอเริ่มทำอาหาร</div>
             </div>
 
@@ -162,7 +168,9 @@
                 <span class="queue-stat-label">เสิร์ฟครบแล้ว</span>
                 <q-icon name="done_all" size="20px" class="queue-stat-icon text-blue-grey-6" />
               </div>
-              <div class="queue-stat-count text-blue-grey-6 font-mono">{{ queueCounts.served }}</div>
+              <div class="queue-stat-count text-blue-grey-6 font-mono">
+                {{ queueCounts.served }}
+              </div>
               <div class="text-caption text-grey-6">เสิร์ฟถึงโต๊ะแล้ว</div>
             </div>
           </div>

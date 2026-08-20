@@ -266,12 +266,7 @@
         </div>
 
         <!-- Edit Order Modal Dialog -->
-        <EditOrderModal
-          v-if="order"
-          v-model="showEditModal"
-          :order="order"
-          @saved="onOrderSaved"
-        />
+        <EditOrderModal v-if="order" v-model="showEditModal" :order="order" @saved="onOrderSaved" />
       </div>
     </template>
   </q-page>

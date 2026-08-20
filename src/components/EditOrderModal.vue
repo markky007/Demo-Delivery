@@ -39,7 +39,10 @@
       <!-- Body / Items List -->
       <q-card-section class="edit-order-body q-pa-md scroll">
         <!-- Notice Banner -->
-        <div class="edit-notice-banner q-mb-md" :class="{ 'edit-notice-banner--kitchen': isKitchen }">
+        <div
+          class="edit-notice-banner q-mb-md"
+          :class="{ 'edit-notice-banner--kitchen': isKitchen }"
+        >
           <q-icon
             :name="isKitchen ? 'restaurant_menu' : 'info'"
             size="18px"
@@ -575,9 +578,7 @@ async function openEditItemOptions(index: number) {
           }
         }
       } else {
-        const founds = group.options
-          .filter((o) => selectedOptIdSet.has(o.id))
-          .map((o) => o.id);
+        const founds = group.options.filter((o) => selectedOptIdSet.has(o.id)).map((o) => o.id);
         if (founds.length > 0) {
           newDishMultiOptions[group.id] = founds;
         }
@@ -733,8 +734,7 @@ function confirmAddDishToOrder() {
     }
   }
 
-  const targetItem =
-    editingItemIndex.value !== null ? items.value[editingItemIndex.value] : null;
+  const targetItem = editingItemIndex.value !== null ? items.value[editingItemIndex.value] : null;
 
   if (targetItem) {
     targetItem.quantity = newDishQuantity.value;

@@ -51,7 +51,9 @@
               <q-icon name="table_restaurant" size="16px" color="primary" />
               <span class="text-caption text-weight-bold text-dark">ทานที่ร้าน</span>
             </div>
-            <div class="stat-number text-primary font-mono">{{ dineInOrders }} <span class="stat-unit">ออเดอร์</span></div>
+            <div class="stat-number text-primary font-mono">
+              {{ dineInOrders }} <span class="stat-unit">ออเดอร์</span>
+            </div>
             <div class="stat-sales text-caption text-grey-7 font-mono">
               ยอดขาย {{ formatPrice(dineInSales) }}
             </div>
@@ -65,7 +67,9 @@
               <q-icon name="shopping_bag" size="16px" color="amber-9" />
               <span class="text-caption text-weight-bold text-dark">สั่งกลับบ้าน</span>
             </div>
-            <div class="stat-number text-amber-9 font-mono">{{ takeawayOrders }} <span class="stat-unit">ออเดอร์</span></div>
+            <div class="stat-number text-amber-9 font-mono">
+              {{ takeawayOrders }} <span class="stat-unit">ออเดอร์</span>
+            </div>
             <div class="stat-sales text-caption text-grey-7 font-mono">
               ยอดขาย {{ formatPrice(takeawaySales) }}
             </div>

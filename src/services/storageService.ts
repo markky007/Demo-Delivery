@@ -97,7 +97,10 @@ export async function uploadMenuImage(file: File): Promise<string> {
       return data.publicUrl;
     }
 
-    console.warn('Supabase storage upload failed, using compressed Data URL fallback:', uploadError);
+    console.warn(
+      'Supabase storage upload failed, using compressed Data URL fallback:',
+      uploadError,
+    );
     // Fallback: Use compressed Data URL (small ~50KB) instead of multi-MB raw file
     return dataUrl;
   } catch (err) {
@@ -119,4 +122,3 @@ export async function uploadMenuImage(file: File): Promise<string> {
 export function createLocalPreviewUrl(file: File): string {
   return URL.createObjectURL(file);
 }
-

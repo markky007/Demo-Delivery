@@ -33,7 +33,9 @@
           </div>
           <div class="row items-center q-gutter-sm text-right flex-shrink-0">
             <span class="text-weight-bold text-dark font-mono">{{ item.quantity }} จาน</span>
-            <span class="text-caption text-grey-7 font-mono">({{ formatPrice(item.subtotal) }})</span>
+            <span class="text-caption text-grey-7 font-mono"
+              >({{ formatPrice(item.subtotal) }})</span
+            >
           </div>
         </div>
       </div>

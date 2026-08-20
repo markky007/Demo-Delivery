@@ -292,7 +292,15 @@ export async function fetchManageOrders(
   if (filters.dateFrom) {
     const parts = filters.dateFrom.split('-');
     if (parts.length === 3) {
-      const fromDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+      const fromDate = new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2]),
+        0,
+        0,
+        0,
+        0,
+      );
       query = query.gte('created_at', fromDate.toISOString());
     }
   }
@@ -300,7 +308,15 @@ export async function fetchManageOrders(
   if (filters.dateTo) {
     const parts = filters.dateTo.split('-');
     if (parts.length === 3) {
-      const toDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
+      const toDate = new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2]),
+        23,
+        59,
+        59,
+        999,
+      );
       query = query.lte('created_at', toDate.toISOString());
     }
   }
@@ -367,10 +383,7 @@ export async function deleteOrderAndSession(orderId: string): Promise<DeleteOrde
 
   if (sessionDelErr) {
     // If cascade on table_sessions failed, try deleting order directly
-    const { error: directOrderDelErr } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', orderId);
+    const { error: directOrderDelErr } = await supabase.from('orders').delete().eq('id', orderId);
 
     if (directOrderDelErr) {
       throw new Error(directOrderDelErr.message);

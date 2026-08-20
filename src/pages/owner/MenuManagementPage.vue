@@ -1157,9 +1157,7 @@ async function toggleAvailability(item: MenuItem) {
 
   // Optimistic UI update
   menuStore.updateItemLocally(item.id, { is_available: newState });
-  notifySuccess(
-    `ปรับสถานะ "${item.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`,
-  );
+  notifySuccess(`ปรับสถานะ "${item.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`);
 
   try {
     const { error } = await supabase

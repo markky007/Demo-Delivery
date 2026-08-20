@@ -44,7 +44,9 @@
               <span class="text-caption text-weight-bold text-dark font-mono">
                 {{ formatPrice(cat.sales) }}
               </span>
-              <span class="text-caption text-grey-6 font-mono"> ({{ getPercent(cat.sales) }}%) </span>
+              <span class="text-caption text-grey-6 font-mono">
+                ({{ getPercent(cat.sales) }}%)
+              </span>
             </div>
           </div>
         </div>

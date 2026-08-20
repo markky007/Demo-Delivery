@@ -43,8 +43,7 @@
             </button>
           </div>
           <div v-if="isSearching" class="search-result-meta">
-            พบ <strong>{{ currentItems.length }}</strong> เมนูที่ตรงกับ
-            "{{ searchQuery }}"
+            พบ <strong>{{ currentItems.length }}</strong> เมนูที่ตรงกับ "{{ searchQuery }}"
           </div>
         </div>
       </div>
@@ -276,7 +275,9 @@ function openItem(item: MenuItem) {
   border-radius: var(--radius-pill);
   padding: 0 12px;
   height: 38px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .search-input-container:focus-within {

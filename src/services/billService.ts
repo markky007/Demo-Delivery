@@ -129,10 +129,14 @@ export async function ownerAddQuickItem(
   // Fallback if RPC is not yet applied in DB:
   const subtotal = price * quantity;
 
-  // 1. Get next queue number from existing orders or random
+  // 1. Get next queue number from today's existing orders
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const { data: latestOrder } = await supabase
     .from('orders')
     .select('queue_number')
+    .gte('created_at', todayStart.toISOString())
     .order('queue_number', { ascending: false })
     .limit(1)
     .maybeSingle();

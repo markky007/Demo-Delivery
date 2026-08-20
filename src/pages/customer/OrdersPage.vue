@@ -314,7 +314,12 @@ function openOrder(orderId: string) {
 }
 
 function getQueueInfo(order: OrderWithItems) {
-  return calculateQueuePosition(order.queue_number, order.status, activeKitchenOrders.value);
+  return calculateQueuePosition(
+    order.queue_number,
+    order.status,
+    activeKitchenOrders.value,
+    order.created_at,
+  );
 }
 
 function getQueueRankLabel(order: OrderWithItems): string {

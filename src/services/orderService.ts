@@ -186,7 +186,8 @@ export async function fetchActiveKitchenOrders(): Promise<ActiveKitchenOrder[]> 
     .from('orders')
     .select('id, queue_number, status, created_at')
     .neq('status', 'SERVED')
-    .order('queue_number');
+    .order('created_at', { ascending: true })
+    .order('queue_number', { ascending: true });
 
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -199,6 +200,7 @@ export function calculateQueuePosition(
   targetQueueNumber: number,
   targetStatus: OrderStatus,
   activeKitchenOrders: ActiveKitchenOrder[],
+  targetCreatedAt?: string,
 ): QueuePositionResult {
   if (targetStatus === OrderStatus.SERVED) {
     return {
@@ -220,9 +222,13 @@ export function calculateQueuePosition(
     };
   }
 
-  const ordersAhead = activeKitchenOrders.filter(
-    (o) => o.queue_number < targetQueueNumber && o.status !== OrderStatus.SERVED,
-  );
+  const ordersAhead = activeKitchenOrders.filter((o) => {
+    if (o.status === OrderStatus.SERVED) return false;
+    if (targetCreatedAt && o.created_at) {
+      return new Date(o.created_at).getTime() < new Date(targetCreatedAt).getTime();
+    }
+    return o.queue_number < targetQueueNumber;
+  });
   const queuesAhead = ordersAhead.length;
   const queuePosition = queuesAhead + 1;
 

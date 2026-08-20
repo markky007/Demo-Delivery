@@ -325,6 +325,7 @@ const queueInfo = computed(() => {
     order.value.queue_number,
     order.value.status,
     activeKitchenOrders.value,
+    order.value.created_at,
   );
 });
 

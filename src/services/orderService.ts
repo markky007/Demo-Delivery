@@ -290,15 +290,19 @@ export async function fetchManageOrders(
     .order('created_at', { ascending: false });
 
   if (filters.dateFrom) {
-    const fromDate = new Date(filters.dateFrom);
-    fromDate.setHours(0, 0, 0, 0);
-    query = query.gte('created_at', fromDate.toISOString());
+    const parts = filters.dateFrom.split('-');
+    if (parts.length === 3) {
+      const fromDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+      query = query.gte('created_at', fromDate.toISOString());
+    }
   }
 
   if (filters.dateTo) {
-    const toDate = new Date(filters.dateTo);
-    toDate.setHours(23, 59, 59, 999);
-    query = query.lte('created_at', toDate.toISOString());
+    const parts = filters.dateTo.split('-');
+    if (parts.length === 3) {
+      const toDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
+      query = query.lte('created_at', toDate.toISOString());
+    }
   }
 
   if (filters.status && filters.status !== 'ALL') {

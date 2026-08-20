@@ -1,27 +1,58 @@
 <template>
   <q-page class="order-mgmt-page q-pa-md">
     <div class="mgmt-container">
-      <!-- ─── Header Bar ─────────────────────────────────────────────── -->
+      <!-- ─── 1. Header Bar ─────────────────────────────────────────── -->
       <div class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-sm">
-        <div>
+        <div class="col-12 col-sm-auto">
           <div class="row items-center q-gutter-sm">
-            <h5 class="q-my-none text-weight-bold page-title">จัดการออเดอร์</h5>
-            <q-badge
-              rounded
-              :color="isRealtimeConnected ? 'green-1' : 'grey-3'"
-              :text-color="isRealtimeConnected ? 'green-9' : 'grey-7'"
-              class="q-px-sm py-xs text-caption text-weight-medium"
-            >
-              <span class="live-dot q-mr-xs" :class="{ 'live-dot--active': isRealtimeConnected }" />
-              {{ isRealtimeConnected ? 'เชื่อมต่อเรียลไทม์' : 'ออฟไลน์' }}
-            </q-badge>
+            <div class="page-icon-wrapper">
+              <q-icon name="assignment" size="26px" color="primary" />
+            </div>
+            <div>
+              <div class="row items-center q-gutter-xs">
+                <h5 class="q-my-none text-weight-bold page-title">จัดการออเดอร์</h5>
+                <q-badge
+                  rounded
+                  :color="isRealtimeConnected ? 'green-1' : 'grey-3'"
+                  :text-color="isRealtimeConnected ? 'green-9' : 'grey-7'"
+                  class="q-px-sm py-xs text-caption text-weight-medium"
+                >
+                  <span class="live-dot q-mr-xs" :class="{ 'live-dot--active': isRealtimeConnected }" />
+                  {{ isRealtimeConnected ? 'เชื่อมต่อเรียลไทม์' : 'ออฟไลน์' }}
+                </q-badge>
+              </div>
+              <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
+                ตรวจสอบประวัติ ค้นหาออเดอร์ และจัดการลบออเดอร์พร้อมล้างเซสชันโต๊ะ
+              </p>
+            </div>
           </div>
-          <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
-            ดูภาพรวม ตรวจสอบรายการอาหาร และจัดการ/ลบออเดอร์พร้อมล้างเซสชันโต๊ะ
-          </p>
         </div>
 
-        <div class="row items-center q-gutter-sm">
+        <div class="col-12 col-sm-auto row items-center q-gutter-sm">
+          <!-- View Toggle: Cards vs Table -->
+          <q-btn-toggle
+            v-model="viewMode"
+            rounded
+            unelevated
+            dense
+            toggle-color="primary"
+            color="white"
+            text-color="grey-8"
+            class="view-toggle shadow-subtle"
+            :options="[
+              { icon: 'grid_view', value: 'cards', slot: 'cards' },
+              { icon: 'table_rows', value: 'table', slot: 'table' },
+            ]"
+          >
+            <template v-slot:cards>
+              <q-tooltip class="bg-dark">มุมมองการ์ด</q-tooltip>
+            </template>
+            <template v-slot:table>
+              <q-tooltip class="bg-dark">มุมมองตาราง</q-tooltip>
+            </template>
+          </q-btn-toggle>
+
+          <!-- Refresh Button -->
           <q-btn
             unelevated
             rounded
@@ -31,29 +62,33 @@
             icon="refresh"
             :loading="isLoading"
             label="รีเฟรช"
-            class="shadow-subtle refresh-btn"
+            class="shadow-subtle action-header-btn"
             @click="loadOrders"
           />
         </div>
       </div>
 
-      <!-- ─── Top Stats Summary Cards ─────────────────────────────────── -->
+      <!-- ─── 2. Metric Stats Summary Cards ──────────────────────────── -->
       <div class="stats-grid q-mb-lg">
         <!-- 1. Total Orders -->
-        <div class="stat-card">
+        <div class="stat-card" @click="selectedStatus = 'ALL'">
           <div class="stat-card-icon stat-icon-total">
             <q-icon name="receipt_long" size="24px" />
           </div>
           <div class="stat-card-info">
-            <span class="stat-label">ออเดอร์ทั้งหมด</span>
+            <span class="stat-label">ออเดอร์ทั้งหมด (ช่วงเวลานี้)</span>
             <div class="stat-value text-grey-9">
-              {{ totalOrdersCount }} <span class="stat-unit">รายการ</span>
+              {{ dateScopedOrders.length }} <span class="stat-unit">รายการ</span>
             </div>
           </div>
         </div>
 
         <!-- 2. In Kitchen / Active -->
-        <div class="stat-card" :class="{ 'stat-card--highlight': inKitchenCount > 0 }">
+        <div
+          class="stat-card stat-clickable"
+          :class="{ 'stat-card--highlight': inKitchenCount > 0 }"
+          @click="selectedStatus = OrderStatus.PREPARING"
+        >
           <div class="stat-card-icon stat-icon-kitchen">
             <q-icon name="soup_kitchen" size="24px" />
           </div>
@@ -66,12 +101,12 @@
         </div>
 
         <!-- 3. Served Orders -->
-        <div class="stat-card">
+        <div class="stat-card stat-clickable" @click="selectedStatus = OrderStatus.SERVED">
           <div class="stat-card-icon stat-icon-served">
             <q-icon name="done_all" size="24px" />
           </div>
           <div class="stat-card-info">
-            <span class="stat-label">เสิร์ฟแล้ว</span>
+            <span class="stat-label">เสิร์ฟครบเรียบร้อย</span>
             <div class="stat-value text-green-9">
               {{ servedCount }} <span class="stat-unit">ออเดอร์</span>
             </div>
@@ -84,7 +119,7 @@
             <q-icon name="payments" size="24px" />
           </div>
           <div class="stat-card-info">
-            <span class="stat-label">มูลค่ารวม (ที่เลือก)</span>
+            <span class="stat-label">มูลค่ารวม (ตามที่แสดง)</span>
             <div class="stat-value text-primary font-mono">
               {{ formatPrice(totalRevenue) }}
             </div>
@@ -92,12 +127,12 @@
         </div>
       </div>
 
-      <!-- ─── Filter & Search Toolbar ─────────────────────────────────── -->
-      <div class="filter-panel q-mb-md">
-        <!-- Date Presets & Custom Range -->
-        <div class="row items-center justify-between q-mb-sm flex-wrap q-gutter-sm">
-          <!-- Date Preset Pills -->
+      <!-- ─── 3. Filter & Search Panel ─────────────────────────────────── -->
+      <div class="filter-panel q-mb-lg">
+        <!-- Top Row: Date Presets & Custom inputs -->
+        <div class="row items-center justify-between q-mb-md flex-wrap q-gutter-sm">
           <div class="row items-center q-gutter-xs date-presets">
+            <span class="text-caption text-grey-7 text-weight-medium q-mr-xs">ช่วงเวลา:</span>
             <q-btn
               v-for="preset in datePresets"
               :key="preset.id"
@@ -108,13 +143,13 @@
               size="sm"
               :label="preset.label"
               :class="selectedDatePreset === preset.id ? 'preset-btn--active' : 'preset-btn--idle'"
-              class="q-px-md"
+              class="q-px-md date-preset-btn"
               @click="applyDatePreset(preset.id)"
             />
           </div>
 
-          <!-- Custom Date Pickers (if custom selected) -->
-          <div v-if="selectedDatePreset === 'CUSTOM'" class="row items-center q-gutter-xs">
+          <!-- Custom Date Pickers (Shown when custom is selected) -->
+          <div v-if="selectedDatePreset === 'CUSTOM'" class="row items-center q-gutter-xs custom-date-box">
             <q-input
               v-model="customDateFrom"
               outlined
@@ -123,6 +158,7 @@
               label="ตั้งแต่วันที่"
               class="date-input"
             />
+            <span class="text-grey-6">-</span>
             <q-input
               v-model="customDateTo"
               outlined
@@ -147,17 +183,57 @@
 
         <q-separator class="q-my-sm separator-subtle" />
 
-        <!-- Search, Status & Table Filters -->
-        <div class="row items-center q-gutter-sm flex-wrap">
-          <!-- Search box -->
-          <div class="col-12 col-sm-4 col-md-3">
+        <!-- Status Filter Tabs / Pills -->
+        <div class="row items-center justify-between q-my-sm flex-wrap q-gutter-y-sm">
+          <div class="row items-center q-gutter-xs status-pills-row">
+            <q-btn
+              v-for="st in statusFilterOptions"
+              :key="st.value"
+              unelevated
+              rounded
+              dense
+              no-caps
+              size="sm"
+              :class="selectedStatus === st.value ? st.activeClass : 'status-pill--idle'"
+              class="q-px-md q-py-xs status-pill"
+              @click="selectedStatus = st.value"
+            >
+              <q-icon :name="st.icon" size="15px" class="q-mr-xs" />
+              <span>{{ st.label }}</span>
+              <span class="status-count-badge q-ml-xs">
+                {{ getStatusCount(st.value) }}
+              </span>
+            </q-btn>
+          </div>
+
+          <!-- Reset Filter Button if any filter active -->
+          <q-btn
+            v-if="isAnyFilterActive"
+            flat
+            dense
+            no-caps
+            color="negative"
+            icon="clear_all"
+            label="ล้างตัวกรอง"
+            size="sm"
+            class="reset-filter-btn"
+            @click="resetFilters"
+          />
+        </div>
+
+        <q-separator class="q-my-sm separator-subtle" />
+
+        <!-- Bottom Controls Row: Search, Table Filter, Sort -->
+        <div class="row items-center q-gutter-sm flex-wrap q-pt-xs">
+          <!-- Search input -->
+          <div class="col-12 col-md-4">
             <q-input
               v-model="searchQuery"
               outlined
               dense
               rounded
               clearable
-              placeholder="ค้นหาเลขคิว, โต๊ะ, เมนูอาหาร..."
+              placeholder="ค้นหาเลขคิว (#01), โต๊ะ, ชื่อลูกค้า, เมนูอาหาร..."
               class="search-input"
             >
               <template v-slot:prepend>
@@ -166,60 +242,58 @@
             </q-input>
           </div>
 
-          <!-- Status Filter -->
-          <div class="row items-center q-gutter-xs status-pills">
-            <q-chip
-              v-for="st in statusFilters"
-              :key="st.value"
-              clickable
-              :selected="selectedStatus === st.value"
-              :color="selectedStatus === st.value ? 'primary' : 'grey-2'"
-              :text-color="selectedStatus === st.value ? 'white' : 'grey-8'"
-              size="sm"
-              class="text-weight-medium q-ma-none"
-              @click="setStatusFilter(st.value)"
-            >
-              {{ st.label }}
-              <q-badge
-                v-if="getStatusCount(st.value) > 0"
-                rounded
-                :color="selectedStatus === st.value ? 'white' : 'grey-4'"
-                :text-color="selectedStatus === st.value ? 'primary' : 'grey-9'"
-                class="q-ml-xs text-bold"
-              >
-                {{ getStatusCount(st.value) }}
-              </q-badge>
-            </q-chip>
-          </div>
-
-          <q-space />
-
-          <!-- Table Filter -->
-          <div class="col-12 col-sm-auto">
+          <!-- Dining / Table filter -->
+          <div class="col-12 col-sm-6 col-md-3">
             <q-select
               v-model="selectedTableFilter"
-              :options="tableOptions"
+              :options="tableFilterOptions"
               outlined
               dense
               rounded
               emit-value
               map-options
-              label="เลือกโต๊ะ"
-              class="table-select"
+              label="กรองโต๊ะ / สั่งกลับบ้าน"
+              class="filter-select"
             >
               <template v-slot:prepend>
                 <q-icon name="table_restaurant" size="18px" color="grey-6" />
               </template>
             </q-select>
           </div>
+
+          <!-- Sort filter -->
+          <div class="col-12 col-sm-6 col-md-3">
+            <q-select
+              v-model="sortBy"
+              :options="sortOptions"
+              outlined
+              dense
+              rounded
+              emit-value
+              map-options
+              label="เรียงลำดับ"
+              class="filter-select"
+            >
+              <template v-slot:prepend>
+                <q-icon name="sort" size="18px" color="grey-6" />
+              </template>
+            </q-select>
+          </div>
+
+          <!-- Result Count Info -->
+          <div class="col-12 col-md text-right gt-sm text-caption text-grey-7">
+            พบ <strong>{{ filteredOrders.length }}</strong> รายการ
+          </div>
         </div>
       </div>
 
-      <!-- ─── Orders List / Table ──────────────────────────────────────── -->
+      <!-- ─── 4. Orders Content ───────────────────────────────────────── -->
+      <!-- Loading State -->
       <div v-if="isLoading" class="q-py-md">
         <LoadingSkeleton type="table" :count="6" />
       </div>
 
+      <!-- Empty State -->
       <div v-else-if="filteredOrders.length === 0" class="empty-wrap q-py-xl">
         <EmptyState
           icon="manage_search"
@@ -240,6 +314,142 @@
         </EmptyState>
       </div>
 
+      <!-- ─── Mode A: Card Grid View ─────────────────────────────────── -->
+      <div v-else-if="viewMode === 'cards'" class="order-cards-grid">
+        <div
+          v-for="order in filteredOrders"
+          :key="order.id"
+          class="order-card column justify-between"
+          :class="`order-card--${order.status.toLowerCase()}`"
+        >
+          <!-- Card Top Bar: Queue, Table, Status -->
+          <div>
+            <div class="order-card-header row items-center justify-between q-mb-sm">
+              <!-- Queue Number Pill -->
+              <div class="queue-chip">
+                <span class="queue-hash">#</span>
+                <span class="queue-num">{{ formatQueueNumOnly(order.queue_number) }}</span>
+              </div>
+
+              <!-- Table / Destination Badge -->
+              <div class="table-chip" :class="order.table_session?.customer_name ? 'table-chip--takeaway' : 'table-chip--dinein'">
+                <q-icon
+                  :name="order.table_session?.customer_name ? 'shopping_bag' : 'table_restaurant'"
+                  size="15px"
+                  class="q-mr-xs"
+                />
+                <span class="text-weight-bold ellipsis text-caption">
+                  {{ getTableDisplayName(order) }}
+                </span>
+              </div>
+
+              <!-- Order Status Badge -->
+              <StatusBadge :status="order.status" />
+            </div>
+
+            <!-- Time and Item Count Row -->
+            <div class="row items-center justify-between text-caption text-grey-6 q-mb-sm q-px-xs">
+              <div class="row items-center q-gutter-xs">
+                <q-icon name="schedule" size="13px" />
+                <span>{{ formatTime(order.created_at) }}</span>
+                <span class="text-grey-4">•</span>
+                <span>{{ formatElapsed(order.created_at) }}</span>
+              </div>
+              <div class="text-weight-medium">
+                {{ order.items?.length || 0 }} รายการ
+              </div>
+            </div>
+
+            <q-separator class="separator-subtle q-mb-sm" />
+
+            <!-- Items List -->
+            <div class="order-card-items-list">
+              <div
+                v-for="(item, idx) in order.items"
+                :key="item.id || idx"
+                class="order-card-item-row"
+              >
+                <div class="row items-start q-gutter-xs full-width">
+                  <span class="item-quantity-pill">{{ item.quantity }}x</span>
+                  <div class="col">
+                    <div class="row items-center justify-between">
+                      <span class="text-weight-bold text-grey-9 item-title">
+                        {{ item.snapshot_name }}
+                      </span>
+                      <span class="text-caption text-grey-7 font-mono">
+                        {{ formatPrice(item.subtotal) }}
+                      </span>
+                    </div>
+
+                    <!-- Options list if any -->
+                    <div
+                      v-if="item.options && item.options.length > 0"
+                      class="options-tags-row q-mt-xs"
+                    >
+                      <span
+                        v-for="opt in item.options"
+                        :key="opt.id"
+                        class="opt-tag"
+                      >
+                        {{ opt.snapshot_option_name }}
+                      </span>
+                    </div>
+
+                    <!-- Special Cooking Note -->
+                    <div v-if="item.special_instruction" class="note-box q-mt-xs">
+                      <q-icon name="edit_note" size="13px" color="orange-8" class="q-mr-xs" />
+                      <span class="text-orange-9 text-caption">{{ item.special_instruction }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Bottom Bar: Total & Actions -->
+          <div class="order-card-footer q-mt-md">
+            <q-separator class="separator-subtle q-mb-sm" />
+            <div class="row items-center justify-between">
+              <div>
+                <span class="text-caption text-grey-6 block">ยอดรวม</span>
+                <span class="text-subtitle1 text-weight-bold text-primary font-mono">
+                  {{ formatPrice(order.total_amount) }}
+                </span>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="row items-center q-gutter-xs">
+                <q-btn
+                  flat
+                  rounded
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="visibility"
+                  label="ดูรายละเอียด"
+                  class="q-px-sm"
+                  @click="openOrderDetails(order)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  color="negative"
+                  icon="delete_outline"
+                  size="sm"
+                  class="delete-btn-hover"
+                  @click="promptDeleteOrder(order)"
+                >
+                  <q-tooltip class="bg-negative">ลบออเดอร์และล้างเซสชันโต๊ะ</q-tooltip>
+                </q-btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Mode B: Table View ─────────────────────────────────────── -->
       <div v-else class="orders-table-wrapper">
         <q-table
           :rows="filteredOrders"
@@ -261,7 +471,7 @@
             </q-td>
           </template>
 
-          <!-- Cell: Table / Customer -->
+          <!-- Cell: Table / Destination -->
           <template v-slot:body-cell-table="props">
             <q-td :props="props">
               <div class="column">
@@ -371,7 +581,7 @@
         </q-table>
       </div>
 
-      <!-- ─── Order Detail Modal Dialog ───────────────────────────────── -->
+      <!-- ─── 5. Order Detail Modal Dialog ────────────────────────────── -->
       <q-dialog v-model="showDetailModal" transition-show="scale" transition-hide="scale">
         <q-card v-if="selectedOrder" class="detail-card">
           <!-- Modal Header -->
@@ -396,10 +606,10 @@
 
           <!-- Modal Body -->
           <q-card-section class="q-pa-md scroll detail-body">
-            <!-- Timeline / Info chips -->
+            <!-- Info chips -->
             <div class="info-chips-row q-mb-md">
               <div class="info-chip">
-                <span class="info-chip-label">สถานะ</span>
+                <span class="info-chip-label">สถานะออเดอร์</span>
                 <StatusBadge :status="selectedOrder.status" />
               </div>
               <div class="info-chip">
@@ -470,7 +680,7 @@
               </span>
             </div>
 
-            <!-- Session & IDs info -->
+            <!-- Technical IDs -->
             <div class="technical-info q-mt-md q-pa-sm text-caption text-grey-6 bg-grey-1 rounded-borders">
               <div><strong>Order ID:</strong> <span class="font-mono">{{ selectedOrder.id }}</span></div>
               <div v-if="selectedOrder.table_session_id">
@@ -504,7 +714,7 @@
         </q-card>
       </q-dialog>
 
-      <!-- ─── Delete Confirmation Dialog ──────────────────────────────── -->
+      <!-- ─── 6. Delete Confirmation Dialog ───────────────────────────── -->
       <q-dialog v-model="showDeleteDialog" persistent transition-show="scale" transition-hide="scale">
         <q-card v-if="orderToDelete" class="delete-dialog-card">
           <q-card-section class="text-center q-pt-lg q-pb-none">
@@ -581,22 +791,27 @@ import EmptyState from 'src/components/EmptyState.vue';
 
 const $q = useQuasar();
 
-// ─── State ─────────────────────────────────────────────────────────────
+// ─── View Mode & UI State ──────────────────────────────────────────────
+const viewMode = ref<'cards' | 'table'>('cards');
 const isLoading = ref(true);
 const isDeleting = ref(false);
 const isRealtimeConnected = ref(false);
-const orders = ref<OrderWithItems[]>([]);
+
+// Raw Data loaded for the current Date Range
+const dateScopedOrders = ref<OrderWithItems[]>([]);
 const tables = ref<TableWithQR[]>([]);
 
-// Filter states
-const selectedDatePreset = ref<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'ALL' | 'CUSTOM'>('TODAY');
+// ─── Filter States ─────────────────────────────────────────────────────
+const selectedDatePreset = ref<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL' | 'CUSTOM'>('TODAY');
 const customDateFrom = ref('');
 const customDateTo = ref('');
+
 const selectedStatus = ref<OrderStatus | 'ALL'>('ALL');
 const selectedTableFilter = ref<string>('ALL');
 const searchQuery = ref('');
+const sortBy = ref<'CREATED_DESC' | 'CREATED_ASC' | 'QUEUE_ASC' | 'QUEUE_DESC' | 'AMOUNT_DESC'>('CREATED_DESC');
 
-// Modals
+// ─── Modals ────────────────────────────────────────────────────────────
 const showDetailModal = ref(false);
 const selectedOrder = ref<OrderWithItems | null>(null);
 
@@ -606,25 +821,47 @@ const orderToDelete = ref<OrderWithItems | null>(null);
 // Realtime
 let realtimeChannel: RealtimeChannel | null = null;
 
-// Date presets config
+// ─── Options Configurations ────────────────────────────────────────────
 const datePresets = [
   { id: 'TODAY', label: 'วันนี้' },
   { id: 'YESTERDAY', label: 'เมื่อวาน' },
   { id: 'LAST_7_DAYS', label: '7 วันล่าสุด' },
+  { id: 'THIS_MONTH', label: 'เดือนนี้' },
   { id: 'ALL', label: 'ทั้งหมด' },
   { id: 'CUSTOM', label: 'กำหนดเอง...' },
 ] as const;
 
-// Status filter config
-const statusFilters = [
-  { value: 'ALL', label: 'ทั้งหมด' },
-  { value: OrderStatus.QUEUED, label: 'รอคิว' },
-  { value: OrderStatus.PREPARING, label: 'กำลังปรุง' },
-  { value: OrderStatus.PREPARED, label: 'ปรุงเสร็จ' },
-  { value: OrderStatus.SERVED, label: 'เสิร์ฟแล้ว' },
+const statusFilterOptions = [
+  { value: 'ALL', label: 'ทั้งหมด', icon: 'list_alt', activeClass: 'status-pill--active-all' },
+  { value: OrderStatus.QUEUED, label: 'รอคิว', icon: 'schedule', activeClass: 'status-pill--active-queued' },
+  { value: OrderStatus.PREPARING, label: 'กำลังปรุง', icon: 'soup_kitchen', activeClass: 'status-pill--active-preparing' },
+  { value: OrderStatus.PREPARED, label: 'ปรุงเสร็จ', icon: 'check_circle_outline', activeClass: 'status-pill--active-prepared' },
+  { value: OrderStatus.SERVED, label: 'เสิร์ฟแล้ว', icon: 'done_all', activeClass: 'status-pill--active-served' },
 ] as const;
 
-// Columns for QTable
+const sortOptions = [
+  { label: 'เวลาสั่งล่าสุด (ใหม่ → เก่า)', value: 'CREATED_DESC' },
+  { label: 'เวลาสั่งแรกสุด (เก่า → ใหม่)', value: 'CREATED_ASC' },
+  { label: 'เลขคิวน้อย → มาก (#1, #2...)', value: 'QUEUE_ASC' },
+  { label: 'เลขคิวมาก → น้อย', value: 'QUEUE_DESC' },
+  { label: 'ยอดเงินสูงสุด → ต่ำสุด', value: 'AMOUNT_DESC' },
+];
+
+const tableFilterOptions = computed(() => {
+  const opts: { label: string; value: string }[] = [
+    { label: 'ทุกโต๊ะ / ทุกประเภท', value: 'ALL' },
+    { label: '🍽️ เฉพาะทานที่ร้าน (ทุกโต๊ะ)', value: 'DINE_IN' },
+    { label: '🥡 เฉพาะสั่งกลับบ้าน', value: 'TAKEAWAY' },
+  ];
+
+  for (const t of tables.value) {
+    opts.push({ label: `โต๊ะ: ${t.name}`, value: `TABLE_${t.id}` });
+  }
+
+  return opts;
+});
+
+// ─── Table Columns ─────────────────────────────────────────────────────
 const columns = [
   {
     name: 'queue_number',
@@ -674,74 +911,116 @@ const columns = [
   },
 ];
 
-// ─── Table Options for Select ──────────────────────────────────────────
-const tableOptions = computed(() => {
-  const opts: { label: string; value: string }[] = [{ label: 'ทุกโต๊ะ / ทุกประเภท', value: 'ALL' }];
-  for (const t of tables.value) {
-    opts.push({ label: t.name, value: t.id });
-  }
-  return opts;
+// ─── Active Filter Checker ─────────────────────────────────────────────
+const isAnyFilterActive = computed(() => {
+  return (
+    selectedStatus.value !== 'ALL' ||
+    selectedTableFilter.value !== 'ALL' ||
+    Boolean(searchQuery.value && searchQuery.value.trim()) ||
+    selectedDatePreset.value !== 'TODAY'
+  );
 });
 
-// ─── Computed Statistics ───────────────────────────────────────────────
-const totalOrdersCount = computed(() => filteredOrders.value.length);
+// ─── Reactive Filtered & Sorted Orders ─────────────────────────────────
+const filteredOrders = computed(() => {
+  let list = [...dateScopedOrders.value];
 
-const inKitchenCount = computed(() =>
-  filteredOrders.value.filter(
-    (o) =>
-      o.status === OrderStatus.QUEUED ||
-      o.status === OrderStatus.PREPARING ||
-      o.status === OrderStatus.PREPARED,
-  ).length,
+  // 1. Status Filter
+  if (selectedStatus.value !== 'ALL') {
+    list = list.filter((o) => o.status === selectedStatus.value);
+  }
+
+  // 2. Table / Dining Type Filter
+  if (selectedTableFilter.value === 'DINE_IN') {
+    list = list.filter((o) => !o.table_session?.customer_name);
+  } else if (selectedTableFilter.value === 'TAKEAWAY') {
+    list = list.filter((o) => Boolean(o.table_session?.customer_name));
+  } else if (selectedTableFilter.value.startsWith('TABLE_')) {
+    const targetTableId = selectedTableFilter.value.replace('TABLE_', '');
+    list = list.filter((o) => o.table_session?.table?.id === targetTableId);
+  }
+
+  // 3. Search Query Filter
+  if (searchQuery.value && searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase();
+    list = list.filter((order) => {
+      // Queue number
+      const qNumStr = String(order.queue_number);
+      if (qNumStr.includes(q) || `#${qNumStr}`.includes(q)) return true;
+
+      // Table name / Customer name
+      const tableName = order.table_session?.table?.name?.toLowerCase() || '';
+      const custName = order.table_session?.customer_name?.toLowerCase() || '';
+      if (tableName.includes(q) || custName.includes(q)) return true;
+
+      // Item names & instructions
+      if (
+        order.items?.some(
+          (it) =>
+            it.snapshot_name.toLowerCase().includes(q) ||
+            (it.special_instruction && it.special_instruction.toLowerCase().includes(q)),
+        )
+      ) {
+        return true;
+      }
+
+      // Order ID
+      if (order.id.toLowerCase().includes(q)) return true;
+
+      return false;
+    });
+  }
+
+  // 4. Sorting
+  list.sort((a, b) => {
+    switch (sortBy.value) {
+      case 'CREATED_ASC':
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      case 'QUEUE_ASC':
+        return a.queue_number - b.queue_number;
+      case 'QUEUE_DESC':
+        return b.queue_number - a.queue_number;
+      case 'AMOUNT_DESC':
+        return (b.total_amount || 0) - (a.total_amount || 0);
+      case 'CREATED_DESC':
+      default:
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+  });
+
+  return list;
+});
+
+// ─── Status Counts (Based on current Date Range) ───────────────────────
+function getStatusCount(status: OrderStatus | 'ALL'): number {
+  if (status === 'ALL') return dateScopedOrders.value.length;
+  return dateScopedOrders.value.filter((o) => o.status === status).length;
+}
+
+// ─── Computed Stats ────────────────────────────────────────────────────
+const inKitchenCount = computed(
+  () =>
+    dateScopedOrders.value.filter(
+      (o) =>
+        o.status === OrderStatus.QUEUED ||
+        o.status === OrderStatus.PREPARING ||
+        o.status === OrderStatus.PREPARED,
+    ).length,
 );
 
 const servedCount = computed(
-  () => filteredOrders.value.filter((o) => o.status === OrderStatus.SERVED).length,
+  () => dateScopedOrders.value.filter((o) => o.status === OrderStatus.SERVED).length,
 );
 
 const totalRevenue = computed(() =>
   filteredOrders.value.reduce((sum, o) => sum + (o.total_amount || 0), 0),
 );
 
-// ─── Filtered Orders ───────────────────────────────────────────────────
-const filteredOrders = computed(() => {
-  let list = orders.value;
-
-  // Search filter
-  if (searchQuery.value && searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase();
-    list = list.filter((order) => {
-      // Check queue number
-      const qNumStr = String(order.queue_number);
-      if (qNumStr.includes(q) || `#${qNumStr}`.includes(q)) return true;
-
-      // Check table / customer name
-      const tableName = order.table_session?.table?.name?.toLowerCase() || '';
-      const custName = order.table_session?.customer_name?.toLowerCase() || '';
-      if (tableName.includes(q) || custName.includes(q)) return true;
-
-      // Check item names
-      if (order.items?.some((it) => it.snapshot_name.toLowerCase().includes(q))) return true;
-
-      return false;
-    });
-  }
-
-  return list;
-});
-
-// Helper for status count
-function getStatusCount(status: OrderStatus | 'ALL'): number {
-  if (status === 'ALL') return orders.value.length;
-  return orders.value.filter((o) => o.status === status).length;
-}
-
-// Format queue number to clean padded string
+// ─── Helpers ───────────────────────────────────────────────────────────
 function formatQueueNumOnly(num: number): string {
   return String(num).padStart(3, '0');
 }
 
-// Display Name helper
 function getTableDisplayName(order: OrderWithItems): string {
   if (order.table_session?.customer_name) {
     return `สั่งกลับบ้าน (${order.table_session.customer_name})`;
@@ -749,26 +1028,35 @@ function getTableDisplayName(order: OrderWithItems): string {
   return order.table_session?.table?.name || 'ไม่ระบุโต๊ะ';
 }
 
-// ─── Date Preset Handler ───────────────────────────────────────────────
-function applyDatePreset(preset: 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'ALL' | 'CUSTOM') {
-  selectedDatePreset.value = preset;
+function toLocalYMD(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
+// ─── Date Preset Handler ───────────────────────────────────────────────
+function applyDatePreset(preset: 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL' | 'CUSTOM') {
+  selectedDatePreset.value = preset;
   const now = new Date();
-  const formatYMD = (d: Date): string => d.toISOString().split('T')[0] ?? '';
 
   if (preset === 'TODAY') {
-    customDateFrom.value = formatYMD(now);
-    customDateTo.value = formatYMD(now);
+    customDateFrom.value = toLocalYMD(now);
+    customDateTo.value = toLocalYMD(now);
   } else if (preset === 'YESTERDAY') {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    customDateFrom.value = formatYMD(yesterday);
-    customDateTo.value = formatYMD(yesterday);
+    customDateFrom.value = toLocalYMD(yesterday);
+    customDateTo.value = toLocalYMD(yesterday);
   } else if (preset === 'LAST_7_DAYS') {
     const past7 = new Date(now);
     past7.setDate(past7.getDate() - 6);
-    customDateFrom.value = formatYMD(past7);
-    customDateTo.value = formatYMD(now);
+    customDateFrom.value = toLocalYMD(past7);
+    customDateTo.value = toLocalYMD(now);
+  } else if (preset === 'THIS_MONTH') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    customDateFrom.value = toLocalYMD(firstDay);
+    customDateTo.value = toLocalYMD(now);
   } else if (preset === 'ALL') {
     customDateFrom.value = '';
     customDateTo.value = '';
@@ -777,16 +1065,11 @@ function applyDatePreset(preset: 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'ALL' |
   void loadOrders();
 }
 
-function setStatusFilter(status: OrderStatus | 'ALL') {
-  selectedStatus.value = status;
-  void loadOrders();
-}
-
 function resetFilters() {
-  selectedDatePreset.value = 'TODAY';
   selectedStatus.value = 'ALL';
   selectedTableFilter.value = 'ALL';
   searchQuery.value = '';
+  sortBy.value = 'CREATED_DESC';
   applyDatePreset('TODAY');
 }
 
@@ -797,10 +1080,9 @@ async function loadOrders() {
     const fetched = await fetchManageOrders({
       dateFrom: customDateFrom.value ? customDateFrom.value : undefined,
       dateTo: customDateTo.value ? customDateTo.value : undefined,
-      status: selectedStatus.value,
-      tableId: selectedTableFilter.value,
+      status: 'ALL', // Fetch all for the date range so client filtering & counts are accurate
     });
-    orders.value = fetched;
+    dateScopedOrders.value = fetched;
   } catch (err) {
     $q.notify({
       type: 'negative',
@@ -908,13 +1190,24 @@ onUnmounted(() => {
 }
 
 .mgmt-container {
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
+}
+
+.page-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page-title {
   color: var(--color-text-primary);
   font-size: 1.35rem;
+  line-height: 1.2;
 }
 
 .live-dot {
@@ -937,11 +1230,19 @@ onUnmounted(() => {
 }
 
 .shadow-subtle {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .separator-subtle {
   background: var(--color-border-subtle);
+}
+
+.action-header-btn {
+  border: 1px solid var(--color-border);
+}
+
+.view-toggle {
+  border: 1px solid var(--color-border);
 }
 
 /* ─── Top Stats Grid ─── */
@@ -960,6 +1261,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 14px;
   transition: all 0.2s ease;
+}
+
+.stat-clickable {
+  cursor: pointer;
 }
 
 .stat-card:hover {
@@ -1029,13 +1334,19 @@ onUnmounted(() => {
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 14px 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .date-presets {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+}
+
+.date-preset-btn {
+  transition: all 0.15s ease;
 }
 
 .preset-btn--active {
@@ -1050,16 +1361,214 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
 }
 
+.custom-date-box {
+  background: var(--color-surface-subtle);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
 .date-input {
-  width: 150px;
+  width: 140px;
 }
 
 .search-input {
-  min-width: 220px;
+  width: 100%;
 }
 
-.table-select {
-  min-width: 180px;
+.filter-select {
+  width: 100%;
+}
+
+/* ─── Status Pills ─── */
+.status-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-pill {
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.status-pill--idle {
+  background: var(--color-surface-subtle) !important;
+  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-border);
+}
+
+.status-pill--active-all {
+  background: var(--color-text-primary) !important;
+  color: #ffffff !important;
+}
+
+.status-pill--active-queued {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+.status-pill--active-preparing {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.status-pill--active-prepared {
+  background: #06b6d4 !important;
+  color: #ffffff !important;
+}
+
+.status-pill--active-served {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.status-count-badge {
+  background: rgba(0, 0, 0, 0.12);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+}
+
+.reset-filter-btn {
+  font-weight: 600;
+}
+
+/* ─── Order Cards Grid ─── */
+.order-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.order-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+.order-card--preparing {
+  border-left: 4px solid #3b82f6;
+}
+
+.order-card--queued {
+  border-left: 4px solid #f59e0b;
+}
+
+.order-card--prepared {
+  border-left: 4px solid #06b6d4;
+}
+
+.order-card--served {
+  border-left: 4px solid #10b981;
+}
+
+.queue-chip {
+  display: inline-flex;
+  align-items: baseline;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.queue-hash {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-right: 1px;
+}
+
+.queue-num {
+  font-size: 1rem;
+}
+
+.table-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  max-width: 140px;
+}
+
+.table-chip--dinein {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #dbeafe;
+}
+
+.table-chip--takeaway {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+}
+
+.order-card-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-card-item-row {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--color-border-subtle);
+}
+
+.order-card-item-row:last-child {
+  border-bottom: none;
+}
+
+.item-quantity-pill {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.item-title {
+  font-size: 0.9rem;
+}
+
+.options-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.opt-tag {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-subtle);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.note-box {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.delete-btn-hover:hover {
+  background: #fee2e2 !important;
 }
 
 /* ─── Orders Table ─── */

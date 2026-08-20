@@ -73,6 +73,54 @@
 
                   <q-separator class="q-my-xs" />
 
+                  <!-- Sound Type Selector -->
+                  <div class="column q-gutter-y-xs" :class="{ 'text-grey-5': !soundEnabled }">
+                    <span class="text-caption text-weight-medium">รูปแบบเสียงเตือน</span>
+                    <div class="row q-gutter-xs">
+                      <q-btn
+                        size="xs"
+                        :outline="soundType !== 'voice'"
+                        :unelevated="soundType === 'voice'"
+                        dense
+                        :disable="!soundEnabled"
+                        :color="soundType === 'voice' ? 'primary' : 'grey-7'"
+                        label="🗣️ เสียงพูด"
+                        class="col q-py-xs"
+                        @click="onSoundTypeChange('voice')"
+                      >
+                        <q-tooltip>พูด "ออเดอร์มาแล้ว"</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        size="xs"
+                        :outline="soundType !== 'chime'"
+                        :unelevated="soundType === 'chime'"
+                        dense
+                        :disable="!soundEnabled"
+                        :color="soundType === 'chime' ? 'primary' : 'grey-7'"
+                        label="🔔 กระดิ่ง"
+                        class="col q-py-xs"
+                        @click="onSoundTypeChange('chime')"
+                      >
+                        <q-tooltip>เสียงกระดิ่งใสๆ กังวาน</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        size="xs"
+                        :outline="soundType !== 'both'"
+                        :unelevated="soundType === 'both'"
+                        dense
+                        :disable="!soundEnabled"
+                        :color="soundType === 'both' ? 'primary' : 'grey-7'"
+                        label="🔔+🗣️ คู่"
+                        class="col q-py-xs"
+                        @click="onSoundTypeChange('both')"
+                      >
+                        <q-tooltip>เสียงกระดิ่ง + เสียงพูด</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+
+                  <q-separator class="q-my-xs" />
+
                   <!-- Volume Slider Section -->
                   <div class="column q-gutter-y-xs" :class="{ 'text-grey-5': !soundEnabled }">
                     <div class="row items-center justify-between text-caption">
@@ -148,8 +196,14 @@
                     no-caps
                     size="sm"
                     color="primary"
-                    icon="volume_up"
-                    label="ทดสอบเสียงกริ่ง"
+                    :icon="soundType === 'voice' ? 'record_voice_over' : 'volume_up'"
+                    :label="
+                      soundType === 'voice'
+                        ? 'ทดสอบเสียงพูด (ออเดอร์มาแล้ว)'
+                        : soundType === 'both'
+                          ? 'ทดสอบเสียงกระดิ่ง + เสียงพูด'
+                          : 'ทดสอบเสียงกระดิ่ง'
+                    "
                     class="full-width"
                     :disable="!soundEnabled"
                     @click="testSound"
@@ -1784,6 +1838,9 @@ import {
   setSoundEnabled,
   getSoundVolume,
   setSoundVolume,
+  getSoundType,
+  setSoundType,
+  type SoundType,
 } from 'src/utils/audioService';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -1800,6 +1857,7 @@ const FOCUS_PAGE_SIZE = 3;
 const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
 const soundVolume = ref<number>(getSoundVolume());
+const soundType = ref<SoundType>(getSoundType());
 
 // Kitchen Order Edit Modal States
 const showEditModal = ref(false);
@@ -1948,6 +2006,12 @@ function onSoundToggle(val: boolean) {
   } else {
     notifyWarning('ปิดเสียงแจ้งเตือนแล้ว');
   }
+}
+
+function onSoundTypeChange(val: SoundType) {
+  soundType.value = val;
+  setSoundType(val);
+  playNewOrderChime(soundVolume.value);
 }
 
 function onVolumeChange(val: number | null) {

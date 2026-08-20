@@ -1,59 +1,95 @@
 /**
- * Storage service for uploading and managing files in Supabase Storage.
+ * Storage service for uploading and managing files in Supabase Storage with client-side compression.
  */
 import { supabase } from 'src/services/supabase';
 
 const BUCKET_NAME = 'menu-images';
 
 /**
- * Convert a File object to a Base64 string as a reliable fallback.
+ * Compress and resize an image file using browser Canvas before uploading.
+ * Reduces 5MB+ images down to ~50-100KB for lightning-fast loads.
  */
-function fileToBase64(file: File): Promise<string> {
+export async function compressImage(
+  file: File,
+  maxWidth = 800,
+  maxHeight = 800,
+  quality = 0.82,
+): Promise<{ blob: Blob; dataUrl: string }> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+
+      // Scale down proportionally
+      if (width > maxWidth || height > maxHeight) {
+        if (width / height > maxWidth / maxHeight) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas 2D context not supported'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Export as compressed WebP or JPEG
+      const mimeType = 'image/jpeg';
+      const dataUrl = canvas.toDataURL(mimeType, quality);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve({ blob, dataUrl });
+          } else {
+            reject(new Error('Failed to compress image to Blob'));
+          }
+        },
+        mimeType,
+        quality,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to load image for compression'));
+    };
+
+    img.src = objectUrl;
   });
 }
 
 /**
- * Upload a menu item image file to Supabase Storage.
- * If the bucket is not created in Supabase yet, attempts to create it or falls back safely.
+ * Upload a menu item image file to Supabase Storage with automatic compression.
  * @param file - The image File object to upload
- * @returns Public URL or Data URL of the uploaded image
+ * @returns Public URL or compressed Data URL of the uploaded image
  */
 export async function uploadMenuImage(file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop() || 'jpg';
-  const cleanExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const fileName = `item-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${cleanExt}`;
+  const fileName = `item-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.jpg`;
   const filePath = `items/${fileName}`;
 
   try {
-    // 1. Try uploading to Supabase Storage
-    let { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file, {
-      cacheControl: '3600',
+    // 1. Compress image before uploading
+    const { blob, dataUrl } = await compressImage(file, 800, 800, 0.82);
+
+    // 2. Try uploading compressed blob to Supabase Storage
+    const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, blob, {
+      cacheControl: '31536000',
+      contentType: 'image/jpeg',
       upsert: true,
     });
-
-    // 2. If bucket doesn't exist, try creating it automatically
-    if (
-      uploadError &&
-      (uploadError.message?.includes('Bucket not found') ||
-        (uploadError as { error?: string })?.error?.includes('Bucket not found'))
-    ) {
-      console.warn('Storage bucket not found, attempting to create bucket:', BUCKET_NAME);
-      try {
-        await supabase.storage.createBucket(BUCKET_NAME, { public: true });
-        const retryResult = await supabase.storage.from(BUCKET_NAME).upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-        uploadError = retryResult.error;
-      } catch (createErr) {
-        console.warn('Auto bucket creation skipped (requires SQL migration):', createErr);
-      }
-    }
 
     // 3. If upload succeeded, return public URL
     if (!uploadError) {
@@ -61,12 +97,17 @@ export async function uploadMenuImage(file: File): Promise<string> {
       return data.publicUrl;
     }
 
-    console.warn('Supabase storage upload failed, using Data URL fallback:', uploadError);
-    // Fallback: Use Base64 Data URL so the menu item is still saved with image
-    return await fileToBase64(file);
+    console.warn('Supabase storage upload failed, using compressed Data URL fallback:', uploadError);
+    // Fallback: Use compressed Data URL (small ~50KB) instead of multi-MB raw file
+    return dataUrl;
   } catch (err) {
-    console.warn('Falling back to Base64 image:', err);
-    return await fileToBase64(file);
+    console.warn('Compression or upload failed, attempting small thumbnail fallback:', err);
+    try {
+      const { dataUrl } = await compressImage(file, 400, 400, 0.6);
+      return dataUrl;
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -78,3 +119,4 @@ export async function uploadMenuImage(file: File): Promise<string> {
 export function createLocalPreviewUrl(file: File): string {
   return URL.createObjectURL(file);
 }
+

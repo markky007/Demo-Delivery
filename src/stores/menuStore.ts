@@ -169,6 +169,15 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  /** Optimistically update an item in local store */
+  function updateItemLocally(itemId: string, updates: Partial<MenuItem>) {
+    const idx = items.value.findIndex((i) => i.id === itemId);
+    if (idx !== -1 && items.value[idx]) {
+      items.value[idx] = { ...items.value[idx], ...updates };
+      invalidateItemCache(itemId);
+    }
+  }
+
   /** Invalidate item options cache (e.g., after owner edits menu) */
   function invalidateItemCache(itemId?: string) {
     if (itemId) {
@@ -195,6 +204,7 @@ export const useMenuStore = defineStore('menu', () => {
     fetchItems,
     fetchItemWithOptions,
     loadMenu,
+    updateItemLocally,
     invalidateItemCache,
   };
 });

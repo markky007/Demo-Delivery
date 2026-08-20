@@ -119,7 +119,13 @@
               <div class="row no-wrap items-start">
                 <!-- Item Thumbnail -->
                 <div class="item-thumb q-mr-md">
-                  <img v-if="item.image_url" :src="item.image_url" :alt="item.name" />
+                  <img
+                    v-if="item.image_url"
+                    :src="item.image_url"
+                    :alt="item.name"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <q-icon v-else name="restaurant" size="24px" color="grey-4" />
                 </div>
 
@@ -147,11 +153,11 @@
 
                   <!-- Option Groups preview tags on card -->
                   <div
-                    v-if="getItemOptionGroupNames(item.id).length > 0"
+                    v-if="(itemOptionGroupNamesMap[item.id] || []).length > 0"
                     class="item-opt-tags-wrap q-mt-xs"
                   >
                     <span
-                      v-for="gName in getItemOptionGroupNames(item.id)"
+                      v-for="gName in itemOptionGroupNamesMap[item.id]"
                       :key="gName"
                       class="item-opt-tag"
                     >
@@ -765,17 +771,34 @@ const categoryOptions = computed(() =>
   menuStore.categories.map((c) => ({ label: c.name, value: c.id })),
 );
 
+// Pre-computed category item counts for O(1) badge lookups
+const categoryItemCountMap = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {};
+  for (const item of menuStore.items) {
+    map[item.category_id] = (map[item.category_id] || 0) + 1;
+  }
+  return map;
+});
+
 function getItemCountByCategory(catId: string | null): number {
   if (!catId) return menuStore.items.length;
-  return menuStore.items.filter((i) => i.category_id === catId).length;
+  return categoryItemCountMap.value[catId] || 0;
 }
 
-function getItemOptionGroupNames(itemId: string): string[] {
-  const groupIds = itemOptionGroupMap.value[itemId] || [];
-  return groupIds
-    .map((gid) => allOptionGroups.value.find((g) => g.id === gid)?.name)
-    .filter((name): name is string => Boolean(name));
-}
+// Pre-computed item option group names lookup map for O(1) card rendering
+const itemOptionGroupNamesMap = computed<Record<string, string[]>>(() => {
+  const groupNameById = new Map<string, string>();
+  for (const g of allOptionGroups.value) {
+    groupNameById.set(g.id, g.name);
+  }
+  const result: Record<string, string[]> = {};
+  for (const [itemId, groupIds] of Object.entries(itemOptionGroupMap.value)) {
+    result[itemId] = groupIds
+      .map((gid) => groupNameById.get(gid))
+      .filter((name): name is string => Boolean(name));
+  }
+  return result;
+});
 
 function toggleOptionGroup(groupId: string) {
   const idx = selectedOptionGroupIds.value.indexOf(groupId);
@@ -791,7 +814,7 @@ async function loadOptionGroups() {
   try {
     const { data: groups, error: gErr } = await supabase
       .from('option_groups')
-      .select('*')
+      .select('*, options(*)')
       .order('sort_order');
 
     if (gErr || !groups) {
@@ -799,21 +822,9 @@ async function loadOptionGroups() {
       return;
     }
 
-    const groupIds = groups.map((g) => g.id);
-    if (groupIds.length === 0) {
-      allOptionGroups.value = [];
-      return;
-    }
-
-    const { data: optionsData } = await supabase
-      .from('options')
-      .select('*')
-      .in('option_group_id', groupIds)
-      .order('sort_order');
-
-    allOptionGroups.value = groups.map((g) => ({
+    allOptionGroups.value = groups.map((g: OptionGroup & { options?: Option[] }) => ({
       ...g,
-      options: (optionsData ?? []).filter((o) => o.option_group_id === g.id),
+      options: (g.options ?? []).sort((a, b) => a.sort_order - b.sort_order),
     }));
   } catch (err) {
     console.error('Failed to load option groups:', err);
@@ -870,10 +881,19 @@ const filteredItems = computed(() => {
   return list;
 });
 
-onMounted(async () => {
+async function loadRestaurantId() {
+  if (restaurantId) return;
   const { data } = await supabase.from('restaurants').select('id').limit(1).single();
   if (data) restaurantId = data.id;
-  await Promise.all([menuStore.loadMenu(true), loadOptionGroups(), loadItemOptionGroups()]);
+}
+
+onMounted(async () => {
+  await Promise.all([
+    loadRestaurantId(),
+    menuStore.loadMenu(true),
+    loadOptionGroups(),
+    loadItemOptionGroups(),
+  ]);
 });
 
 // Image Upload Helpers
@@ -1132,19 +1152,28 @@ function resetItemForm() {
 }
 
 async function toggleAvailability(item: MenuItem) {
+  const previousState = item.is_available;
+  const newState = !previousState;
+
+  // Optimistic UI update
+  menuStore.updateItemLocally(item.id, { is_available: newState });
+  notifySuccess(
+    `ปรับสถานะ "${item.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`,
+  );
+
   try {
-    await supabase
+    const { error } = await supabase
       .from('menu_items')
       .update({
-        is_available: !item.is_available,
+        is_available: newState,
         updated_at: new Date().toISOString(),
       })
       .eq('id', item.id);
-    await menuStore.loadMenu(true);
-    notifySuccess(
-      `ปรับสถานะ "${item.name}" เป็น ${item.is_available ? 'หมดชั่วคราว' : 'พร้อมขาย'} แล้ว`,
-    );
+
+    if (error) throw error;
   } catch (err) {
+    // Revert on failure
+    menuStore.updateItemLocally(item.id, { is_available: previousState });
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะได้');
   }
 }

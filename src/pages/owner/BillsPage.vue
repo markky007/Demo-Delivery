@@ -985,7 +985,7 @@ import type {
 const router = useRouter();
 const { notifySuccess, notifyInfo, notifyError } = useNotify();
 
-const viewMode = ref<'card' | 'floorplan'>('card');
+const viewMode = ref<'card' | 'floorplan'>('floorplan');
 
 const tables = ref<TableWithQR[]>([]);
 const activeSessions = ref<RawSession[]>([]);

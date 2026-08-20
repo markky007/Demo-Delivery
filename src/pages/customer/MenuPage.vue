@@ -6,6 +6,9 @@
     </div>
 
     <template v-else>
+      <!-- Hero Section: Random Menu Minigame -->
+      <RandomMenuGame v-if="!isSearching" />
+
       <!-- Sticky Category Pills + Search -->
       <div class="category-tabs-wrapper">
         <div class="category-pills-container">
@@ -125,6 +128,7 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { formatPrice } from 'src/utils/formatters';
 import EmptyState from 'src/components/EmptyState.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
+import RandomMenuGame from 'src/components/RandomMenuGame.vue';
 import type { MenuItem } from 'src/types/database';
 
 const router = useRouter();

@@ -1426,12 +1426,7 @@ function resetFilter() {
 
 function handleFilterChange(val: string) {
   selectedFilter.value = val as
-    | 'ALL'
-    | 'COOKING'
-    | 'READY_TO_PAY'
-    | 'PAID'
-    | 'SEATED_NO_ORDER'
-    | 'AVAILABLE';
+    'ALL' | 'COOKING' | 'READY_TO_PAY' | 'PAID' | 'SEATED_NO_ORDER' | 'AVAILABLE';
 }
 
 // Clear table prompt & action

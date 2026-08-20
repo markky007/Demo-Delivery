@@ -175,7 +175,9 @@
               <div class="row items-center justify-between no-wrap table-surface-footer">
                 <div v-if="item.session" class="table-amount-wrap">
                   <span class="currency">฿</span>
-                  <span class="amount-number">{{ formatPrice(item.totalAmount).replace('฿', '') }}</span>
+                  <span class="amount-number">{{
+                    formatPrice(item.totalAmount).replace('฿', '')
+                  }}</span>
                 </div>
                 <div v-else class="table-avail-prompt text-caption text-grey-6 font-size-11">
                   พร้อมรับลูกค้า

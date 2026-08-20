@@ -78,10 +78,16 @@
                   dense
                   class="q-mr-sm pointer-events-none"
                 />
-                <span class="option-name">{{ opt.name }}</span>
+                <span class="option-name" :class="{ 'text-grey-6': !opt.is_available }">
+                  {{ opt.name }}
+                </span>
+                <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm">
+                  หมด
+                </span>
               </div>
               <div class="option-price-adjust">
-                <span v-if="opt.price_adjustment > 0"
+                <span v-if="!opt.is_available" class="text-caption text-grey-5">หมดชั่วคราว</span>
+                <span v-else-if="opt.price_adjustment > 0"
                   >+{{ formatPrice(opt.price_adjustment) }}</span
                 >
                 <span v-else-if="opt.price_adjustment < 0">{{
@@ -121,10 +127,16 @@
                   dense
                   class="q-mr-sm pointer-events-none"
                 />
-                <span class="option-name">{{ opt.name }}</span>
+                <span class="option-name" :class="{ 'text-grey-6': !opt.is_available }">
+                  {{ opt.name }}
+                </span>
+                <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm">
+                  หมด
+                </span>
               </div>
               <div class="option-price-adjust">
-                <span v-if="opt.price_adjustment > 0"
+                <span v-if="!opt.is_available" class="text-caption text-grey-5">หมดชั่วคราว</span>
+                <span v-else-if="opt.price_adjustment > 0"
                   >+{{ formatPrice(opt.price_adjustment) }}</span
                 >
                 <span v-else-if="opt.price_adjustment < 0">{{
@@ -133,6 +145,15 @@
                 <span v-else class="text-grey-5">—</span>
               </div>
             </div>
+          </div>
+
+          <!-- Alert if all options in a required group are unavailable -->
+          <div
+            v-if="group.is_required && !group.options.some((o) => o.is_available)"
+            class="group-unavailable-alert q-mt-sm"
+          >
+            <q-icon name="error_outline" size="16px" class="q-mr-xs" />
+            <span>ตัวเลือกที่จำเป็นในกลุ่มนี้หมดชั่วคราว ไม่สามารถสั่งเมนูนี้ได้</span>
           </div>
         </div>
 
@@ -173,7 +194,9 @@
           @click="addToCart"
         >
           <div class="row items-center justify-between full-width q-px-sm">
-            <span class="text-weight-bold">เพิ่มลงตะกร้า</span>
+            <span class="text-weight-bold">{{
+              !item.is_available ? 'เมนูนี้หมดชั่วคราว' : 'เพิ่มลงตะกร้า'
+            }}</span>
             <span class="text-weight-bold">{{ formatPrice(itemTotal) }}</span>
           </div>
         </q-btn>
@@ -214,7 +237,7 @@ const multiSelectedOptions = reactive<Record<string, string[]>>({});
 
 onMounted(async () => {
   const itemId = route.params.itemId as string;
-  item.value = await menuStore.fetchItemWithOptions(itemId);
+  item.value = await menuStore.fetchItemWithOptions(itemId, true);
   isLoading.value = false;
 
   if (item.value) {
@@ -532,6 +555,28 @@ function addToCart() {
 .option-name {
   font-size: 0.92rem;
   color: var(--color-text-primary);
+}
+
+.opt-sold-out-chip {
+  background: var(--color-status-soldout-bg);
+  color: var(--color-status-soldout);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+}
+
+.group-unavailable-alert {
+  display: flex;
+  align-items: center;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .option-price-adjust {

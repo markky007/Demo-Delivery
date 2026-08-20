@@ -2,7 +2,7 @@
   <q-page class="menu-mgmt-page q-pa-md">
     <div class="menu-mgmt-container">
       <!-- Tabs Header -->
-      <div class="row items-center justify-between q-mb-lg">
+      <div class="row items-center justify-between q-mb-lg flex-wrap q-gutter-y-sm">
         <q-tabs
           v-model="activeTab"
           no-caps
@@ -12,6 +12,7 @@
           indicator-color="primary"
         >
           <q-tab name="items" label="รายการอาหาร" icon="restaurant_menu" />
+          <q-tab name="ingredients" label="จัดการวัตถุดิบ (สต็อก)" icon="inventory_2" />
           <q-tab name="categories" label="หมวดหมู่เมนู" icon="category" />
         </q-tabs>
 
@@ -27,7 +28,7 @@
           class="add-btn"
         />
         <q-btn
-          v-else
+          v-else-if="activeTab === 'categories'"
           color="primary"
           unelevated
           no-caps
@@ -133,13 +134,21 @@
                 <div class="col">
                   <div class="text-weight-bold item-title">{{ item.name }}</div>
                   <div class="item-price q-mt-xs">{{ formatPrice(item.base_price) }}</div>
-                  <div class="row items-center q-gutter-xs q-mt-xs">
+                  <div class="row items-center flex-wrap q-gutter-xs q-mt-xs">
                     <StatusBadge
                       :status="item.is_available ? 'ACTIVE' : 'SOLDOUT'"
                       mode="raw"
                       :custom-label="item.is_available ? 'พร้อมขาย' : 'หมดชั่วคราว'"
                     />
                     <q-badge v-if="!item.is_active" color="grey-5" label="ปิดการใช้งาน" />
+                    <q-badge
+                      color="blue-grey-1"
+                      text-color="blue-grey-9"
+                      class="text-weight-medium"
+                    >
+                      <q-icon :name="getIngredientIcon(getItemMainIngredient(item))" size="12px" class="q-mr-xs" />
+                      {{ getItemMainIngredient(item) }}
+                    </q-badge>
                     <q-badge
                       v-if="isItemFried(item)"
                       color="deep-orange-8"
@@ -211,7 +220,308 @@
         </template>
       </div>
 
-      <!-- 2. Categories Tab -->
+      <!-- 2. Ingredients Stock Management Tab -->
+      <div v-if="activeTab === 'ingredients'">
+        <!-- Stats Summary Bar -->
+        <div class="row q-col-gutter-md q-mb-lg">
+          <div class="col-12 col-sm-4">
+            <div class="ing-stat-card">
+              <div class="row items-center justify-between">
+                <div>
+                  <div class="text-caption text-grey-7">วัตถุดิบทั้งหมด</div>
+                  <div class="text-h5 text-weight-bold text-dark q-mt-xs">
+                    {{ ingredientStats.total }} <span class="text-caption text-weight-normal">ชนิด</span>
+                  </div>
+                </div>
+                <div class="ing-stat-icon-wrap bg-blue-1 text-primary">
+                  <q-icon name="inventory_2" size="24px" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <div class="ing-stat-card">
+              <div class="row items-center justify-between">
+                <div>
+                  <div class="text-caption text-grey-7">วัตถุดิบพร้อมขาย</div>
+                  <div class="text-h5 text-weight-bold text-positive q-mt-xs">
+                    {{ ingredientStats.available }} <span class="text-caption text-weight-normal">ชนิด</span>
+                  </div>
+                </div>
+                <div class="ing-stat-icon-wrap bg-green-1 text-positive">
+                  <q-icon name="check_circle" size="24px" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <div class="ing-stat-card">
+              <div class="row items-center justify-between">
+                <div>
+                  <div class="text-caption text-grey-7">วัตถุดิบที่หมด (ปิดเมนูอยู่)</div>
+                  <div class="text-h5 text-weight-bold text-negative q-mt-xs">
+                    {{ ingredientStats.soldOut }} <span class="text-caption text-weight-normal">ชนิด</span>
+                  </div>
+                </div>
+                <div class="ing-stat-icon-wrap bg-red-1 text-negative">
+                  <q-icon name="block" size="24px" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar Section -->
+        <div class="filter-card q-mb-lg q-pa-md">
+          <div class="row items-center justify-between q-col-gutter-md">
+            <!-- Filter Status Pills -->
+            <div class="col-12 col-md-7">
+              <div class="category-pills-scroll">
+                <button
+                  type="button"
+                  class="cat-filter-pill"
+                  :class="{ 'cat-filter-pill--active': filterIngredientStatus === 'all' }"
+                  @click="filterIngredientStatus = 'all'"
+                >
+                  <q-icon name="apps" size="16px" class="q-mr-xs" />
+                  <span>วัตถุดิบทั้งหมด</span>
+                  <span class="cat-count-badge">{{ ingredientGroups.length }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="cat-filter-pill"
+                  :class="{ 'cat-filter-pill--active': filterIngredientStatus === 'soldout' }"
+                  @click="filterIngredientStatus = 'soldout'"
+                >
+                  <q-icon name="block" size="16px" class="q-mr-xs text-negative" />
+                  <span>มีเมนูหมด</span>
+                  <span class="cat-count-badge">{{ ingredientStats.soldOut }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="cat-filter-pill"
+                  :class="{ 'cat-filter-pill--active': filterIngredientStatus === 'available' }"
+                  @click="filterIngredientStatus = 'available'"
+                >
+                  <q-icon name="check_circle" size="16px" class="q-mr-xs text-positive" />
+                  <span>พร้อมขายครบ</span>
+                  <span class="cat-count-badge">{{ ingredientStats.available }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search input -->
+            <div class="col-12 col-md-5">
+              <q-input
+                v-model="searchIngredientQuery"
+                outlined
+                dense
+                placeholder="ค้นหาชื่อวัตถุดิบ หรือ ชื่อเมนูอาหาร..."
+                class="search-input-box"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" size="18px" color="grey-6" />
+                </template>
+              </q-input>
+            </div>
+          </div>
+
+          <!-- Filter Meta Info -->
+          <div class="row items-center justify-between q-mt-sm text-caption text-grey-7 q-px-xs">
+            <span>
+              แสดง <strong>{{ filteredIngredientGroups.length }}</strong> จาก {{ ingredientGroups.length }} กลุ่มวัตถุดิบ
+            </span>
+            <span
+              v-if="filterIngredientStatus !== 'all' || searchIngredientQuery"
+              class="clear-filter-link cursor-pointer text-weight-medium"
+              @click="clearIngredientFilters"
+            >
+              ล้างการกรอง
+            </span>
+          </div>
+        </div>
+
+        <!-- Loading Skeleton -->
+        <div v-if="menuStore.isLoading" class="q-mb-lg">
+          <LoadingSkeleton type="list" :count="4" />
+        </div>
+
+        <div
+          v-else-if="filteredIngredientGroups.length === 0"
+          class="text-center q-pa-xl text-grey-6 empty-search-card"
+        >
+          <q-icon name="search_off" size="48px" color="grey-4" class="q-mb-xs" />
+          <div class="text-weight-bold text-subtitle1">ไม่พบวัตถุดิบหรือรายการอาหารที่ค้นหา</div>
+          <div class="text-caption text-grey-6 q-mt-xs">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</div>
+        </div>
+
+        <!-- Ingredient Groups List -->
+        <div v-else class="ingredients-list q-gutter-y-md">
+          <div
+            v-for="grp in filteredIngredientGroups"
+            :key="grp.name"
+            class="ingredient-card"
+            :class="{
+              'ingredient-card--soldout': grp.isAllSoldOut,
+              'ingredient-card--partial': !grp.isAllSoldOut && grp.soldOutCount > 0,
+            }"
+          >
+            <!-- Card Header -->
+            <div class="row items-center justify-between q-pa-md ingredient-card-header">
+              <!-- Left Info -->
+              <div class="row items-center no-wrap col q-mr-md">
+                <div
+                  class="ingredient-icon-circle q-mr-md"
+                  :class="grp.isAllSoldOut ? 'bg-red-1 text-negative' : 'bg-orange-1 text-primary'"
+                >
+                  <q-icon :name="grp.icon" size="22px" />
+                </div>
+                <div class="col ellipsis">
+                  <div class="row items-center flex-wrap q-gutter-xs">
+                    <span class="text-weight-bold text-subtitle1 ingredient-name-text">{{ grp.name }}</span>
+                    
+                    <span
+                      class="ingredient-status-pill"
+                      :class="{
+                        'pill--soldout': grp.isAllSoldOut,
+                        'pill--available': grp.isAllAvailable,
+                        'pill--partial': !grp.isAllSoldOut && !grp.isAllAvailable,
+                      }"
+                    >
+                      <q-icon
+                        :name="grp.isAllSoldOut ? 'block' : grp.isAllAvailable ? 'check_circle' : 'warning'"
+                        size="13px"
+                        class="q-mr-xs"
+                      />
+                      <span>
+                        {{
+                          grp.isAllSoldOut
+                            ? 'หมดทุกเมนู'
+                            : grp.isAllAvailable
+                              ? 'พร้อมขายทุกเมนู'
+                              : `มีเมนูหมด (${grp.soldOutCount}/${grp.totalCount})`
+                        }}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="text-caption text-grey-7 q-mt-xs">
+                    มี <strong>{{ grp.totalCount }}</strong> เมนูอาหารที่ใช้วัตถุดิบนี้ (พร้อมขาย {{ grp.availableCount }} / หมด {{ grp.soldOutCount }})
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Master Toggle & Accordion Button -->
+              <div class="row items-center q-gutter-sm flex-shrink-0">
+                <!-- Master Toggle Button for all items in this ingredient -->
+                <q-btn
+                  v-if="!grp.isAllSoldOut"
+                  unelevated
+                  no-caps
+                  color="red-1"
+                  text-color="negative"
+                  icon="block"
+                  :label="`ปรับเป็นหมด (${grp.availableCount} เมนู)`"
+                  class="master-stock-toggle-btn"
+                  @click="toggleIngredientStock(grp, false)"
+                  :loading="isIngredientUpdating === grp.name"
+                >
+                  <q-tooltip>ปิดการขายทุกเมนูที่ใช้วัตถุดิบ {{ grp.name }}</q-tooltip>
+                </q-btn>
+                <q-btn
+                  v-else
+                  unelevated
+                  no-caps
+                  color="green-1"
+                  text-color="positive"
+                  icon="check_circle"
+                  :label="`เปิดขายทุกเมนู (${grp.totalCount} เมนู)`"
+                  class="master-stock-toggle-btn"
+                  @click="toggleIngredientStock(grp, true)"
+                  :loading="isIngredientUpdating === grp.name"
+                >
+                  <q-tooltip>เปิดขายทุกเมนูที่ใช้วัตถุดิบ {{ grp.name }}</q-tooltip>
+                </q-btn>
+
+                <!-- Toggle Dropdown Arrow -->
+                <q-btn
+                  flat
+                  dense
+                  round
+                  :icon="expandedIngredients[grp.name] ? 'expand_less' : 'expand_more'"
+                  color="grey-7"
+                  @click="expandedIngredients[grp.name] = !expandedIngredients[grp.name]"
+                  aria-label="ดูรายการเมนู"
+                />
+              </div>
+            </div>
+
+            <!-- Expandable Nested Dishes Sub-list -->
+            <q-slide-transition>
+              <div v-show="expandedIngredients[grp.name]" class="ingredient-dishes-panel q-pa-md">
+                <div class="row items-center justify-between q-mb-sm">
+                  <div class="text-caption text-weight-bold text-grey-8">
+                    รายชื่อเมนูอาหารที่ใช้วัตถุดิบ "{{ grp.name }}":
+                  </div>
+                  <div class="text-caption text-grey-6">
+                    คลิกสลับสถานะทีละเมนูได้
+                  </div>
+                </div>
+
+                <div class="dishes-subgrid">
+                  <div
+                    v-for="item in grp.items"
+                    :key="item.id"
+                    class="subdish-card"
+                    :class="{ 'subdish-card--soldout': !item.is_available }"
+                  >
+                    <div class="row items-center justify-between no-wrap">
+                      <div class="row items-center no-wrap col q-mr-sm">
+                        <div class="subdish-thumb q-mr-sm">
+                          <img v-if="item.image_url" :src="item.image_url" :alt="item.name" />
+                          <q-icon v-else name="restaurant" size="18px" color="grey-4" />
+                        </div>
+                        <div class="col ellipsis">
+                          <div class="text-weight-bold text-body2 subdish-name ellipsis">{{ item.name }}</div>
+                          <div class="row items-center q-gutter-xs q-mt-xs">
+                            <span class="text-caption text-primary text-weight-bold">
+                              {{ formatPrice(item.base_price) }}
+                            </span>
+                            <StatusBadge
+                              :status="item.is_available ? 'ACTIVE' : 'SOLDOUT'"
+                              mode="raw"
+                              :custom-label="item.is_available ? 'พร้อมขาย' : 'หมด'"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <q-btn
+                        unelevated
+                        no-caps
+                        dense
+                        size="sm"
+                        :color="item.is_available ? 'red-1' : 'green-1'"
+                        :text-color="item.is_available ? 'negative' : 'positive'"
+                        :icon="item.is_available ? 'block' : 'check_circle'"
+                        :label="item.is_available ? 'ปรับเป็นหมด' : 'เปิดขาย'"
+                        class="quick-toggle-btn"
+                        @click="toggleAvailability(item)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </q-slide-transition>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Categories Tab -->
       <div v-if="activeTab === 'categories'">
         <!-- Loading Skeleton -->
         <div v-if="menuStore.isLoading" class="q-mb-lg">
@@ -290,7 +600,7 @@
         </q-card>
       </q-dialog>
 
-      <!-- Menu Item Modal Dialog (With Image Upload) -->
+      <!-- Menu Item Modal Dialog (With Image Upload & Main Ingredient) -->
       <q-dialog v-model="showItemDialog" full-width>
         <q-card style="max-width: 600px" class="q-pa-sm">
           <q-card-section>
@@ -396,15 +706,28 @@
                 />
               </div>
               <div class="col-12 col-sm-6">
-                <div class="field-label q-mb-xs">ราคาฐาน (บาท)</div>
-                <q-input
-                  v-model.number="itemForm.base_price"
+                <div class="field-label q-mb-xs">วัตถุดิบหลัก (Main Ingredient)</div>
+                <q-select
+                  v-model="itemForm.main_ingredient"
+                  :options="ingredientSelectOptions"
                   outlined
-                  type="number"
-                  min="0"
-                  placeholder="60"
+                  use-input
+                  new-value-mode="add-unique"
+                  placeholder="เช่น ไก่ทอด, หมูกรอบ, กุ้ง"
+                  clearable
                 />
               </div>
+            </div>
+
+            <div>
+              <div class="field-label q-mb-xs">ราคาฐาน (บาท)</div>
+              <q-input
+                v-model.number="itemForm.base_price"
+                outlined
+                type="number"
+                min="0"
+                placeholder="60"
+              />
             </div>
 
             <div>
@@ -545,7 +868,7 @@
                   no-caps
                   color="primary"
                   icon="open_in_new"
-                  label="จัดการตัวเลือก"
+                  label="จัดการตัวเลือกเสริม"
                   size="sm"
                   to="/owner/options"
                   class="manage-options-link"
@@ -683,6 +1006,11 @@ import { supabase } from 'src/services/supabase';
 import { uploadMenuImage, createLocalPreviewUrl } from 'src/services/storageService';
 import { formatPrice } from 'src/utils/formatters';
 import { inferFryConfigFromName } from 'src/utils/fryHelper';
+import {
+  STANDARD_INGREDIENTS,
+  inferMainIngredient,
+  getIngredientIcon,
+} from 'src/utils/ingredientHelper';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { MenuCategory, MenuItem, OptionGroup, Option, FryConfig } from 'src/types/database';
@@ -703,6 +1031,14 @@ const isSaving = ref(false);
 const isUploading = ref(false);
 const editingCategory = ref<MenuCategory | null>(null);
 const editingItem = ref<MenuItem | null>(null);
+
+// Ingredients Stock Management State
+const searchIngredientQuery = ref('');
+const filterIngredientStatus = ref<'all' | 'soldout' | 'available'>('all');
+const isIngredientUpdating = ref<string | null>(null);
+const expandedIngredients = reactive<Record<string, boolean>>({});
+
+const ingredientSelectOptions = STANDARD_INGREDIENTS.map((i) => i.name);
 
 // Option Groups State
 const allOptionGroups = ref<OptionGroupWithSubOptions[]>([]);
@@ -738,9 +1074,14 @@ const itemForm = reactive({
   base_price: 0,
   image_url: '',
   category_id: '',
+  main_ingredient: '',
   is_active: true,
   is_available: true,
 });
+
+function getItemMainIngredient(item: MenuItem): string {
+  return inferMainIngredient(item.name, item.main_ingredient);
+}
 
 function isItemFried(item: MenuItem): boolean {
   if (item.fry_config && typeof item.fry_config.is_fried === 'boolean') {
@@ -881,6 +1222,117 @@ const filteredItems = computed(() => {
   return list;
 });
 
+// ─── Ingredients Tab Computations & Actions ─────────────────────────
+
+const ingredientGroups = computed(() => {
+  const groupsMap: Record<string, MenuItem[]> = {};
+
+  for (const item of menuStore.items) {
+    const ing = getItemMainIngredient(item);
+    if (!groupsMap[ing]) {
+      groupsMap[ing] = [];
+    }
+    groupsMap[ing].push(item);
+  }
+
+  const list = Object.entries(groupsMap).map(([name, items]) => {
+    const totalCount = items.length;
+    const availableCount = items.filter((i) => i.is_available).length;
+    const soldOutCount = totalCount - availableCount;
+    return {
+      name,
+      icon: getIngredientIcon(name),
+      items: items.sort((a, b) => a.name.localeCompare(b.name, 'th')),
+      totalCount,
+      availableCount,
+      soldOutCount,
+      isAllSoldOut: availableCount === 0,
+      isAllAvailable: availableCount === totalCount,
+    };
+  });
+
+  return list.sort((a, b) => {
+    if (a.soldOutCount > 0 && b.soldOutCount === 0) return -1;
+    if (a.soldOutCount === 0 && b.soldOutCount > 0) return 1;
+    return b.totalCount - a.totalCount;
+  });
+});
+
+const ingredientStats = computed(() => {
+  const total = ingredientGroups.value.length;
+  const soldOut = ingredientGroups.value.filter((g) => g.soldOutCount > 0).length;
+  const available = total - soldOut;
+  return { total, soldOut, available };
+});
+
+const filteredIngredientGroups = computed(() => {
+  let list = ingredientGroups.value;
+
+  if (filterIngredientStatus.value === 'soldout') {
+    list = list.filter((g) => g.soldOutCount > 0);
+  } else if (filterIngredientStatus.value === 'available') {
+    list = list.filter((g) => g.isAllAvailable);
+  }
+
+  if (searchIngredientQuery.value.trim()) {
+    const q = searchIngredientQuery.value.trim().toLowerCase();
+    list = list
+      .map((g) => {
+        const matchesGroupName = g.name.toLowerCase().includes(q);
+        const matchingDishes = g.items.filter((i) => i.name.toLowerCase().includes(q));
+        if (matchesGroupName) return g;
+        if (matchingDishes.length > 0) {
+          return {
+            ...g,
+            items: matchingDishes,
+          };
+        }
+        return null;
+      })
+      .filter((g): g is NonNullable<typeof g> => g !== null);
+  }
+
+  return list;
+});
+
+function clearIngredientFilters() {
+  filterIngredientStatus.value = 'all';
+  searchIngredientQuery.value = '';
+}
+
+async function toggleIngredientStock(
+  grp: { name: string; items: MenuItem[] },
+  targetAvailable: boolean,
+) {
+  isIngredientUpdating.value = grp.name;
+  const itemIds = grp.items.map((i) => i.id);
+
+  // Optimistic UI update in menuStore
+  menuStore.updateMultipleItemsLocally(itemIds, { is_available: targetAvailable });
+  notifySuccess(
+    `ปรับวัตถุดิบ "${grp.name}" (${itemIds.length} เมนู) เป็น ${
+      targetAvailable ? 'เปิดขาย' : 'หมดชั่วคราว'
+    } แล้ว`,
+  );
+
+  try {
+    const { error } = await supabase
+      .from('menu_items')
+      .update({
+        is_available: targetAvailable,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', itemIds);
+
+    if (error) throw error;
+  } catch (err) {
+    await menuStore.loadMenu(true);
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะวัตถุดิบได้');
+  } finally {
+    isIngredientUpdating.value = null;
+  }
+}
+
 async function loadRestaurantId() {
   if (restaurantId) return;
   const { data } = await supabase.from('restaurants').select('id').limit(1).single();
@@ -1000,6 +1452,7 @@ function editItem(item: MenuItem) {
   itemForm.base_price = item.base_price;
   itemForm.image_url = item.image_url ?? '';
   itemForm.category_id = item.category_id;
+  itemForm.main_ingredient = item.main_ingredient ?? inferMainIngredient(item.name);
   itemForm.is_active = item.is_active;
   itemForm.is_available = item.is_available;
 
@@ -1071,12 +1524,16 @@ async function saveItem() {
       unit: itemFryConfig.unit || 'ออเดอร์',
     };
 
+    const detectedIngredient =
+      itemForm.main_ingredient?.trim() || inferMainIngredient(itemForm.name);
+
     const payload: Record<string, unknown> = {
       name: itemForm.name.trim(),
       description: itemForm.description || null,
       base_price: itemForm.base_price,
       image_url: itemForm.image_url || null,
       category_id: itemForm.category_id,
+      main_ingredient: detectedIngredient,
       is_active: itemForm.is_active,
       is_available: itemForm.is_available,
       fry_config: itemFryConfig.is_fried ? fryConfigPayload : { is_fried: false },
@@ -1102,10 +1559,8 @@ async function saveItem() {
 
     // Sync menu_item_option_groups
     if (targetItemId) {
-      // 1. Remove existing linked option groups for this menu item
       await supabase.from('menu_item_option_groups').delete().eq('menu_item_id', targetItemId);
 
-      // 2. Insert newly selected option groups
       if (selectedOptionGroupIds.value.length > 0) {
         const rowsToInsert = selectedOptionGroupIds.value.map((groupId, index) => ({
           menu_item_id: targetItemId,
@@ -1138,6 +1593,7 @@ function resetItemForm() {
   itemForm.base_price = 0;
   itemForm.image_url = '';
   itemForm.category_id = '';
+  itemForm.main_ingredient = '';
   itemForm.is_active = true;
   itemForm.is_available = true;
   itemFryConfig.is_fried = false;
@@ -1170,7 +1626,6 @@ async function toggleAvailability(item: MenuItem) {
 
     if (error) throw error;
   } catch (err) {
-    // Revert on failure
     menuStore.updateItemLocally(item.id, { is_available: previousState });
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะได้');
   }
@@ -1351,13 +1806,39 @@ async function toggleAvailability(item: MenuItem) {
   border: 1px solid var(--color-border);
 }
 
-/* Category cards */
+/* Category Item Card */
 .category-item-card {
   background: #ffffff;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
   padding: 14px 18px;
+  border: 1px solid var(--color-border);
   box-shadow: var(--shadow-subtle);
+}
+
+/* Fry Settings Box */
+.fry-settings-box {
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: var(--radius-md);
+}
+
+.fry-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fry-indicator-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.fry-details-content {
+  border-top: 1px dashed #fdba74;
 }
 
 .field-label {
@@ -1509,5 +1990,152 @@ async function toggleAvailability(item: MenuItem) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   padding: 1px 6px;
+}
+
+/* ─── Ingredients Tab Specific Styles ───────────────────────── */
+.ing-stat-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
+}
+
+.ing-stat-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ingredient-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s ease;
+}
+
+.ingredient-card:hover {
+  box-shadow: var(--shadow-card);
+}
+
+.ingredient-card--soldout {
+  border-color: #fecaca;
+  background: #fffafa;
+}
+
+.ingredient-card--partial {
+  border-color: #fed7aa;
+}
+
+.ingredient-card-header {
+  background: #ffffff;
+}
+
+.ingredient-card--soldout .ingredient-card-header {
+  background: #fff5f5;
+}
+
+.ingredient-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ingredient-name-text {
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+}
+
+.ingredient-status-pill {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+}
+
+.pill--soldout {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.pill--available {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.pill--partial {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.master-stock-toggle-btn {
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+}
+
+.ingredient-dishes-panel {
+  background: var(--color-surface-subtle);
+  border-top: 1px solid var(--color-border);
+}
+
+.dishes-subgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.subdish-card {
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.subdish-card:hover {
+  border-color: var(--color-border-hover, #cbd5e1);
+}
+
+.subdish-card--soldout {
+  opacity: 0.75;
+  background: #fdf2f2;
+  border-color: #fecaca;
+}
+
+.subdish-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.subdish-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.subdish-name {
+  color: var(--color-text-primary);
+  line-height: 1.2;
 }
 </style>

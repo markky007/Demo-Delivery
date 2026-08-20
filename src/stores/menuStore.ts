@@ -181,6 +181,13 @@ export const useMenuStore = defineStore('menu', () => {
     }
   }
 
+  /** Optimistically update multiple items in local store */
+  function updateMultipleItemsLocally(itemIds: string[], updates: Partial<MenuItem>) {
+    const idSet = new Set(itemIds);
+    items.value = items.value.map((i) => (idSet.has(i.id) ? { ...i, ...updates } : i));
+    invalidateItemCache();
+  }
+
   /** Invalidate item options cache (e.g., after owner edits menu) */
   function invalidateItemCache(itemId?: string) {
     if (itemId) {
@@ -208,6 +215,7 @@ export const useMenuStore = defineStore('menu', () => {
     fetchItemWithOptions,
     loadMenu,
     updateItemLocally,
+    updateMultipleItemsLocally,
     invalidateItemCache,
   };
 });

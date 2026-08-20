@@ -92,6 +92,7 @@ export interface MenuItem {
   is_active: boolean;
   is_available: boolean;
   sort_order: number;
+  main_ingredient?: string | null;
   fry_config?: FryConfig | null;
   created_at: string;
   updated_at: string;

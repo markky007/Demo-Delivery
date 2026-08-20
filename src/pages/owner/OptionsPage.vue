@@ -126,6 +126,20 @@
                       :custom-label="opt.is_available ? 'พร้อมขาย' : 'หมด'"
                     />
 
+                    <!-- Quick Availability Toggle Button -->
+                    <q-btn
+                      unelevated
+                      no-caps
+                      dense
+                      size="sm"
+                      :color="opt.is_available ? 'red-1' : 'green-1'"
+                      :text-color="opt.is_available ? 'negative' : 'positive'"
+                      :icon="opt.is_available ? 'block' : 'check_circle'"
+                      :label="opt.is_available ? 'ปรับเป็นหมด' : 'เปิดขาย'"
+                      class="quick-toggle-btn"
+                      @click.stop="toggleOptionAvailability(opt)"
+                    />
+
                     <q-btn
                       flat
                       dense
@@ -273,6 +287,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useNotify } from 'src/composables/useNotify';
+import { useMenuStore } from 'src/stores/menuStore';
 import { supabase } from 'src/services/supabase';
 import { formatPrice } from 'src/utils/formatters';
 import StatusBadge from 'src/components/StatusBadge.vue';
@@ -280,6 +295,7 @@ import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { OptionGroup, Option } from 'src/types/database';
 import { inferFryConfigFromName } from 'src/utils/fryHelper';
 
+const menuStore = useMenuStore();
 const { notifySuccess, notifyError } = useNotify();
 
 function isOptionFried(opt: Option): boolean {
@@ -426,11 +442,38 @@ async function saveOption() {
     }
     showOptionDialog.value = false;
     await loadData();
+    menuStore.invalidateItemCache();
     notifySuccess('บันทึกตัวเลือกเรียบร้อยแล้ว');
   } catch (err) {
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกตัวเลือกได้');
   } finally {
     isSaving.value = false;
+  }
+}
+
+async function toggleOptionAvailability(opt: Option) {
+  const previousState = opt.is_available;
+  const newState = !previousState;
+
+  // Optimistic update
+  opt.is_available = newState;
+  menuStore.invalidateItemCache();
+  notifySuccess(`ปรับสถานะ "${opt.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`);
+
+  try {
+    const { error } = await supabase
+      .from('options')
+      .update({
+        is_available: newState,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', opt.id);
+
+    if (error) throw error;
+  } catch (err) {
+    opt.is_available = previousState;
+    menuStore.invalidateItemCache();
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะได้');
   }
 }
 </script>

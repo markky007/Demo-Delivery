@@ -57,20 +57,95 @@ export function isFriedRiceItem(dishName: string, categoryName?: string | null):
 }
 
 /**
- * Check if the dish/category is explicitly a non-rice dish (e.g. noodles, drinks, desserts, appetizers)
+ * Check if the dish/category is explicitly a non-rice dish (e.g. soup/yam, noodles/pad see ew, drinks, desserts, appetizers)
+ * Rule: All categories require rice EXCEPT "ยำ/ต้ม" and "ผัดซีอิ้ว" (plus drinks/desserts/appetizers).
  */
-function isExcludedFromRice(dishName: string, categoryName?: string | null): boolean {
+export function isExcludedFromRice(dishName: string, categoryName?: string | null): boolean {
   const cleanDish = dishName.toLowerCase().trim();
   const cleanCat = (categoryName || '').toLowerCase().trim();
 
-  // Noodle categories / keywords
+  // 1. หมวดหมู่ ยำ/ต้ม (Soup / Tom Yum / Yam / Salads / Curries soup)
+  const soupAndYamCatKeywords = [
+    'ยำ/ต้ม',
+    'ต้ม/ยำ',
+    'ยำ / ต้ม',
+    'ต้ม / ยำ',
+    'ยำ',
+    'ต้ม',
+    'ต้มยำ',
+    'แกงจืด',
+    'ต้มจืด',
+    'ต้มแซ่บ',
+    'ต้มข่า',
+    'แกงส้ม',
+    'แกงเลียง',
+    'แกงป่า',
+    'ซุป',
+    'soup',
+    'tom yum',
+    'salad',
+    'yum',
+  ];
+
+  for (const kw of soupAndYamCatKeywords) {
+    if (cleanCat.includes(kw)) {
+      // If category is soup/yam and dish is not explicitly a rice dish (e.g. ข้าวผัด, ราดข้าว)
+      if (
+        !cleanDish.includes('ข้าวผัด') &&
+        !cleanDish.includes('ราดข้าว') &&
+        !cleanDish.includes('ข้าวหน้า') &&
+        !cleanDish.includes('ข้าวสวย')
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check if dish itself is clearly a soup or yum dish without rice
+  const soupAndYamDishKeywords = [
+    'ต้มยำ',
+    'แกงจืด',
+    'ต้มจืด',
+    'ต้มแซ่บ',
+    'ต้มข่า',
+    'แกงส้ม',
+    'แกงเลียง',
+    'ยำวุ้นเส้น',
+    'ยำมาม่า',
+    'ยำรวมมิตร',
+    'ยำหมูยอ',
+    'ยำไข่ดาว',
+    'ยำกุนเชียง',
+    'ยำเล็บมือนาง',
+    'ยำแซลมอน',
+    'ยำกุ้งสด',
+    'ยำปูม้า',
+    'ยำหอยแครง',
+  ];
+  for (const kw of soupAndYamDishKeywords) {
+    if (cleanDish.includes(kw)) {
+      if (
+        !cleanDish.includes('ราดข้าว') &&
+        !cleanDish.includes('ข้าวผัด') &&
+        !cleanDish.includes('ข้าวหน้า') &&
+        !cleanDish.includes('ข้าวสวย')
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // 2. หมวดหมู่ ผัดซีอิ้ว / ผัดซีอิ๊ว / เส้น / Noodles
   const noodleKeywords = [
+    'ผัดซีอิ้ว',
+    'ผัดซีอิ๊ว',
     'ก๋วยเตี๋ยว',
     'ผัดไทย',
     'ราดหน้า',
-    'ผัดซีอิ๊ว',
     'บะหมี่',
     'เส้นหมี่',
+    'เส้นใหญ่',
+    'เส้นเล็ก',
     'วุ้นเส้น',
     'สุกี้',
     'มาม่า',
@@ -78,25 +153,29 @@ function isExcludedFromRice(dishName: string, categoryName?: string | null): boo
     'พาสต้า',
     'สปาเก็ตตี้',
     'อุด้ง',
+    'กวยจั๊บ',
     'noodle',
     'noodles',
     'pad thai',
+    'pad see ew',
   ];
 
   for (const kw of noodleKeywords) {
     if (cleanCat.includes(kw) || cleanDish.includes(kw)) {
       // If dish contains noodles and not explicitly "ข้าว"
-      if (!cleanDish.includes('ข้าว')) {
+      if (!cleanDish.includes('ข้าว') && !cleanDish.includes('rice')) {
         return true;
       }
     }
   }
 
-  // Drinks / Desserts / Snacks
+  // 3. Drinks / Desserts / Snacks
   const excludedCategoryKeywords = [
     'เครื่องดื่ม',
     'drinks',
+    'drink',
     'beverage',
+    'beverages',
     'ขนม',
     'dessert',
     'desserts',
@@ -106,7 +185,7 @@ function isExcludedFromRice(dishName: string, categoryName?: string | null): boo
   ];
 
   for (const kw of excludedCategoryKeywords) {
-    if (cleanCat.includes(kw)) {
+    if (cleanCat.includes(kw) || cleanDish.includes(kw)) {
       // If category is drink/dessert and dish doesn't explicitly ask for rice
       if (!cleanDish.includes('ข้าวเหนียว') && !cleanDish.includes('ข้าว')) {
         return true;
@@ -114,23 +193,26 @@ function isExcludedFromRice(dishName: string, categoryName?: string | null): boo
     }
   }
 
-  // Appetizers / ของทานเล่น (without rice in name)
+  // 4. Appetizers / ของทานเล่น (without rice in name)
   if (
     cleanCat.includes('appetizer') ||
     cleanCat.includes('ของทานเล่น') ||
-    cleanCat.includes('ทานเล่น')
+    cleanCat.includes('ทานเล่น') ||
+    cleanCat.includes('snack') ||
+    cleanCat.includes('snacks')
   ) {
     if (!cleanDish.includes('ข้าว')) {
       return true;
     }
   }
 
-  // Items with "ข้าวโพด" (corn) or "ข้าวเกรียบ" that aren't rice dishes
+  // 5. Items with "ข้าวโพด" (corn) or "ข้าวเกรียบ" that aren't rice dishes
   if (
     (cleanDish.includes('ข้าวโพด') || cleanDish.includes('ข้าวเกรียบ')) &&
     !cleanDish.includes('ข้าวผัด') &&
     !cleanDish.includes('ราดข้าว') &&
-    !cleanDish.includes('ข้าวหน้า')
+    !cleanDish.includes('ข้าวหน้า') &&
+    !cleanDish.includes('ข้าวสวย')
   ) {
     return true;
   }
@@ -139,35 +221,16 @@ function isExcludedFromRice(dishName: string, categoryName?: string | null): boo
 }
 
 /**
- * Check if an item represents a rice-based dish
+ * Check if an item represents a rice-based dish.
+ * All categories/dishes require rice EXCEPT the excluded ones (ยำ/ต้ม, ผัดซีอิ้ว/เส้น, เครื่องดื่ม, ของหวาน/ของทานเล่น).
  */
 export function isRiceDishItem(dishName: string, categoryName?: string | null): boolean {
   if (isExcludedFromRice(dishName, categoryName)) {
     return false;
   }
 
-  const cleanDish = dishName.toLowerCase().trim();
-  const cleanCat = (categoryName || '').toLowerCase().trim();
-
-  // If dish explicitly contains "ข้าว"
-  if (cleanDish.includes('ข้าว') || cleanDish.includes('rice')) {
-    return true;
-  }
-
-  // If category is Single Dish / Rice Dish / Main Courses
-  if (
-    cleanCat.includes('อาหารจานเดียว') ||
-    cleanCat.includes('จานเดียว') ||
-    cleanCat.includes('ราดข้าว') ||
-    cleanCat.includes('เมนูข้าว') ||
-    cleanCat.includes('ข้าวผัด') ||
-    cleanCat.includes('main course') ||
-    cleanCat.includes('main courses')
-  ) {
-    return true;
-  }
-
-  return false;
+  // All other categories and dishes require rice by default
+  return true;
 }
 
 /**

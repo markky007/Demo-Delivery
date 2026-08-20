@@ -24,9 +24,12 @@ export const useMenuStore = defineStore('menu', () => {
     categories.value.filter((c) => c.is_active).sort((a, b) => a.sort_order - b.sort_order),
   );
 
-  const activeItems = computed(() =>
-    items.value.filter((i) => i.is_active).sort((a, b) => a.sort_order - b.sort_order),
-  );
+  const activeItems = computed(() => {
+    const activeCategoryIds = new Set(activeCategories.value.map((c) => c.id));
+    return items.value
+      .filter((i) => i.is_active && activeCategoryIds.has(i.category_id))
+      .sort((a, b) => a.sort_order - b.sort_order);
+  });
 
   /** Pre-computed Map for O(1) category lookups instead of filtering per call */
   const itemsByCategoryMap = computed(() => {

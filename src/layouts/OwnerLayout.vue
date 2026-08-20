@@ -143,6 +143,7 @@ let timeInterval: ReturnType<typeof setInterval>;
 const navItems = [
   { label: 'ภาพรวมร้านค้า', icon: 'dashboard', route: '/owner/dashboard' },
   { label: 'คิวออเดอร์', icon: 'soup_kitchen', route: '/owner/queue' },
+  { label: 'จัดการออเดอร์', icon: 'assignment', route: '/owner/orders' },
   { label: 'จัดการโต๊ะและ QR', icon: 'table_restaurant', route: '/owner/tables' },
   { label: 'จัดการเมนูอาหาร', icon: 'restaurant_menu', route: '/owner/menu' },
   { label: 'ตัวเลือกเสริม', icon: 'tune', route: '/owner/options' },

@@ -294,3 +294,22 @@ export async function transferTableSession(
     targetTableName: targetTable.name,
   };
 }
+
+/**
+ * Completely delete a table session and all associated orders, bills, items.
+ */
+export async function deleteTableSession(sessionId: string): Promise<void> {
+  const { error: rpcErr } = await supabase.rpc('delete_table_session_cascade', {
+    p_session_id: sessionId,
+  });
+
+  if (!rpcErr) return;
+
+  // Fallback direct delete
+  const { error } = await supabase
+    .from('table_sessions')
+    .delete()
+    .eq('id', sessionId);
+
+  if (error) throw new Error(error.message);
+}

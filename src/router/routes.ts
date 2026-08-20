@@ -80,6 +80,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'คิวออเดอร์' },
       },
       {
+        path: 'orders',
+        name: 'owner-orders',
+        component: () => import('@/pages/owner/OrderManagementPage.vue'),
+        meta: { title: 'จัดการออเดอร์' },
+      },
+      {
         path: 'tables',
         name: 'owner-tables',
         component: () => import('@/pages/owner/TablesPage.vue'),

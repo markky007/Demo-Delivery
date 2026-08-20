@@ -251,3 +251,132 @@ export function calculateQueuePosition(
     isCurrentOrNext: queuesAhead === 0,
   };
 }
+
+export interface FetchManageOrdersFilter {
+  dateFrom?: string | undefined;
+  dateTo?: string | undefined;
+  status?: OrderStatus | 'ALL' | undefined;
+  tableId?: string | undefined;
+}
+
+/**
+ * Fetch orders for owner Order Management page with flexible filters.
+ */
+export async function fetchManageOrders(
+  filters: FetchManageOrdersFilter = {},
+): Promise<OrderWithItems[]> {
+  let query = supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      table_session:table_sessions (
+        id,
+        status,
+        customer_name,
+        created_at,
+        closed_at,
+        table:tables (
+          id,
+          name
+        )
+      ),
+      items:order_items (
+        *,
+        options:order_item_options (*)
+      )
+    `,
+    )
+    .order('created_at', { ascending: false });
+
+  if (filters.dateFrom) {
+    const fromDate = new Date(filters.dateFrom);
+    fromDate.setHours(0, 0, 0, 0);
+    query = query.gte('created_at', fromDate.toISOString());
+  }
+
+  if (filters.dateTo) {
+    const toDate = new Date(filters.dateTo);
+    toDate.setHours(23, 59, 59, 999);
+    query = query.lte('created_at', toDate.toISOString());
+  }
+
+  if (filters.status && filters.status !== 'ALL') {
+    query = query.eq('status', filters.status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  let orders = (data ?? []) as OrderWithItems[];
+
+  if (filters.tableId && filters.tableId !== 'ALL') {
+    orders = orders.filter((o) => o.table_session?.table?.id === filters.tableId);
+  }
+
+  return orders;
+}
+
+export interface DeleteOrderResult {
+  success: boolean;
+  deleted_order_id?: string;
+  queue_number?: number;
+  table_session_id?: string;
+  table_id?: string;
+  table_name?: string;
+  customer_name?: string;
+}
+
+/**
+ * Delete an order and completely cascade-purge its session, bills, guest sessions, and items.
+ * Frees up table immediately back to AVAILABLE.
+ */
+export async function deleteOrderAndSession(orderId: string): Promise<DeleteOrderResult> {
+  // 1. Try DB RPC first
+  const { data: rpcData, error: rpcError } = await supabase.rpc('delete_order_and_session', {
+    p_order_id: orderId,
+  });
+
+  if (!rpcError && rpcData) {
+    return rpcData as DeleteOrderResult;
+  }
+
+  // 2. Client-side fallback if RPC is not yet executed in database
+  // Fetch order to get table_session_id
+  const { data: order, error: orderFetchErr } = await supabase
+    .from('orders')
+    .select('id, queue_number, table_session_id')
+    .eq('id', orderId)
+    .single();
+
+  if (orderFetchErr || !order) {
+    throw new Error(orderFetchErr?.message ?? 'ไม่พบข้อมูลออเดอร์');
+  }
+
+  const sessionId = order.table_session_id;
+
+  // Delete table_session (cascades to orders, bills, guest_sessions, order_items)
+  const { error: sessionDelErr } = await supabase
+    .from('table_sessions')
+    .delete()
+    .eq('id', sessionId);
+
+  if (sessionDelErr) {
+    // If cascade on table_sessions failed, try deleting order directly
+    const { error: directOrderDelErr } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (directOrderDelErr) {
+      throw new Error(directOrderDelErr.message);
+    }
+  }
+
+  return {
+    success: true,
+    deleted_order_id: orderId,
+    queue_number: order.queue_number,
+    table_session_id: sessionId,
+  };
+}

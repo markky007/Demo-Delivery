@@ -50,7 +50,7 @@
                 anchor="bottom right"
                 self="top right"
                 class="q-pa-md shadow-4"
-                style="min-width: 260px; border-radius: 12px"
+                style="min-width: 320px; max-width: 360px; border-radius: 14px"
               >
                 <div class="column q-gutter-y-sm">
                   <!-- Header with Switch -->
@@ -75,7 +75,7 @@
 
                   <!-- Sound Type Selector -->
                   <div class="column q-gutter-y-xs" :class="{ 'text-grey-5': !soundEnabled }">
-                    <span class="text-caption text-weight-medium">รูปแบบเสียงเตือน</span>
+                    <span class="text-caption text-weight-medium">ประเภทเสียงแจ้งเตือน</span>
                     <div class="row q-gutter-xs">
                       <q-btn
                         size="xs"
@@ -85,10 +85,10 @@
                         :disable="!soundEnabled"
                         :color="soundType === 'voice' ? 'primary' : 'grey-7'"
                         label="🗣️ เสียงพูด"
-                        class="col q-py-xs"
+                        class="col q-py-xs text-weight-bold"
                         @click="onSoundTypeChange('voice')"
                       >
-                        <q-tooltip>พูด "ออเดอร์มาแล้ว"</q-tooltip>
+                        <q-tooltip>เสียงคนพูดแจ้งเตือน</q-tooltip>
                       </q-btn>
                       <q-btn
                         size="xs"
@@ -98,7 +98,7 @@
                         :disable="!soundEnabled"
                         :color="soundType === 'chime' ? 'primary' : 'grey-7'"
                         label="🔔 กระดิ่ง"
-                        class="col q-py-xs"
+                        class="col q-py-xs text-weight-bold"
                         @click="onSoundTypeChange('chime')"
                       >
                         <q-tooltip>เสียงกระดิ่งใสๆ กังวาน</q-tooltip>
@@ -111,13 +111,122 @@
                         :disable="!soundEnabled"
                         :color="soundType === 'both' ? 'primary' : 'grey-7'"
                         label="🔔+🗣️ คู่"
-                        class="col q-py-xs"
+                        class="col q-py-xs text-weight-bold"
                         @click="onSoundTypeChange('both')"
                       >
                         <q-tooltip>เสียงกระดิ่ง + เสียงพูด</q-tooltip>
                       </q-btn>
                     </div>
                   </div>
+
+                  <!-- Voice Pattern Selection (Shown when voice or both is active) -->
+                  <template v-if="soundType === 'voice' || soundType === 'both'">
+                    <q-separator class="q-my-xs" />
+
+                    <div class="column q-gutter-y-xs" :class="{ 'text-grey-5': !soundEnabled }">
+                      <div class="row items-center justify-between">
+                        <span class="text-caption text-weight-medium">ข้อความเสียงพูด</span>
+                        <span
+                          class="text-caption text-primary text-weight-bold ellipsis"
+                          style="max-width: 150px"
+                        >
+                          {{ previewVoiceSample }}
+                        </span>
+                      </div>
+
+                      <q-select
+                        v-model="voicePattern"
+                        :options="VOICE_PATTERN_OPTIONS"
+                        emit-value
+                        map-options
+                        dense
+                        outlined
+                        options-dense
+                        :disable="!soundEnabled"
+                        class="full-width"
+                        @update:model-value="onVoicePatternChange"
+                      >
+                        <template #option="scope">
+                          <q-item v-bind="scope.itemProps" class="q-py-xs">
+                            <q-item-section>
+                              <q-item-label class="text-weight-bold text-caption">
+                                {{ scope.opt.label }}
+                              </q-item-label>
+                              <q-item-label caption class="text-grey-7">
+                                ตัวอย่าง: "{{ scope.opt.example }}"
+                              </q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+
+                      <!-- Custom Voice Text Input -->
+                      <div v-if="voicePattern === 'custom'" class="q-mt-xs">
+                        <q-input
+                          v-model="customVoiceText"
+                          outlined
+                          dense
+                          placeholder="พิมพ์ข้อความที่ต้องการให้พูด..."
+                          :disable="!soundEnabled"
+                          @update:model-value="onCustomVoiceTextChange"
+                        >
+                          <template #append>
+                            <q-btn
+                              flat
+                              round
+                              dense
+                              icon="play_arrow"
+                              color="primary"
+                              size="sm"
+                              @click="testSound"
+                            >
+                              <q-tooltip>ลองฟังเสียง</q-tooltip>
+                            </q-btn>
+                          </template>
+                        </q-input>
+                      </div>
+
+                      <!-- Speech Speed Selector -->
+                      <div class="row items-center justify-between q-mt-xs">
+                        <span class="text-caption text-grey-7">ความเร็วเสียงพูด:</span>
+                        <div class="row q-gutter-xs">
+                          <q-btn
+                            size="xs"
+                            :outline="voiceSpeed !== 0.85"
+                            :unelevated="voiceSpeed === 0.85"
+                            dense
+                            :disable="!soundEnabled"
+                            :color="voiceSpeed === 0.85 ? 'primary' : 'grey-6'"
+                            label="0.85x ช้า"
+                            class="q-px-xs"
+                            @click="onVoiceSpeedChange(0.85)"
+                          />
+                          <q-btn
+                            size="xs"
+                            :outline="voiceSpeed !== 1.0"
+                            :unelevated="voiceSpeed === 1.0"
+                            dense
+                            :disable="!soundEnabled"
+                            :color="voiceSpeed === 1.0 ? 'primary' : 'grey-6'"
+                            label="1.0x ปกติ"
+                            class="q-px-xs"
+                            @click="onVoiceSpeedChange(1.0)"
+                          />
+                          <q-btn
+                            size="xs"
+                            :outline="voiceSpeed !== 1.2"
+                            :unelevated="voiceSpeed === 1.2"
+                            dense
+                            :disable="!soundEnabled"
+                            :color="voiceSpeed === 1.2 ? 'primary' : 'grey-6'"
+                            label="1.2x เร็ว"
+                            class="q-px-xs"
+                            @click="onVoiceSpeedChange(1.2)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </template>
 
                   <q-separator class="q-my-xs" />
 
@@ -197,14 +306,8 @@
                     size="sm"
                     color="primary"
                     :icon="soundType === 'voice' ? 'record_voice_over' : 'volume_up'"
-                    :label="
-                      soundType === 'voice'
-                        ? 'ทดสอบเสียงพูด (ออเดอร์มาแล้ว)'
-                        : soundType === 'both'
-                          ? 'ทดสอบเสียงกระดิ่ง + เสียงพูด'
-                          : 'ทดสอบเสียงกระดิ่ง'
-                    "
-                    class="full-width"
+                    :label="testButtonLabel"
+                    class="full-width text-weight-bold"
                     :disable="!soundEnabled"
                     @click="testSound"
                   />
@@ -1895,7 +1998,16 @@ import {
   setSoundVolume,
   getSoundType,
   setSoundType,
+  getVoicePattern,
+  setVoicePattern,
+  getCustomVoiceText,
+  setCustomVoiceText,
+  getVoiceSpeed,
+  setVoiceSpeed,
+  buildSpeechText,
+  VOICE_PATTERN_OPTIONS,
   type SoundType,
+  type VoicePattern,
 } from 'src/utils/audioService';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -1913,6 +2025,26 @@ const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
 const soundVolume = ref<number>(getSoundVolume());
 const soundType = ref<SoundType>(getSoundType());
+const voicePattern = ref<VoicePattern>(getVoicePattern());
+const customVoiceText = ref<string>(getCustomVoiceText());
+const voiceSpeed = ref<number>(getVoiceSpeed());
+
+const previewVoiceSample = computed(() => {
+  return buildSpeechText(
+    voicePattern.value,
+    { tableName: 'โต๊ะ 1', queueNumber: 1 },
+    customVoiceText.value,
+  );
+});
+
+const testButtonLabel = computed(() => {
+  if (soundType.value === 'chime') return 'ทดสอบเสียงกระดิ่ง (Chime)';
+  const sample = previewVoiceSample.value;
+  if (soundType.value === 'both') {
+    return `ทดสอบกระดิ่ง + "${sample}"`;
+  }
+  return `ทดสอบเสียงพูด ("${sample}")`;
+});
 
 // Kitchen Order Edit Modal States
 const showEditModal = ref(false);
@@ -2056,7 +2188,7 @@ function setFocusFilter(filter: 'all' | 'queued' | 'preparing' | 'prepared') {
 function onSoundToggle(val: boolean) {
   setSoundEnabled(val);
   if (val) {
-    playNewOrderChime(soundVolume.value);
+    testSound();
     notifySuccess('เปิดเสียงแจ้งเตือนออเดอร์แล้ว');
   } else {
     notifyWarning('ปิดเสียงแจ้งเตือนแล้ว');
@@ -2066,24 +2198,46 @@ function onSoundToggle(val: boolean) {
 function onSoundTypeChange(val: SoundType) {
   soundType.value = val;
   setSoundType(val);
-  playNewOrderChime(soundVolume.value);
+  testSound();
+}
+
+function onVoicePatternChange(val: VoicePattern) {
+  voicePattern.value = val;
+  setVoicePattern(val);
+  testSound();
+}
+
+function onCustomVoiceTextChange(val: string | number | null) {
+  const str = String(val || '');
+  customVoiceText.value = str;
+  setCustomVoiceText(str);
+}
+
+function onVoiceSpeedChange(speed: number) {
+  voiceSpeed.value = speed;
+  setVoiceSpeed(speed);
+  testSound();
 }
 
 function onVolumeChange(val: number | null) {
   if (val !== null) {
     setSoundVolume(val);
-    playNewOrderChime(val);
+    testSound();
   }
 }
 
 function setPresetVolume(vol: number) {
   soundVolume.value = vol;
   setSoundVolume(vol);
-  playNewOrderChime(vol);
+  testSound();
 }
 
 function testSound() {
-  playNewOrderChime(soundVolume.value);
+  const sampleContext = {
+    tableName: 'โต๊ะ 1',
+    queueNumber: 1,
+  };
+  playNewOrderChime(soundVolume.value, sampleContext);
 }
 
 function getTableName(order: OrderWithItems): string {
@@ -2405,13 +2559,17 @@ onMounted(async () => {
           queueStore.setOrders(orders);
 
           if (payload.eventType === 'INSERT') {
-            playNewOrderChime();
+            const insertedId = (payload.new as { id?: string })?.id;
+            const newOrder = orders.find((o) => o.id === insertedId);
+            const tableName = newOrder ? getTableName(newOrder) : undefined;
+            const queueNumber = newOrder?.queue_number;
+            playNewOrderChime(undefined, { tableName, queueNumber });
             notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
           }
           if (payload.eventType === 'UPDATE') {
             const newData = payload.new as { revision?: number; status?: OrderStatus };
             if (newData.revision && newData.revision > 1) {
-              playNewOrderChime();
+              playNewOrderChime(undefined, 'ลูกค้ามีการแก้ไขรายการอาหาร');
               notifyWarning('⚠️ ลูกค้ามีการแก้ไขรายการอาหาร');
             }
             if (newData.status === OrderStatus.PREPARED) {

@@ -1,16 +1,101 @@
 /**
  * Audio and Speech Alert Service for Kitchen Display System (KDS).
  * Supports:
- * 1. Web Speech Synthesis TTS (e.g., "ออเดอร์มาแล้ว" in natural Thai voice)
- * 2. Web Audio API synthesizer chimes (works completely offline, zero latency)
- * 3. Combined Chime + Voice alerts
+ * 1. Multiple Thai Voice Alert Templates (Default, Polite, Friendly, Kitchen, Table/Queue dynamic announcements, Custom text)
+ * 2. Web Speech Synthesis TTS with adjustable speed and volume
+ * 3. Web Audio API synthesizer chimes (works completely offline, zero latency)
+ * 4. Combined Chime + Voice alerts
  */
 
 export type SoundType = 'voice' | 'chime' | 'both';
 
+export type VoicePattern =
+  | 'default' // ออเดอร์มาแล้ว
+  | 'polite_female' // มีออเดอร์ใหม่เข้ามาค่ะ
+  | 'polite_male' // มีออเดอร์ใหม่เข้ามาครับ
+  | 'friendly' // ออเดอร์เข้าจ้า
+  | 'kitchen' // มีรายการอาหารใหม่ในครัวค่ะ
+  | 'with_table' // มีออเดอร์ใหม่ {ชื่อโต๊ะ}
+  | 'with_queue' // ออเดอร์ใหม่ คิวที่ {คิว}
+  | 'with_table_and_queue' // ออเดอร์ใหม่ คิวที่ {คิว} {ชื่อโต๊ะ}
+  | 'custom'; // กำหนดข้อความเอง
+
+export interface VoicePatternOption {
+  value: VoicePattern;
+  label: string;
+  example: string;
+  description: string;
+}
+
+export interface OrderSpeechContext {
+  tableName?: string | undefined;
+  queueNumber?: number | string | undefined;
+  customerName?: string | null | undefined;
+}
+
+export const VOICE_PATTERN_OPTIONS: VoicePatternOption[] = [
+  {
+    value: 'default',
+    label: '🏷️ ออเดอร์มาแล้ว (มาตรฐาน)',
+    example: 'ออเดอร์มาแล้ว',
+    description: 'สั้นกระชับ ชัดเจน',
+  },
+  {
+    value: 'polite_female',
+    label: '🌸 มีออเดอร์ใหม่เข้ามาค่ะ (สุภาพ)',
+    example: 'มีออเดอร์ใหม่เข้ามาค่ะ',
+    description: 'สุภาพ นุ่มนวล เป็นทางการ',
+  },
+  {
+    value: 'polite_male',
+    label: '👔 มีออเดอร์ใหม่เข้ามาครับ (สุภาพ)',
+    example: 'มีออเดอร์ใหม่เข้ามาครับ',
+    description: 'สุภาพ เรียบร้อย',
+  },
+  {
+    value: 'friendly',
+    label: '⚡ ออเดอร์เข้าจ้า (กันเอง)',
+    example: 'ออเดอร์เข้าจ้า',
+    description: 'สนุกสนาน กระฉับกระเฉง',
+  },
+  {
+    value: 'kitchen',
+    label: '🍳 มีรายการอาหารใหม่ในครัวค่ะ',
+    example: 'มีรายการอาหารใหม่ในครัวค่ะ',
+    description: 'เน้นแจ้งเตือนสำหรับครัวและเชฟ',
+  },
+  {
+    value: 'with_table',
+    label: '🪑 บอกชื่อโต๊ะ / สั่งกลับบ้าน',
+    example: 'มีออเดอร์ใหม่ โต๊ะ 1 (หรือ สั่งกลับบ้าน)',
+    description: 'พูดระบุชื่อโต๊ะหรือสั่งกลับบ้านอัตโนมัติ',
+  },
+  {
+    value: 'with_queue',
+    label: '🔢 บอกหมายเลขคิว',
+    example: 'ออเดอร์ใหม่ คิวที่ 5',
+    description: 'พูดระบุหมายเลขคิวออเดอร์',
+  },
+  {
+    value: 'with_table_and_queue',
+    label: '📋 บอกทั้งคิวและโต๊ะ',
+    example: 'ออเดอร์ใหม่ คิวที่ 5 โต๊ะ 1',
+    description: 'บอกข้อมูลครบถ้วนทั้งคิวและโต๊ะ',
+  },
+  {
+    value: 'custom',
+    label: '✏️ กำหนดข้อความพูดเอง...',
+    example: 'กำหนดข้อความได้ตามต้องการ',
+    description: 'พิมพ์ข้อความที่ต้องการให้ระบบพูดเองได้อิสระ',
+  },
+];
+
 const STORAGE_KEY_ENABLED = 'kds_sound_enabled';
 const STORAGE_KEY_VOLUME = 'kds_sound_volume';
 const STORAGE_KEY_TYPE = 'kds_sound_type';
+const STORAGE_KEY_VOICE_PATTERN = 'kds_sound_voice_pattern';
+const STORAGE_KEY_CUSTOM_VOICE_TEXT = 'kds_sound_custom_voice_text';
+const STORAGE_KEY_VOICE_SPEED = 'kds_sound_voice_speed';
 
 let audioCtx: AudioContext | null = null;
 
@@ -50,7 +135,7 @@ export function setSoundEnabled(enabled: boolean): void {
 
 /**
  * Get sound alert type ('voice' | 'chime' | 'both').
- * Defaults to 'voice' as requested.
+ * Defaults to 'voice'.
  */
 export function getSoundType(): SoundType {
   if (typeof window === 'undefined') return 'voice';
@@ -67,6 +152,76 @@ export function getSoundType(): SoundType {
 export function setSoundType(type: SoundType): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY_TYPE, type);
+}
+
+/**
+ * Get selected voice alert pattern.
+ */
+export function getVoicePattern(): VoicePattern {
+  if (typeof window === 'undefined') return 'default';
+  const stored = localStorage.getItem(STORAGE_KEY_VOICE_PATTERN) as VoicePattern | null;
+  if (
+    stored &&
+    [
+      'default',
+      'polite_female',
+      'polite_male',
+      'friendly',
+      'kitchen',
+      'with_table',
+      'with_queue',
+      'with_table_and_queue',
+      'custom',
+    ].includes(stored)
+  ) {
+    return stored;
+  }
+  return 'default';
+}
+
+/**
+ * Set selected voice alert pattern.
+ */
+export function setVoicePattern(pattern: VoicePattern): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY_VOICE_PATTERN, pattern);
+}
+
+/**
+ * Get custom speech text.
+ */
+export function getCustomVoiceText(): string {
+  if (typeof window === 'undefined') return 'ออเดอร์มาแล้ว';
+  return localStorage.getItem(STORAGE_KEY_CUSTOM_VOICE_TEXT) || 'ออเดอร์มาแล้ว';
+}
+
+/**
+ * Set custom speech text.
+ */
+export function setCustomVoiceText(text: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY_CUSTOM_VOICE_TEXT, text.trim());
+}
+
+/**
+ * Get speech playback speed (0.85 = ช้า, 1.0 = ปกติ, 1.2 = เร็ว).
+ */
+export function getVoiceSpeed(): number {
+  if (typeof window === 'undefined') return 1.0;
+  const stored = localStorage.getItem(STORAGE_KEY_VOICE_SPEED);
+  if (stored) {
+    const val = parseFloat(stored);
+    if (!isNaN(val) && val >= 0.7 && val <= 1.5) return val;
+  }
+  return 1.0;
+}
+
+/**
+ * Set speech playback speed.
+ */
+export function setVoiceSpeed(speed: number): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY_VOICE_SPEED, String(speed));
 }
 
 /**
@@ -91,9 +246,50 @@ export function setSoundVolume(volume: number): void {
 }
 
 /**
+ * Build the spoken text according to pattern and context.
+ */
+export function buildSpeechText(
+  pattern: VoicePattern = getVoicePattern(),
+  context?: OrderSpeechContext,
+  customTextOverride?: string,
+): string {
+  if (pattern === 'custom') {
+    const custom = customTextOverride !== undefined ? customTextOverride : getCustomVoiceText();
+    return custom.trim() || 'ออเดอร์มาแล้ว';
+  }
+
+  const tableLabel = context?.tableName || 'โต๊ะ 1';
+  const queueNum = context?.queueNumber ? String(context.queueNumber) : '1';
+
+  switch (pattern) {
+    case 'polite_female':
+      return 'มีออเดอร์ใหม่เข้ามาค่ะ';
+    case 'polite_male':
+      return 'มีออเดอร์ใหม่เข้ามาครับ';
+    case 'friendly':
+      return 'ออเดอร์เข้าจ้า';
+    case 'kitchen':
+      return 'มีรายการอาหารใหม่ในครัวค่ะ';
+    case 'with_table':
+      return `มีออเดอร์ใหม่ ${tableLabel}`;
+    case 'with_queue':
+      return `ออเดอร์ใหม่ คิวที่ ${queueNum}`;
+    case 'with_table_and_queue':
+      return `ออเดอร์ใหม่ คิวที่ ${queueNum} ${tableLabel}`;
+    case 'default':
+    default:
+      return 'ออเดอร์มาแล้ว';
+  }
+}
+
+/**
  * Speak Thai text alert using Web Speech Synthesis API.
  */
-export function speakAlert(text = 'ออเดอร์มาแล้ว', overrideVol?: number): void {
+export function speakAlert(
+  textOrContext?: string | OrderSpeechContext,
+  overrideVol?: number,
+  overrideSpeed?: number,
+): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   if (!isSoundEnabled() && overrideVol === undefined) return;
 
@@ -101,16 +297,21 @@ export function speakAlert(text = 'ออเดอร์มาแล้ว', ove
   const volumeFactor = Math.max(0, Math.min(1, rawVol / 100));
   if (volumeFactor <= 0) return;
 
+  const textToSpeak =
+    typeof textOrContext === 'string'
+      ? textOrContext
+      : buildSpeechText(getVoicePattern(), textOrContext);
+
   try {
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.lang = 'th-TH';
     utterance.volume = volumeFactor;
-    utterance.rate = 1.0;
+    utterance.rate = overrideSpeed !== undefined ? overrideSpeed : getVoiceSpeed();
     utterance.pitch = 1.05;
 
     // Pick best available Thai voice if available
@@ -129,8 +330,7 @@ export function speakAlert(text = 'ออเดอร์มาแล้ว', ove
 }
 
 /**
- * Helper to play a chime note with fundamental frequency + overtone harmonics
- * for rich, piercing clarity that cuts through kitchen noise.
+ * Helper to play a chime note with fundamental frequency + overtone harmonics.
  */
 function playChimeNote(
   ctx: AudioContext,
@@ -204,19 +404,22 @@ export function playChimeAlert(overrideVol?: number): void {
  * Main function to trigger new incoming order notification.
  * Dispatches voice speech, chime, or both depending on user settings.
  */
-export function playNewOrderChime(overrideVol?: number, customText = 'ออเดอร์มาแล้ว'): void {
+export function playNewOrderChime(
+  overrideVol?: number,
+  contextOrText?: string | OrderSpeechContext,
+): void {
   if (!isSoundEnabled() && overrideVol === undefined) return;
 
   const type = getSoundType();
 
   if (type === 'voice') {
-    speakAlert(customText, overrideVol);
+    speakAlert(contextOrText, overrideVol);
   } else if (type === 'chime') {
     playChimeAlert(overrideVol);
   } else if (type === 'both') {
     playChimeAlert(overrideVol);
     setTimeout(() => {
-      speakAlert(customText, overrideVol);
+      speakAlert(contextOrText, overrideVol);
     }, 450);
   }
 }

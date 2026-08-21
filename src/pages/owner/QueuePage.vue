@@ -1506,11 +1506,11 @@
                     จุดตักข้าว & เตรียมข้าว (Rice Station)
                   </h6>
                   <q-badge color="amber-9" rounded class="q-px-sm text-weight-bold">
-                    <span>รอตัก {{ pendingRiceCount }} จาน</span>
+                    <span>รอตัก {{ pendingRiceCount }} รายการ</span>
                   </q-badge>
                 </div>
                 <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
-                  สรุปจำนวนจานข้าวธรรมดา/พิเศษ และข้าวผัด ที่ต้องตักจากออเดอร์ในครัว
+                  สรุปจำนวนจานข้าวธรรมดา/พิเศษ ข้าวผัด และตักข้าวกลับบ้าน ที่ต้องตักจากออเดอร์ในครัว
                 </p>
               </div>
             </div>
@@ -1545,7 +1545,7 @@
           <div class="row items-center justify-between q-mb-sm">
             <div class="text-weight-bold text-subtitle2 row items-center text-grey-9">
               <q-icon name="analytics" size="18px" color="amber-9" class="q-mr-xs" />
-              <span>สรุปรวมจานข้าวทั้งหมดที่ต้องตัก (Live Summary)</span>
+              <span>สรุปรวมข้าวทั้งหมดที่ต้องตัก (Live Summary)</span>
             </div>
             <div class="text-caption text-grey-6">คำนวณจากทุกออเดอร์ที่ยังไม่เสิร์ฟในครัว</div>
           </div>
@@ -1558,14 +1558,27 @@
               :class="{
                 'rice-summary-card--all-done': sum.pendingQuantity === 0,
                 'rice-summary-card--fried': sum.riceType === 'fried',
+                'rice-summary-card--takeaway': sum.isTakeaway,
               }"
             >
               <div class="row items-center justify-between no-wrap">
                 <div class="row items-center q-gutter-xs ellipsis">
                   <q-icon
-                    :name="sum.riceType === 'fried' ? 'outdoor_grill' : 'rice_bowl'"
+                    :name="
+                      sum.isTakeaway
+                        ? 'shopping_bag'
+                        : sum.riceType === 'fried'
+                          ? 'outdoor_grill'
+                          : 'rice_bowl'
+                    "
                     size="18px"
-                    :color="sum.riceType === 'fried' ? 'deep-orange-7' : 'amber-9'"
+                    :color="
+                      sum.isTakeaway
+                        ? 'orange-9'
+                        : sum.riceType === 'fried'
+                          ? 'deep-orange-7'
+                          : 'amber-9'
+                    "
                   />
                   <span class="text-weight-bold text-body2 rice-sum-name ellipsis">{{
                     sum.riceName
@@ -1594,7 +1607,13 @@
               </div>
               <q-linear-progress
                 :value="sum.totalQuantity > 0 ? sum.completedQuantity / sum.totalQuantity : 0"
-                :color="sum.riceType === 'fried' ? 'deep-orange-7' : 'amber-8'"
+                :color="
+                  sum.isTakeaway
+                    ? 'orange-8'
+                    : sum.riceType === 'fried'
+                      ? 'deep-orange-7'
+                      : 'amber-8'
+                "
                 track-color="amber-1"
                 class="q-mt-xs rounded-borders"
                 size="4px"
@@ -1604,7 +1623,7 @@
 
           <div v-else class="rice-summary-empty q-pa-md text-center">
             <q-icon name="check_circle" size="28px" color="green-6" class="q-mr-xs" />
-            <span class="text-weight-medium text-grey-8">ไม่มีรายการจานข้าวที่ต้องตักในขณะนี้</span>
+            <span class="text-weight-medium text-grey-8">ไม่มีรายการข้าวที่ต้องตักในขณะนี้</span>
           </div>
         </div>
 
@@ -1666,10 +1685,25 @@
                 <span class="rice-order-queue-badge">
                   #{{ formatQueueNumber(orderGroup.queueNumber) }}
                 </span>
-                <span class="rice-order-table-title text-weight-bold">
+                <span
+                  class="rice-order-table-title text-weight-bold"
+                  :class="{ 'text-orange-9': isTakeawayName(orderGroup.tableName) }"
+                >
                   {{ orderGroup.tableName }}
                 </span>
-                <span v-if="orderGroup.customerName" class="text-caption text-grey-7">
+                <q-badge
+                  v-if="isTakeawayName(orderGroup.tableName)"
+                  color="orange-9"
+                  rounded
+                  class="q-px-xs text-weight-bold"
+                >
+                  <q-icon name="shopping_bag" size="12px" class="q-mr-xs" />
+                  กลับบ้าน
+                </q-badge>
+                <span
+                  v-if="orderGroup.customerName && !orderGroup.tableName.includes(orderGroup.customerName)"
+                  class="text-caption text-grey-7"
+                >
                   ({{ orderGroup.customerName }})
                 </span>
               </div>
@@ -1700,6 +1734,7 @@
                 :class="{
                   'rice-item-row--done': completedRiceItemIds.has(req.id),
                   'rice-item-row--fried': req.isFriedRice,
+                  'rice-item-row--takeaway': req.isTakeaway,
                 }"
                 @click="toggleRiceItem(req.id)"
               >
@@ -1715,15 +1750,27 @@
                     />
                     <div class="col ellipsis">
                       <div class="row items-center q-gutter-xs wrap">
-                        <!-- Main display label (e.g. ธรรมดา 1 จาน / พิเศษ 2 จาน / ธรรมดา (ข้าวผัด) 1 จาน) -->
+                        <!-- Main display label (e.g. ธรรมดา 1 จาน / พิเศษ 2 จาน / ตักข้าวกลับบ้าน ธรรมดา 1 กล่อง) -->
                         <span
                           class="text-weight-bold rice-item-name"
-                          :class="{ 'text-strike text-grey-6': completedRiceItemIds.has(req.id) }"
+                          :class="{
+                            'text-strike text-grey-6': completedRiceItemIds.has(req.id),
+                            'text-orange-9': req.isTakeaway && !completedRiceItemIds.has(req.id),
+                          }"
                         >
                           {{ req.displayLabel }}
                         </span>
 
                         <!-- Portion & Category Badges -->
+                        <q-badge
+                          v-if="req.isTakeaway"
+                          color="orange-9"
+                          rounded
+                          class="q-px-xs text-weight-bold"
+                        >
+                          <q-icon name="shopping_bag" size="12px" class="q-mr-xs" />
+                          กลับบ้าน
+                        </q-badge>
                         <q-badge
                           v-if="req.isFriedRice"
                           color="deep-orange-7"
@@ -1741,7 +1788,7 @@
                           พิเศษ
                         </q-badge>
                         <q-badge
-                          v-else-if="!req.isFriedRice"
+                          v-else-if="!req.isFriedRice && !req.isTakeaway"
                           color="grey-7"
                           outline
                           rounded
@@ -1766,7 +1813,12 @@
                   </div>
 
                   <div class="rice-qty-box text-right q-ml-sm">
-                    <span class="text-weight-bolder rice-qty-num">{{ req.quantity }}</span>
+                    <span
+                      class="text-weight-bolder rice-qty-num"
+                      :class="{ 'text-orange-9': req.isTakeaway }"
+                    >
+                      {{ req.quantity }}
+                    </span>
                     <span class="text-caption text-grey-6 q-ml-xs">{{ req.unit }}</span>
                   </div>
                 </div>
@@ -3574,6 +3626,11 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   background: #fffaf5;
 }
 
+.rice-summary-card--takeaway {
+  border-color: #fb923c;
+  background: #fffaf5;
+}
+
 .rice-summary-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-hover);
@@ -3684,6 +3741,11 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
 
 .rice-item-row--fried {
   border-left: 3px solid #f97316;
+}
+
+.rice-item-row--takeaway {
+  border-left: 3px solid #ea580c;
+  background: #fffaf5;
 }
 
 .rice-item-row--done {

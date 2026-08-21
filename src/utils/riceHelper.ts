@@ -1,5 +1,7 @@
 import type { OrderWithItems, MenuItem, MenuCategory } from '../types/database';
 import { OrderStatus } from '../types/enums';
+import { isTakeawayName } from '../services/tableService';
+import { isTakeawayOption } from './formatters';
 
 export interface RiceRequirement {
   id: string; // unique item key for checkbox state
@@ -11,13 +13,14 @@ export interface RiceRequirement {
   dishName: string;
   riceType: 'plain' | 'fried' | 'sticky'; // plain = ข้าวสวย, fried = ข้าวผัด, sticky = ข้าวเหนียว
   portionSize: 'normal' | 'special'; // normal = ธรรมดา, special = พิเศษ
-  displayLabel: string; // e.g. "ธรรมดา 1 จาน", "พิเศษ 2 จาน", "ธรรมดา (ข้าวผัด) 1 จาน", "พิเศษ (ข้าวผัด) 2 จาน"
-  riceName: string; // e.g. "ข้าวสวย (ธรรมดา)", "ข้าวสวย (พิเศษ)", "ข้าวผัด (ธรรมดา)", "ข้าวผัด (พิเศษ)"
+  displayLabel: string; // e.g. "ธรรมดา 1 จาน", "พิเศษ 2 จาน", "ตักข้าวกลับบ้าน ธรรมดา 1 กล่อง", "ตักข้าวกลับบ้าน พิเศษ 2 กล่อง"
+  riceName: string; // e.g. "ข้าวสวย (ธรรมดา)", "ข้าวสวย (พิเศษ)", "ตักข้าวกลับบ้าน (ธรรมดา)", "ตักข้าวกลับบ้าน (พิเศษ)"
   quantity: number;
   unit: string;
   isSpecial: boolean;
   isFriedRice: boolean;
   isAddonRice?: boolean;
+  isTakeaway?: boolean;
   specialInstruction?: string | null | undefined;
   orderStatus: string;
   queuedAt: string;
@@ -27,6 +30,7 @@ export interface RiceSummaryItem {
   riceName: string;
   riceType: 'plain' | 'fried' | 'sticky';
   portionSize: 'normal' | 'special';
+  isTakeaway?: boolean | undefined;
   totalQuantity: number;
   pendingQuantity: number;
   completedQuantity: number;
@@ -249,8 +253,20 @@ export function extractRiceRequirementsFromOrders(
   );
 
   for (const order of activeOrders) {
-    const tableName = order.table_session?.table?.name || 'กลับบ้าน / ไม่ระบุ';
+    const rawTableName = order.table_session?.table?.name;
     const customerName = order.table_session?.customer_name;
+    const isOrderTakeaway =
+      isTakeawayName(rawTableName) ||
+      !rawTableName ||
+      (customerName ? isTakeawayName(customerName) : false);
+
+    const tableName = rawTableName
+      ? isTakeawayName(rawTableName) && customerName
+        ? `สั่งกลับบ้าน (${customerName})`
+        : rawTableName
+      : customerName
+        ? `สั่งกลับบ้าน (${customerName})`
+        : 'หน้าร้าน / กลับบ้าน';
 
     for (const item of order.items || []) {
       const menuItem = menuItemsMap?.get(item.menu_item_id);
@@ -259,6 +275,18 @@ export function extractRiceRequirementsFromOrders(
       const dishName = item.snapshot_name || menuItem?.name || '';
 
       const options = item.options || [];
+
+      // Check if item options specify takeaway / packaging
+      const isItemTakeaway =
+        isOrderTakeaway ||
+        options.some(
+          (opt) =>
+            isTakeawayOption(opt.snapshot_option_name) ||
+            (opt.snapshot_option_name || '').includes('กลับบ้าน') ||
+            (opt.snapshot_option_name || '').includes('ใส่กล่อง') ||
+            (opt.snapshot_option_name || '').includes('ใส่ห่อ') ||
+            (opt.snapshot_option_name || '').includes('ห่อกลับ'),
+        );
 
       // Check if user specifically requested "ไม่เอาข้าว" / "ไม่รับข้าว" / "เฉพาะกับข้าว"
       const hasNoRiceOption = options.some((opt) => {
@@ -307,8 +335,20 @@ export function extractRiceRequirementsFromOrders(
 
         const sizeLabel = isSpecial ? 'พิเศษ' : 'ธรรมดา';
         const typeSuffix = isFried ? ' (ข้าวผัด)' : isSticky ? ' (ข้าวเหนียว)' : '';
-        const riceName = `${isSticky ? 'ข้าวเหนียว' : isFried ? 'ข้าวผัด' : 'ข้าวสวย'} (${sizeLabel})`;
-        const displayLabel = `${sizeLabel}${typeSuffix} ${item.quantity} จาน`;
+        const unit = isItemTakeaway ? 'กล่อง' : 'จาน';
+
+        let displayLabel: string;
+        let riceName: string;
+
+        if (isItemTakeaway) {
+          displayLabel = `ตักข้าวกลับบ้าน ${sizeLabel}${typeSuffix} ${item.quantity} ${unit}`;
+          const baseType = isSticky ? 'ข้าวเหนียว' : isFried ? 'ข้าวผัด' : 'ข้าวสวย';
+          riceName = `ตักข้าวกลับบ้าน (${baseType !== 'ข้าวสวย' ? `${baseType} ` : ''}${sizeLabel})`;
+        } else {
+          displayLabel = `${sizeLabel}${typeSuffix} ${item.quantity} จาน`;
+          const baseType = isSticky ? 'ข้าวเหนียว' : isFried ? 'ข้าวผัด' : 'ข้าวสวย';
+          riceName = `${baseType} (${sizeLabel})`;
+        }
 
         requirements.push({
           id: `${order.id}-${item.id}-rice`,
@@ -323,10 +363,11 @@ export function extractRiceRequirementsFromOrders(
           displayLabel,
           riceName,
           quantity: item.quantity,
-          unit: 'จาน',
+          unit,
           isSpecial,
           isFriedRice: isFried,
           isAddonRice: false,
+          isTakeaway: isItemTakeaway,
           specialInstruction: item.special_instruction,
           orderStatus: order.status,
           queuedAt: order.queued_at,
@@ -344,8 +385,18 @@ export function extractRiceRequirementsFromOrders(
           const isExtraSpecial = optName.includes('พิเศษ');
           const portionSize = isExtraSpecial ? 'special' : 'normal';
           const sizeLabel = isExtraSpecial ? 'พิเศษ' : 'ธรรมดา';
-          const riceName = `ข้าวสวย (${sizeLabel})`;
-          const displayLabel = `เพิ่มข้าว ${sizeLabel} ${item.quantity} จาน`;
+          const unit = isItemTakeaway ? 'กล่อง' : 'จาน';
+
+          let displayLabel: string;
+          let riceName: string;
+
+          if (isItemTakeaway) {
+            displayLabel = `ตักข้าวกลับบ้าน เพิ่มข้าว ${sizeLabel} ${item.quantity} ${unit}`;
+            riceName = `ตักข้าวกลับบ้าน (เพิ่มข้าว ${sizeLabel})`;
+          } else {
+            displayLabel = `เพิ่มข้าว ${sizeLabel} ${item.quantity} จาน`;
+            riceName = `ข้าวสวย (${sizeLabel})`;
+          }
 
           requirements.push({
             id: `${order.id}-${item.id}-opt-rice-${opt.option_id || optName}`,
@@ -360,10 +411,11 @@ export function extractRiceRequirementsFromOrders(
             displayLabel,
             riceName,
             quantity: item.quantity,
-            unit: 'จาน',
+            unit,
             isSpecial: isExtraSpecial,
             isFriedRice: false,
             isAddonRice: true,
+            isTakeaway: isItemTakeaway,
             specialInstruction: item.special_instruction,
             orderStatus: order.status,
             queuedAt: order.queued_at,
@@ -387,8 +439,12 @@ export function aggregateRiceSummary(
   const standardKeys = [
     'ข้าวสวย (ธรรมดา)',
     'ข้าวสวย (พิเศษ)',
+    'ตักข้าวกลับบ้าน (ธรรมดา)',
+    'ตักข้าวกลับบ้าน (พิเศษ)',
     'ข้าวผัด (ธรรมดา)',
     'ข้าวผัด (พิเศษ)',
+    'ตักข้าวกลับบ้าน (ข้าวผัด ธรรมดา)',
+    'ตักข้าวกลับบ้าน (ข้าวผัด พิเศษ)',
   ];
 
   const summaryMap = new Map<string, RiceSummaryItem>();
@@ -409,6 +465,7 @@ export function aggregateRiceSummary(
         riceName: req.riceName,
         riceType: req.riceType,
         portionSize: req.portionSize,
+        isTakeaway: req.isTakeaway,
         totalQuantity: req.quantity,
         pendingQuantity: isDone ? 0 : req.quantity,
         completedQuantity: isDone ? req.quantity : 0,
@@ -417,7 +474,7 @@ export function aggregateRiceSummary(
     }
   }
 
-  // Sort: pending quantity desc, with standard keys first
+  // Sort: standard keys in priority order, then by pending quantity desc
   return Array.from(summaryMap.values()).sort((a, b) => {
     const aIdx = standardKeys.indexOf(a.riceName);
     const bIdx = standardKeys.indexOf(b.riceName);

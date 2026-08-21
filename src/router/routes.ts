@@ -127,6 +127,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/owner/LocationSettingsPage.vue'),
         meta: { title: 'พิกัดร้าน & ขอบเขต' },
       },
+      {
+        path: 'preview',
+        name: 'owner-preview',
+        component: () => import('@/pages/owner/CustomerPreviewPage.vue'),
+        meta: { title: 'จำลองหน้าจอลูกค้า (Preview)' },
+      },
     ],
   },
 

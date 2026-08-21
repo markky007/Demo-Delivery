@@ -150,6 +150,7 @@ const navItems = [
   { label: 'บิลและการชำระเงิน', icon: 'receipt_long', route: '/owner/bills' },
   { label: 'ประวัติยอดขาย', icon: 'bar_chart', route: '/owner/sales' },
   { label: 'พิกัดร้าน & ขอบเขต', icon: 'pin_drop', route: '/owner/location' },
+  { label: 'จำลองสั่งอาหาร (Preview)', icon: 'smartphone', route: '/owner/preview' },
 ];
 
 const pageTitle = computed(() => (route.meta.title as string) || 'ภาพรวมร้านค้า');

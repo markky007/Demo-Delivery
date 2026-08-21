@@ -102,7 +102,7 @@ export function inferFryConfigFromName(name: string): FryConfig | null {
   }
 
   // 5. ไก่ทอด
-  if (cleanName.includes('ไก่ทอด')) {
+  if (cleanName.includes('ไก่ทอด') || (cleanName.includes('ไก่') && cleanName.includes('ทอด'))) {
     if (cleanName.includes('ราดซอส')) {
       return {
         is_fried: true,
@@ -118,6 +118,125 @@ export function inferFryConfigFromName(name: string): FryConfig | null {
       fry_name: 'ไก่ทอด',
       fry_qty: 1,
       special_fry_name: 'ไก่ทอดพิเศษ',
+      special_fry_qty: 1,
+      unit: 'ออเดอร์',
+    };
+  }
+
+  // 6. กุ้งทอด / กุ้งชุบแป้งทอด / กุ้งทอดกระเทียม
+  if (
+    cleanName.includes('กุ้งทอด') ||
+    cleanName.includes('กุ้งชุบแป้งทอด') ||
+    cleanName.includes('ทอดมันกุ้ง') ||
+    (cleanName.includes('กุ้ง') && cleanName.includes('ทอด'))
+  ) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'กุ้งทอดราดซอส',
+        fry_qty: 1,
+        special_fry_name: 'กุ้งทอดราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
+    return {
+      is_fried: true,
+      fry_name: 'กุ้งทอด',
+      fry_qty: 1,
+      special_fry_name: 'กุ้งทอดพิเศษ',
+      special_fry_qty: 1,
+      unit: 'ออเดอร์',
+    };
+  }
+
+  // 7. หมึกทอด / ปลาหมึกทอด / หมึกชุบแป้งทอด / หมึกทอดกระเทียม
+  if (
+    cleanName.includes('หมึกทอด') ||
+    cleanName.includes('ปลาหมึกทอด') ||
+    cleanName.includes('หมึกชุบแป้งทอด') ||
+    cleanName.includes('ปลาหมึกชุบแป้งทอด') ||
+    cleanName.includes('หนวดหมึกทอด') ||
+    cleanName.includes('หมึกวงทอด') ||
+    ((cleanName.includes('หมึก') || cleanName.includes('ปลาหมึก')) && cleanName.includes('ทอด'))
+  ) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'หมึกทอดราดซอส',
+        fry_qty: 1,
+        special_fry_name: 'หมึกทอดราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
+    return {
+      is_fried: true,
+      fry_name: 'หมึกทอด',
+      fry_qty: 1,
+      special_fry_name: 'หมึกทอดพิเศษ',
+      special_fry_qty: 1,
+      unit: 'ออเดอร์',
+    };
+  }
+
+  // 8. ทะเลทอด / ซีฟู้ดทอด / ทะเลชุบแป้งทอด / รวมมิตรทะเลทอด
+  if (
+    cleanName.includes('ทะเลทอด') ||
+    cleanName.includes('ซีฟู้ดทอด') ||
+    cleanName.includes('ทะเลชุบแป้งทอด') ||
+    cleanName.includes('รวมมิตรทะเลทอด') ||
+    ((cleanName.includes('ทะเล') || cleanName.includes('ซีฟู้ด')) && cleanName.includes('ทอด'))
+  ) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'ทะเลทอดราดซอส',
+        fry_qty: 1,
+        special_fry_name: 'ทะเลทอดราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
+    return {
+      is_fried: true,
+      fry_name: 'ทะเลทอด',
+      fry_qty: 1,
+      special_fry_name: 'ทะเลทอดพิเศษ',
+      special_fry_qty: 1,
+      unit: 'ออเดอร์',
+    };
+  }
+
+  // 9. หมูทอด (หมูทอดกระเทียม, สันคอหมูทอด, หมูแดดเดียวทอด ฯลฯ)
+  if (cleanName.includes('หมูทอด') || (cleanName.includes('หมู') && cleanName.includes('ทอด'))) {
+    if (cleanName.includes('ราดซอส')) {
+      return {
+        is_fried: true,
+        fry_name: 'หมูทอดราดซอส',
+        fry_qty: 1,
+        special_fry_name: 'หมูทอดราดซอสพิเศษ',
+        special_fry_qty: 1,
+        unit: 'ออเดอร์',
+      };
+    }
+    return {
+      is_fried: true,
+      fry_name: 'หมูทอด',
+      fry_qty: 1,
+      special_fry_name: 'หมูทอดพิเศษ',
+      special_fry_qty: 1,
+      unit: 'ออเดอร์',
+    };
+  }
+
+  // 10. เมนูอื่นๆ ที่มีคำว่า 'ทอด' ทั่วไป
+  if (cleanName.includes('ทอด') || cleanName.includes('ชุบแป้งทอด')) {
+    return {
+      is_fried: true,
+      fry_name: cleanName,
+      fry_qty: 1,
+      special_fry_name: `${cleanName}พิเศษ`,
       special_fry_qty: 1,
       unit: 'ออเดอร์',
     };

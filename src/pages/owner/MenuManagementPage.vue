@@ -824,6 +824,36 @@
                   >
                     สามชั้นทอด
                   </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('กุ้งทอด', 'ออเดอร์', 'กุ้งทอดพิเศษ')"
+                  >
+                    กุ้งทอด
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('หมึกทอด', 'ออเดอร์', 'หมึกทอดพิเศษ')"
+                  >
+                    หมึกทอด
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    outline
+                    color="deep-orange-8"
+                    icon="add"
+                    @click="applyFryPreset('ทะเลทอด', 'ออเดอร์', 'ทะเลทอดพิเศษ')"
+                  >
+                    ทะเลทอด
+                  </q-chip>
                 </div>
 
                 <div class="row q-col-gutter-sm">
@@ -1016,7 +1046,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useNotify } from 'src/composables/useNotify';
 import { supabase } from 'src/services/supabase';
@@ -1124,6 +1154,28 @@ function applyFryPreset(name: string, unit = 'ออเดอร์', specialNam
   itemFryConfig.special_fry_name = specialName || `${name}พิเศษ`;
   itemFryConfig.special_fry_qty = 1;
 }
+
+watch(
+  () => itemFryConfig.is_fried,
+  (isFried) => {
+    if (isFried && !itemFryConfig.fry_name) {
+      const inferred = inferFryConfigFromName(itemForm.name);
+      if (inferred) {
+        itemFryConfig.fry_name = inferred.fry_name || itemForm.name.trim();
+        itemFryConfig.unit = inferred.unit || 'ออเดอร์';
+        itemFryConfig.fry_qty = inferred.fry_qty || 1;
+        itemFryConfig.special_fry_name = inferred.special_fry_name || '';
+        itemFryConfig.special_fry_qty = inferred.special_fry_qty || 1;
+      } else if (itemForm.name.trim()) {
+        itemFryConfig.fry_name = itemForm.name.trim();
+        itemFryConfig.unit = 'ออเดอร์';
+        itemFryConfig.fry_qty = 1;
+        itemFryConfig.special_fry_name = `${itemForm.name.trim()}พิเศษ`;
+        itemFryConfig.special_fry_qty = 1;
+      }
+    }
+  },
+);
 
 const categoryOptions = computed(() =>
   menuStore.categories.map((c) => ({ label: c.name, value: c.id })),
@@ -1541,16 +1593,12 @@ async function saveItem() {
       unit: itemFryConfig.unit || 'ออเดอร์',
     };
 
-    const detectedIngredient =
-      itemForm.main_ingredient?.trim() || inferMainIngredient(itemForm.name);
-
     const payload: Record<string, unknown> = {
       name: itemForm.name.trim(),
       description: itemForm.description || null,
       base_price: itemForm.base_price,
       image_url: itemForm.image_url || null,
       category_id: itemForm.category_id,
-      main_ingredient: detectedIngredient,
       is_active: itemForm.is_active,
       is_available: itemForm.is_available,
       fry_config: itemFryConfig.is_fried ? fryConfigPayload : { is_fried: false },
@@ -1560,7 +1608,13 @@ async function saveItem() {
     let targetItemId = editingItem.value?.id;
 
     if (editingItem.value) {
-      await supabase.from('menu_items').update(payload).eq('id', editingItem.value.id);
+      const { error: updateErr } = await supabase
+        .from('menu_items')
+        .update(payload)
+        .eq('id', editingItem.value.id);
+      if (updateErr) {
+        throw updateErr;
+      }
     } else {
       const maxOrder = Math.max(0, ...menuStore.items.map((i) => i.sort_order)) + 1;
       const { data: insertedItem, error: insertErr } = await supabase

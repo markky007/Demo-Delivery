@@ -2578,10 +2578,13 @@ onMounted(async () => {
           if (payload.eventType === 'INSERT') {
             const insertedId = (payload.new as { id?: string })?.id;
             const newOrder = orders.find((o) => o.id === insertedId);
-            const tableName = newOrder ? getTableName(newOrder) : undefined;
-            const queueNumber = newOrder?.queue_number;
-            playNewOrderChime(undefined, { tableName, queueNumber });
-            notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
+            // Skip notification for owner Quick Add items (inserted as SERVED directly)
+            if (newOrder && newOrder.status !== OrderStatus.SERVED) {
+              const tableName = getTableName(newOrder);
+              const queueNumber = newOrder.queue_number;
+              playNewOrderChime(undefined, { tableName, queueNumber });
+              notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
+            }
           }
           if (payload.eventType === 'UPDATE') {
             const newData = payload.new as { id?: string; revision?: number; status?: OrderStatus };

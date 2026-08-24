@@ -63,7 +63,7 @@
 
           <div class="row q-col-gutter-sm q-mt-xs">
             <!-- Canned Soft Drink -->
-            <div class="col-6">
+            <div class="col-4">
               <div class="drink-item-card column justify-between q-pa-sm full-height">
                 <div class="row items-center no-wrap q-mb-xs">
                   <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">🥤</div>
@@ -90,8 +90,36 @@
               </div>
             </div>
 
+            <!-- Plain Water -->
+            <div class="col-4">
+              <div class="drink-item-card column justify-between q-pa-sm full-height">
+                <div class="row items-center no-wrap q-mb-xs">
+                  <div class="drink-icon-wrap drink-icon-wrap--plain q-mr-sm">🫗</div>
+                  <div class="col ellipsis">
+                    <div class="text-weight-bold text-body2 ellipsis">น้ำเปล่า</div>
+                    <div class="text-caption text-primary text-weight-bold font-mono">
+                      {{ formatPrice(10) }}
+                    </div>
+                  </div>
+                </div>
+                <q-btn
+                  unelevated
+                  rounded
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  icon="add"
+                  label="+ เพิ่ม 1 ขวด"
+                  :loading="isAddingDrink === 'plain'"
+                  @click="addDrinkItem('น้ำเปล่า', 10, 'plain')"
+                  class="full-width q-py-xs q-mt-xs"
+                />
+              </div>
+            </div>
+
             <!-- Bottled Water -->
-            <div class="col-6">
+            <div class="col-4">
               <div class="drink-item-card column justify-between q-pa-sm full-height">
                 <div class="row items-center no-wrap q-mb-xs">
                   <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">💧</div>
@@ -596,6 +624,10 @@ async function handleCancelEmptySession() {
 
 .drink-icon-wrap--can {
   background: #fee2e2;
+}
+
+.drink-icon-wrap--plain {
+  background: #ecfdf5;
 }
 
 .drink-icon-wrap--water {

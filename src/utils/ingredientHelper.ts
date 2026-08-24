@@ -21,7 +21,11 @@ export const STANDARD_INGREDIENTS = [
   { name: 'สามชั้น', icon: 'mdi-pig', keywords: ['สามชั้น', 'สามชั้นทอด'] },
   { name: 'หมูสับ', icon: 'mdi-pig', keywords: ['หมูสับ'] },
   { name: 'หมูชิ้น', icon: 'mdi-pig', keywords: ['หมูชิ้น', 'หมุชิ้น'] },
-  { name: 'กุ้งทอด', icon: 'fa-solid fa-shrimp', keywords: ['กุ้งทอด', 'กุ้งชุบแป้งทอด', 'ทอดมันกุ้ง'] },
+  {
+    name: 'กุ้งทอด',
+    icon: 'fa-solid fa-shrimp',
+    keywords: ['กุ้งทอด', 'กุ้งชุบแป้งทอด', 'ทอดมันกุ้ง'],
+  },
   {
     name: 'ปลาหมึกทอด',
     icon: 'fa-solid fa-fish',

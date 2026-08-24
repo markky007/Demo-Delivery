@@ -2590,11 +2590,7 @@ onMounted(async () => {
             const newData = payload.new as { id?: string; revision?: number; status?: OrderStatus };
             // Compare against our in-memory snapshot to detect actual revision changes
             const prevRevision = newData.id ? (prevRevisions.get(newData.id) ?? 1) : 1;
-            if (
-              newData.revision &&
-              newData.revision > 1 &&
-              newData.revision > prevRevision
-            ) {
+            if (newData.revision && newData.revision > 1 && newData.revision > prevRevision) {
               playNewOrderChime(undefined, 'ลูกค้ามีการแก้ไขรายการอาหาร');
               notifyWarning('⚠️ ลูกค้ามีการแก้ไขรายการอาหาร');
             }

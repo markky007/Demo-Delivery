@@ -2090,6 +2090,20 @@ const completedRiceItemIds = ref<Set<string>>(new Set(loadPersistedRiceCompleted
 let realtimeChannel: RealtimeChannel | null = null;
 let elapsedInterval: ReturnType<typeof setInterval>;
 
+// Track known order revisions in memory to detect actual edits vs status changes.
+// Supabase realtime doesn't send old record fields without REPLICA IDENTITY FULL,
+// so we compare against our own snapshot instead.
+const knownRevisions = new Map<string, number>();
+
+function updateKnownRevisions(orders: { id: string; revision?: number }[]) {
+  knownRevisions.clear();
+  for (const o of orders) {
+    if (o.revision !== undefined) {
+      knownRevisions.set(o.id, o.revision);
+    }
+  }
+}
+
 // Active kitchen orders (QUEUED + PREPARING + PREPARED)
 const activeKitchenOrders = computed(() => {
   return queueStore.orders
@@ -2535,6 +2549,7 @@ onMounted(async () => {
   try {
     const orders = await fetchTodayOrders();
     queueStore.setOrders(orders);
+    updateKnownRevisions(orders);
 
     // Default to focus view if active orders exist, otherwise overview
     if (orders.some((o) => o.status === OrderStatus.QUEUED || o.status === OrderStatus.PREPARING)) {
@@ -2555,8 +2570,10 @@ onMounted(async () => {
       },
       (payload) => {
         void (async () => {
+          const prevRevisions = new Map(knownRevisions);
           const orders = await fetchTodayOrders();
           queueStore.setOrders(orders);
+          updateKnownRevisions(orders);
 
           if (payload.eventType === 'INSERT') {
             const insertedId = (payload.new as { id?: string })?.id;
@@ -2567,8 +2584,14 @@ onMounted(async () => {
             notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
           }
           if (payload.eventType === 'UPDATE') {
-            const newData = payload.new as { revision?: number; status?: OrderStatus };
-            if (newData.revision && newData.revision > 1) {
+            const newData = payload.new as { id?: string; revision?: number; status?: OrderStatus };
+            // Compare against our in-memory snapshot to detect actual revision changes
+            const prevRevision = newData.id ? (prevRevisions.get(newData.id) ?? 1) : 1;
+            if (
+              newData.revision &&
+              newData.revision > 1 &&
+              newData.revision > prevRevision
+            ) {
               playNewOrderChime(undefined, 'ลูกค้ามีการแก้ไขรายการอาหาร');
               notifyWarning('⚠️ ลูกค้ามีการแก้ไขรายการอาหาร');
             }

@@ -34,8 +34,8 @@ BEGIN
     RAISE EXCEPTION 'Order not found';
   END IF;
 
-  IF v_order.status = 'CANCELLED' THEN
-    RAISE EXCEPTION 'ไม่สามารถแก้ไขออเดอร์ที่ถูกยกเลิกแล้วได้';
+  IF v_order.status = 'SERVED' THEN
+    RAISE EXCEPTION 'ไม่สามารถแก้ไขออเดอร์ที่เสิร์ฟแล้วได้';
   END IF;
 
   -- 2. Verify table session exists and is active

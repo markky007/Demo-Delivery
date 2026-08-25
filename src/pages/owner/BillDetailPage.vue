@@ -150,7 +150,14 @@
 
         <!-- Receipt Slip View -->
         <div class="receipt-wrapper q-mb-lg">
-          <ReceiptSlip :bill="bill" :table-name="tableName" :orders="orders" :show-actions="true" />
+          <ReceiptSlip
+            :bill="bill"
+            :table-name="tableName"
+            :orders="orders"
+            :show-actions="true"
+            :allow-edit-price="session.status === 'ACTIVE' && bill?.status !== 'PAID'"
+            @edit-price="handleOpenEditPriceModal"
+          />
         </div>
 
         <!-- Action Controls for Owner (No Print) -->
@@ -354,6 +361,231 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Edit Order Item Price Modal Dialog -->
+      <q-dialog v-model="showEditPriceModal">
+        <q-card
+          style="min-width: 360px; max-width: 480px"
+          class="q-pa-md border-radius-lg edit-price-dialog-card no-print"
+        >
+          <q-card-section class="q-pb-xs">
+            <div class="row items-center no-wrap q-mb-sm">
+              <div class="edit-price-modal-icon-wrap q-mr-sm">
+                <q-icon name="price_change" size="24px" color="primary" />
+              </div>
+              <div>
+                <div class="text-h6 text-weight-bold">แก้ไขราคาอาหาร</div>
+                <div class="text-caption text-grey-7">
+                  ปรับราคาต่อหน่วยตามหมายเหตุพิเศษหรือตัวเลือกเพิ่มเติม
+                </div>
+              </div>
+            </div>
+
+            <!-- Item Header & Details -->
+            <div v-if="editingItem" class="edit-item-summary-card q-pa-sm q-my-sm">
+              <div class="row items-center justify-between">
+                <div>
+                  <div class="text-weight-bold text-body1 text-primary">
+                    {{ editingItem.snapshot_name }}
+                  </div>
+                  <div class="text-caption text-grey-7">
+                    จำนวน {{ editingItem.quantity }} จาน • ราคาเดิม {{ formatPrice(editingItem.snapshot_base_price) }}/จาน
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-caption text-grey-6">ยอดรวมเดิม</span>
+                  <div class="text-weight-bold text-body2 font-mono">
+                    {{ formatPrice(editingItem.subtotal) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Customer Special Instruction Note Highlight -->
+              <div v-if="editingItem.special_instruction" class="customer-note-highlight-box q-pa-xs q-mt-sm">
+                <div class="row items-start no-wrap">
+                  <q-icon name="comment" size="16px" color="amber-9" class="q-mr-xs q-mt-xs" />
+                  <div class="text-caption text-amber-10 font-weight-500">
+                    <strong>หมายเหตุจากลูกค้า:</strong> {{ editingItem.special_instruction }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Base Price Input & Quick Adjustments -->
+            <div class="q-mt-md">
+              <label class="text-caption text-weight-bold text-grey-8 q-mb-xs block">
+                ราคาตั้งต้นต่อหน่วยใหม่ (฿/จาน):
+              </label>
+              <q-input
+                v-model.number="newBasePrice"
+                type="number"
+                outlined
+                dense
+                min="0"
+                prefix="฿"
+                class="font-mono text-weight-bold text-h6"
+                placeholder="ระบุราคาใหม่ต่อจาน"
+              >
+                <template #append>
+                  <span class="text-caption text-grey-6">/ จาน</span>
+                </template>
+              </q-input>
+
+              <!-- Quick Add Buttons -->
+              <div class="q-mt-xs">
+                <div class="text-caption text-grey-7 q-mb-xs">เพิ่ม/ลดราคาด่วน:</div>
+                <div class="row q-gutter-xs wrap">
+                  <q-btn
+                    unelevated
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    outline
+                    label="+10"
+                    @click="quickAdjustPrice(10)"
+                    class="q-px-sm"
+                  />
+                  <q-btn
+                    unelevated
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    outline
+                    label="+15"
+                    @click="quickAdjustPrice(15)"
+                    class="q-px-sm"
+                  />
+                  <q-btn
+                    unelevated
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    outline
+                    label="+20"
+                    @click="quickAdjustPrice(20)"
+                    class="q-px-sm"
+                  />
+                  <q-btn
+                    unelevated
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    outline
+                    label="+30"
+                    @click="quickAdjustPrice(30)"
+                    class="q-px-sm"
+                  />
+                  <q-btn
+                    unelevated
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    outline
+                    label="+50"
+                    @click="quickAdjustPrice(50)"
+                    class="q-px-sm"
+                  />
+                  <q-btn
+                    unelevated
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    outline
+                    label="+100"
+                    @click="quickAdjustPrice(100)"
+                    class="q-px-sm"
+                  />
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    size="sm"
+                    color="grey-7"
+                    label="คืนค่าเดิม"
+                    icon="restore"
+                    @click="resetPriceToOriginal"
+                    class="q-px-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional Note update -->
+            <div class="q-mt-md">
+              <label class="text-caption text-weight-bold text-grey-8 q-mb-xs block">
+                หมายเหตุประกอบการปรับราคา (ถ้ามี):
+              </label>
+              <q-input
+                v-model="editInstruction"
+                outlined
+                dense
+                placeholder="เช่น เพิ่มหมูกรอบพิเศษ +20"
+                class="text-caption"
+              />
+            </div>
+
+            <!-- Live Calculation Preview -->
+            <div v-if="editingItem" class="price-preview-calc-card q-pa-sm q-mt-md">
+              <div class="row justify-between text-caption text-grey-8 q-mb-xs">
+                <span>ราคาตั้งต้นใหม่:</span>
+                <span class="font-mono font-weight-600">{{ formatPrice(newBasePrice || 0) }} / จาน</span>
+              </div>
+              <div v-if="itemOptionsTotal > 0" class="row justify-between text-caption text-grey-8 q-mb-xs">
+                <span>ตัวเลือกเสริม (Options):</span>
+                <span class="font-mono font-weight-600">+{{ formatPrice(itemOptionsTotal) }} / จาน</span>
+              </div>
+              <div class="row justify-between text-caption text-grey-8 q-mb-xs">
+                <span>ราคารวมต่อหน่วย ({{ editingItem.quantity }} จาน):</span>
+                <span class="font-mono font-weight-600">{{ formatPrice(previewUnitTotal) }} × {{ editingItem.quantity }}</span>
+              </div>
+              <q-separator class="q-my-xs" />
+              <div class="row justify-between items-center text-subtitle2 q-pt-xs">
+                <span class="text-weight-bold">ยอดรวมรายการใหม่:</span>
+                <div class="text-right">
+                  <span class="text-weight-bolder text-primary font-mono text-subtitle1">
+                    {{ formatPrice(previewSubtotal) }}
+                  </span>
+                  <span
+                    v-if="priceDiff !== 0"
+                    class="text-caption q-ml-xs font-mono font-weight-600"
+                    :class="priceDiff > 0 ? 'text-positive' : 'text-negative'"
+                  >
+                    ({{ priceDiff > 0 ? '+' : '' }}{{ formatPrice(priceDiff) }})
+                  </span>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-md">
+            <q-btn
+              unelevated
+              no-caps
+              rounded
+              color="primary"
+              :label="`ยืนยันปรับราคาเป็น ${formatPrice(previewSubtotal)}`"
+              :loading="isSavingPrice"
+              @click="handleConfirmUpdatePrice"
+              class="full-width font-weight-600"
+            />
+            <q-btn
+              flat
+              no-caps
+              rounded
+              color="grey-7"
+              label="ยกเลิก"
+              v-close-popup
+              class="full-width"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </template>
   </q-page>
 </template>
@@ -363,7 +595,12 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useNotify } from 'src/composables/useNotify';
 import { supabase } from 'src/services/supabase';
-import { getOrCreateBill, markBillPaid, ownerAddQuickItem } from 'src/services/billService';
+import {
+  getOrCreateBill,
+  markBillPaid,
+  ownerAddQuickItem,
+  ownerUpdateOrderItemPrice,
+} from 'src/services/billService';
 import { closeTableSession, transferTableSession } from 'src/services/sessionService';
 import { fetchTables, isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
@@ -371,7 +608,13 @@ import { OrderStatus } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import ReceiptSlip from 'src/components/ReceiptSlip.vue';
-import type { TableSession, Bill, OrderWithItems, TableWithQR } from 'src/types/database';
+import type {
+  TableSession,
+  Bill,
+  OrderWithItems,
+  TableWithQR,
+  OrderItemWithOptions,
+} from 'src/types/database';
 
 const route = useRoute();
 const router = useRouter();
@@ -384,6 +627,30 @@ const tableName = ref('');
 const isLoading = ref(true);
 const isProcessing = ref(false);
 const isAddingDrink = ref<string | null>(null);
+
+// Edit Order Item Price State
+const showEditPriceModal = ref(false);
+const editingItem = ref<OrderItemWithOptions | null>(null);
+const editingOrder = ref<OrderWithItems | null>(null);
+const newBasePrice = ref<number>(0);
+const editInstruction = ref<string>('');
+const isSavingPrice = ref(false);
+
+const itemOptionsTotal = computed(() => {
+  if (!editingItem.value?.options) return 0;
+  return editingItem.value.options.reduce(
+    (sum, opt) => sum + (opt.snapshot_price_adjustment || 0),
+    0,
+  );
+});
+
+const previewUnitTotal = computed(() => (newBasePrice.value || 0) + itemOptionsTotal.value);
+const previewSubtotal = computed(
+  () => previewUnitTotal.value * (editingItem.value?.quantity || 1),
+);
+const priceDiff = computed(
+  () => previewSubtotal.value - (editingItem.value?.subtotal || 0),
+);
 
 // Transfer Table Modal State
 const showTransferModal = ref(false);
@@ -557,6 +824,52 @@ async function handleCancelEmptySession() {
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกการเปิดโต๊ะได้');
   } finally {
     isProcessing.value = false;
+  }
+}
+
+function handleOpenEditPriceModal(payload: {
+  item: OrderItemWithOptions;
+  order: OrderWithItems;
+}) {
+  editingItem.value = payload.item;
+  editingOrder.value = payload.order;
+  newBasePrice.value = payload.item.snapshot_base_price;
+  editInstruction.value = payload.item.special_instruction || '';
+  showEditPriceModal.value = true;
+}
+
+function quickAdjustPrice(amount: number) {
+  newBasePrice.value = Math.max(0, (newBasePrice.value || 0) + amount);
+}
+
+function resetPriceToOriginal() {
+  if (editingItem.value) {
+    newBasePrice.value = editingItem.value.snapshot_base_price;
+  }
+}
+
+async function handleConfirmUpdatePrice() {
+  if (!editingItem.value) return;
+  isSavingPrice.value = true;
+  try {
+    await ownerUpdateOrderItemPrice(
+      editingItem.value.id,
+      newBasePrice.value,
+      previewSubtotal.value,
+      editInstruction.value,
+    );
+    notifySuccess(
+      `ปรับราคา "${editingItem.value.snapshot_name}" เป็น ${formatPrice(previewSubtotal.value)} เรียบร้อยแล้ว`,
+    );
+    showEditPriceModal.value = false;
+    editingItem.value = null;
+    editingOrder.value = null;
+    await loadData();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'ไม่สามารถปรับราคาอาหารได้';
+    notifyError(msg);
+  } finally {
+    isSavingPrice.value = false;
   }
 }
 </script>
@@ -750,6 +1063,40 @@ async function handleCancelEmptySession() {
 
 .font-weight-600 {
   font-weight: 600;
+}
+
+/* ─── Edit Price Modal Styles ─── */
+.edit-price-dialog-card {
+  background: #ffffff;
+}
+
+.edit-price-modal-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.edit-item-summary-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.customer-note-highlight-box {
+  background: #fffbeb;
+  border: 1px dashed #fcd34d;
+  border-radius: var(--radius-sm);
+}
+
+.price-preview-calc-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
 }
 
 @media print {

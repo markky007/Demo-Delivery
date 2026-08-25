@@ -60,13 +60,43 @@
             <div class="row justify-between items-start">
               <!-- Dish Name -->
               <div class="col-6 receipt-item-name">
-                <span class="text-weight-bold">{{ item.snapshot_name }}</span>
+                <div class="row items-center no-wrap">
+                  <span class="text-weight-bold ellipsis">{{ item.snapshot_name }}</span>
+                  <q-btn
+                    v-if="allowEditPrice"
+                    flat
+                    round
+                    dense
+                    size="xs"
+                    color="primary"
+                    icon="edit"
+                    class="q-ml-xs no-print edit-price-btn"
+                    @click="emit('edit-price', { item, order })"
+                  >
+                    <q-tooltip>แก้ไขราคาอาหาร / ปรับตามหมายเหตุ</q-tooltip>
+                  </q-btn>
+                </div>
               </div>
               <!-- Quantity -->
               <div class="col-2 text-center text-weight-medium">x{{ item.quantity }}</div>
               <!-- Subtotal -->
-              <div class="col-4 text-right text-weight-bold font-mono">
-                {{ formatPrice(item.subtotal) }}
+              <div class="col-4 text-right font-mono">
+                <div class="row items-center justify-end no-wrap">
+                  <span class="text-weight-bold">{{ formatPrice(item.subtotal) }}</span>
+                  <q-btn
+                    v-if="allowEditPrice"
+                    flat
+                    dense
+                    size="xs"
+                    color="primary"
+                    label="แก้ราคา"
+                    icon="edit"
+                    class="q-ml-xs no-print edit-price-pill gt-xs"
+                    @click="emit('edit-price', { item, order })"
+                  >
+                    <q-tooltip>แก้ไขราคาอาหาร (฿)</q-tooltip>
+                  </q-btn>
+                </div>
               </div>
             </div>
 
@@ -90,13 +120,18 @@
               </div>
             </div>
 
-            <!-- Special Instruction -->
+            <!-- Special Instruction (Highlighted) -->
             <div
               v-if="item.special_instruction"
-              class="receipt-note-item text-caption text-primary q-pl-xs q-mt-xs"
+              class="receipt-note-item text-caption q-pl-xs q-mt-xs"
+              :class="{ 'receipt-note-item--actionable': allowEditPrice }"
+              @click="allowEditPrice && emit('edit-price', { item, order })"
             >
-              <q-icon name="edit_note" size="13px" class="q-mr-xs" />
-              <span>{{ item.special_instruction }}</span>
+              <div class="row items-center">
+                <q-icon name="comment" size="13px" class="q-mr-xs text-amber-9" />
+                <span class="text-weight-medium text-amber-10">หมายเหตุ: {{ item.special_instruction }}</span>
+                <span v-if="allowEditPrice" class="text-caption text-primary q-ml-xs text-weight-bold no-print">(กดเพื่อแก้ราคา)</span>
+              </div>
             </div>
           </div>
         </div>
@@ -193,7 +228,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { Bill, OrderWithItems } from 'src/types/database';
+import type { Bill, OrderWithItems, OrderItemWithOptions } from 'src/types/database';
 import { BillStatus } from 'src/types/enums';
 import {
   formatPrice,
@@ -210,14 +245,20 @@ const props = withDefaults(
     tableName?: string;
     orders?: OrderWithItems[];
     showActions?: boolean;
+    allowEditPrice?: boolean;
   }>(),
   {
     bill: null,
     tableName: 'โต๊ะ',
     orders: () => [],
     showActions: true,
+    allowEditPrice: false,
   },
 );
+
+const emit = defineEmits<{
+  (e: 'edit-price', payload: { item: OrderItemWithOptions; order: OrderWithItems }): void;
+}>();
 
 const { notifySuccess } = useNotify();
 const receiptCardRef = ref<HTMLElement | null>(null);
@@ -389,6 +430,41 @@ async function copyReceiptSummary() {
   display: flex;
   align-items: center;
   margin-top: 2px;
+  background: #fffbeb;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px dashed #fcd34d;
+}
+
+.receipt-note-item--actionable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.receipt-note-item--actionable:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.edit-price-btn {
+  opacity: 0.75;
+  transition: opacity 0.2s;
+}
+
+.edit-price-btn:hover {
+  opacity: 1;
+}
+
+.edit-price-pill {
+  font-size: 11px;
+  padding: 0 4px;
+  background: #eff6ff;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.edit-price-pill:hover {
+  background: #dbeafe;
 }
 
 .font-mono {

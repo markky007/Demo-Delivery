@@ -269,3 +269,100 @@ export async function fetchBillWithDetails(billId: string): Promise<{
     orders: (ordersData ?? []) as OrderWithItems[],
   };
 }
+
+/**
+ * Update an order item's base price and subtotal by owner (e.g. for custom options in comments).
+ */
+export async function ownerUpdateOrderItemPrice(
+  orderItemId: string,
+  newBasePrice: number,
+  newSubtotal?: number,
+  specialInstruction?: string,
+): Promise<void> {
+  const { error: rpcError } = await supabase.rpc('owner_update_order_item_price', {
+    p_order_item_id: orderItemId,
+    p_new_base_price: newBasePrice,
+    p_new_subtotal: newSubtotal ?? null,
+    p_special_instruction: specialInstruction ?? null,
+  });
+
+  if (!rpcError) return;
+
+  // Fallback if RPC is not yet applied in DB:
+  // 1. Fetch order item and options
+  const { data: itemData, error: fetchErr } = await supabase
+    .from('order_items')
+    .select('*, options:order_item_options(*), order:orders(*)')
+    .eq('id', orderItemId)
+    .single();
+
+  if (fetchErr || !itemData) {
+    throw new Error(fetchErr?.message || 'ไม่พบรายการอาหาร');
+  }
+
+  const options = (itemData.options ?? []) as { snapshot_price_adjustment: number }[];
+  const optionsSubtotal = options.reduce((sum, opt) => sum + (opt.snapshot_price_adjustment || 0), 0);
+  const quantity = itemData.quantity || 1;
+  const calculatedSubtotal =
+    newSubtotal !== undefined && newSubtotal !== null && newSubtotal >= 0
+      ? newSubtotal
+      : (newBasePrice + optionsSubtotal) * quantity;
+
+  // 2. Update order item
+  const updatePayload: Record<string, unknown> = {
+    snapshot_base_price: newBasePrice,
+    subtotal: calculatedSubtotal,
+    updated_at: new Date().toISOString(),
+  };
+  if (specialInstruction !== undefined) {
+    updatePayload.special_instruction = specialInstruction;
+  }
+
+  const { error: itemUpdateErr } = await supabase
+    .from('order_items')
+    .update(updatePayload)
+    .eq('id', orderItemId);
+
+  if (itemUpdateErr) throw new Error(itemUpdateErr.message);
+
+  // 3. Recalculate order total
+  const orderId = itemData.order_id;
+  const { data: allOrderItems } = await supabase
+    .from('order_items')
+    .select('subtotal')
+    .eq('order_id', orderId);
+
+  const newOrderTotal = (allOrderItems ?? []).reduce(
+    (sum: number, it: { subtotal: number }) => sum + it.subtotal,
+    0,
+  );
+
+  await supabase
+    .from('orders')
+    .update({ total_amount: newOrderTotal, updated_at: new Date().toISOString() })
+    .eq('id', orderId);
+
+  // 4. Recalculate session bill if session exists
+  const tableSessionId = itemData.order?.table_session_id;
+  if (tableSessionId) {
+    const { data: allSessionOrders } = await supabase
+      .from('orders')
+      .select('total_amount')
+      .eq('table_session_id', tableSessionId);
+
+    const newBillTotal = (allSessionOrders ?? []).reduce(
+      (sum: number, o: { total_amount: number }) => sum + o.total_amount,
+      0,
+    );
+
+    await supabase.from('bills').upsert(
+      {
+        table_session_id: tableSessionId,
+        total_amount: newBillTotal,
+        status: 'PENDING',
+      },
+      { onConflict: 'table_session_id' },
+    );
+  }
+}
+

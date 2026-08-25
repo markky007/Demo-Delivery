@@ -194,6 +194,10 @@ export interface MenuItemWithOptions extends MenuItem {
   option_groups: (OptionGroup & { options: Option[] })[];
 }
 
+export type OrderItemWithOptions = OrderItem & {
+  options?: OrderItemOption[];
+};
+
 export interface OrderWithItems extends Order {
   table_session?: {
     id: string;

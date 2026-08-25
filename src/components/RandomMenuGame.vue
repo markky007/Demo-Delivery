@@ -294,7 +294,9 @@
                     </span>
                   </div>
                   <div class="option-price-adjust">
-                    <span v-if="!opt.is_available" class="text-caption text-grey-5">หมดชั่วคราว</span>
+                    <span v-if="!opt.is_available" class="text-caption text-grey-5"
+                      >หมดชั่วคราว</span
+                    >
                     <span
                       v-else-if="
                         isTakeawaySession &&

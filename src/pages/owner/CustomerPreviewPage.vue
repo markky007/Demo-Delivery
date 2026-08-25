@@ -472,7 +472,9 @@
                         สแกนจากจุดบริการสั่งกลับบ้าน ระบบล็อกตัวเลือกนี้เป็นสั่งกลับบ้านโดยอัตโนมัติ
                       </span>
                     </template>
-                    <template v-else-if="group.selection_type === 'single'">เลือกได้ 1 รายการ</template>
+                    <template v-else-if="group.selection_type === 'single'"
+                      >เลือกได้ 1 รายการ</template
+                    >
                     <template v-else>
                       เลือกได้
                       <template v-if="group.min_selections > 0"

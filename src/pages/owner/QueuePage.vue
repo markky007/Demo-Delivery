@@ -755,13 +755,13 @@
                         class="slip-dish-card"
                         :class="{ 'slip-dish-card--multi': (item.quantity || 1) > 1 }"
                       >
-                        <div class="row items-start no-wrap">
+                        <div class="row items-center no-wrap">
                           <!-- Distinct Quantity Box -->
                           <div
                             class="slip-dish-qty-box"
                             :class="{ 'slip-dish-qty-box--multi': (item.quantity || 1) > 1 }"
                           >
-                            {{ item.quantity }}x
+                            {{ item.quantity }}
                           </div>
 
                           <!-- Dish Details -->
@@ -977,9 +977,7 @@
                 <div class="dishes-list q-my-sm">
                   <div v-for="item in order.items" :key="item.id" class="dish-item-row">
                     <div class="dish-name-line">
-                      <span class="text-weight-bold text-primary q-mr-xs"
-                        >{{ item.quantity }}x</span
-                      >
+                      <span class="text-weight-bold text-primary q-mr-xs">{{ item.quantity }}</span>
                       <span>{{ item.snapshot_name }}</span>
                     </div>
                     <!-- Options -->
@@ -1125,9 +1123,7 @@
                 <div class="dishes-list q-my-sm">
                   <div v-for="item in order.items" :key="item.id" class="dish-item-row">
                     <div class="dish-name-line">
-                      <span class="text-weight-bold text-amber-9 q-mr-xs"
-                        >{{ item.quantity }}x</span
-                      >
+                      <span class="text-weight-bold text-amber-9 q-mr-xs">{{ item.quantity }}</span>
                       <span>{{ item.snapshot_name }}</span>
                     </div>
                     <!-- Options -->
@@ -1237,9 +1233,7 @@
                 <div class="dishes-list q-my-sm">
                   <div v-for="item in order.items" :key="item.id" class="dish-item-row">
                     <div class="dish-name-line">
-                      <span class="text-weight-bold text-green-8 q-mr-xs"
-                        >{{ item.quantity }}x</span
-                      >
+                      <span class="text-weight-bold text-green-8 q-mr-xs">{{ item.quantity }}</span>
                       <span>{{ item.snapshot_name }}</span>
                     </div>
                     <!-- Options -->

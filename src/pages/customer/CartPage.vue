@@ -124,7 +124,13 @@
         <div class="cart-summary-card q-mt-md">
           <div class="summary-card-header row items-center justify-between q-mb-sm">
             <span class="text-weight-bold text-subtitle2">สรุปรายการคำสั่งซื้อ</span>
-            <span class="text-caption text-grey-6">โต๊ะ {{ sessionStore.tableName }}</span>
+            <span class="text-caption text-grey-6">
+              {{
+                isTakeawayName(sessionStore.tableName)
+                  ? 'สั่งกลับบ้าน (Takeaway)'
+                  : `โต๊ะ ${sessionStore.tableName}`
+              }}
+            </span>
           </div>
 
           <div class="row justify-between items-center text-body2 text-grey-8 q-mb-xs">
@@ -176,6 +182,7 @@ import { useCartStore } from 'src/stores/cartStore';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
+import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice, getVisibleOptions, isTakeawayOption } from 'src/utils/formatters';
 import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';

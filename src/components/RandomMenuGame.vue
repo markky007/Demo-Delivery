@@ -181,11 +181,31 @@
               :id="`random-group-${group.id}`"
               :key="group.id"
               class="option-group-card q-mt-md"
-              :class="{ 'option-group-card--error': missingGroupIds.has(group.id) }"
+              :class="{
+                'option-group-card--error': missingGroupIds.has(group.id),
+                'option-group-card--takeaway-locked':
+                  isTakeawaySession && isDiningOptionGroup(group.name),
+              }"
             >
               <div class="row items-center justify-between q-mb-xs">
-                <div class="option-group-name">{{ group.name }}</div>
+                <div class="option-group-name row items-center no-wrap">
+                  <q-icon
+                    v-if="isTakeawaySession && isDiningOptionGroup(group.name)"
+                    name="lock"
+                    size="16px"
+                    class="q-mr-xs text-orange-9"
+                  />
+                  <span>{{ group.name }}</span>
+                </div>
                 <span
+                  v-if="isTakeawaySession && isDiningOptionGroup(group.name)"
+                  class="group-tag group-tag--takeaway-locked"
+                >
+                  <q-icon name="lock" size="12px" class="q-mr-xs" />
+                  สั่งกลับบ้าน (ล็อกอัตโนมัติ)
+                </span>
+                <span
+                  v-else
                   class="group-tag"
                   :class="group.is_required ? 'group-tag--required' : 'group-tag--optional'"
                 >
@@ -194,7 +214,12 @@
               </div>
 
               <div class="option-group-hint q-mb-sm">
-                <template v-if="group.selection_type === 'single'">เลือกได้ 1 รายการ</template>
+                <template v-if="isTakeawaySession && isDiningOptionGroup(group.name)">
+                  <span class="text-orange-9 text-weight-medium">
+                    สแกนจากจุดบริการสั่งกลับบ้าน ระบบล็อกตัวเลือกนี้เป็นสั่งกลับบ้านโดยอัตโนมัติ
+                  </span>
+                </template>
+                <template v-else-if="group.selection_type === 'single'">เลือกได้ 1 รายการ</template>
                 <template v-else>
                   เลือกได้
                   <template v-if="group.min_selections > 0"
@@ -221,7 +246,15 @@
                   class="option-row"
                   :class="{
                     'option-row--selected': selectedOptions[group.id] === opt.id,
-                    'option-row--disabled': !opt.is_available,
+                    'option-row--disabled':
+                      !opt.is_available ||
+                      (isTakeawaySession &&
+                        isDiningOptionGroup(group.name) &&
+                        !isTakeawayOption(opt.name)),
+                    'option-row--locked':
+                      isTakeawaySession &&
+                      isDiningOptionGroup(group.name) &&
+                      isTakeawayOption(opt.name),
                   }"
                   @click="toggleSingleOption(group, opt.id, opt.is_available)"
                 >
@@ -229,15 +262,50 @@
                     <q-radio
                       :model-value="selectedOptions[group.id]"
                       :val="opt.id"
-                      :disable="!opt.is_available"
+                      :disable="
+                        !opt.is_available || (isTakeawaySession && isDiningOptionGroup(group.name))
+                      "
                       color="primary"
                       dense
                       class="q-mr-sm pointer-events-none"
                     />
-                    <span class="option-name">{{ opt.name }}</span>
+                    <span
+                      class="option-name"
+                      :class="{
+                        'text-grey-6':
+                          !opt.is_available ||
+                          (isTakeawaySession &&
+                            isDiningOptionGroup(group.name) &&
+                            !isTakeawayOption(opt.name)),
+                      }"
+                    >
+                      {{ opt.name }}
+                    </span>
+                    <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm"> หมด </span>
+                    <span
+                      v-else-if="
+                        isTakeawaySession &&
+                        isDiningOptionGroup(group.name) &&
+                        isTakeawayOption(opt.name)
+                      "
+                      class="opt-locked-chip q-ml-sm"
+                    >
+                      <q-icon name="lock" size="10px" class="q-mr-xs" />ล็อกตาม QR
+                    </span>
                   </div>
                   <div class="option-price-adjust">
-                    <span v-if="opt.price_adjustment > 0"
+                    <span v-if="!opt.is_available" class="text-caption text-grey-5">หมดชั่วคราว</span>
+                    <span
+                      v-else-if="
+                        isTakeawaySession &&
+                        isDiningOptionGroup(group.name) &&
+                        !isTakeawayOption(opt.name)
+                      "
+                      class="text-caption text-grey-5"
+                    >
+                      (สำหรับทานที่ร้าน)
+                    </span>
+                    <span v-else-if="opt.price_adjustment > 0"
                       >+{{ formatPrice(opt.price_adjustment) }}</span
                     >
                     <span v-else-if="opt.price_adjustment < 0">{{
@@ -364,8 +432,10 @@
 import { ref, reactive, computed, onUnmounted } from 'vue';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
+import { useSessionStore } from 'src/stores/sessionStore';
+import { isTakeawayName } from 'src/services/tableService';
 import { useNotify } from 'src/composables/useNotify';
-import { formatPrice } from 'src/utils/formatters';
+import { formatPrice, isDiningOptionGroup, isTakeawayOption } from 'src/utils/formatters';
 import { MAX_SPECIAL_INSTRUCTION_LENGTH } from 'src/utils/constants';
 import { SelectionType } from 'src/types/enums';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
@@ -375,7 +445,10 @@ import type { CartItemOption } from 'src/types/cart';
 
 const menuStore = useMenuStore();
 const cartStore = useCartStore();
+const sessionStore = useSessionStore();
 const { notifySuccess, notifyWarning } = useNotify();
+
+const isTakeawaySession = computed(() => isTakeawayName(sessionStore.tableName));
 
 // ─── Available Items for Randomizer ──────────────────
 const availableItems = computed(() => {
@@ -549,17 +622,33 @@ async function openResultDialog(baseItem: MenuItem) {
     for (const group of fullItem.option_groups) {
       if (group.selection_type === SelectionType.MULTI) {
         multiSelectedOptions[group.id] = [];
+      } else if (group.selection_type === SelectionType.SINGLE) {
+        // If customer is in takeaway session, auto-select and lock the takeaway option in the dining group
+        if (isDiningOptionGroup(group.name) && isTakeawaySession.value) {
+          const takeawayOpt =
+            group.options.find((o) => isTakeawayOption(o.name) && o.is_available) ||
+            group.options.find((o) => isTakeawayOption(o.name));
+          if (takeawayOpt) {
+            selectedOptions[group.id] = takeawayOpt.id;
+            missingGroupIds.value.delete(group.id);
+          }
+        }
       }
     }
   }
 }
 
 function toggleSingleOption(
-  group: { id: string; is_required: boolean },
+  group: { id: string; name?: string; is_required: boolean },
   optId: string,
   isAvailable: boolean,
 ) {
   if (!isAvailable) return;
+
+  // Lock dining option group if customer is on a takeaway session
+  if (isTakeawaySession.value && isDiningOptionGroup(group.name)) {
+    return;
+  }
 
   if (selectedOptions[group.id] === optId) {
     if (!group.is_required) {
@@ -1261,6 +1350,38 @@ onUnmounted(() => {
 .group-tag--optional {
   background: var(--color-surface-subtle);
   color: var(--color-text-secondary);
+}
+
+.group-tag--takeaway-locked {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.opt-locked-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ea580c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.option-group-card--takeaway-locked {
+  border-left: 3.5px solid #f97316 !important;
+  background: #fffdfa;
+}
+
+.option-row--locked {
+  background: #fff7ed !important;
+  border-color: #fdba74 !important;
+  cursor: default !important;
 }
 
 .option-group-hint {

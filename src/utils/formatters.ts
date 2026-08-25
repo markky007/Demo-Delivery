@@ -125,6 +125,20 @@ export function isDefaultOptionName(name?: string | null): boolean {
 }
 
 /**
+ * Check whether an option group is for dining format (รูปแบบการทาน / ทานที่ร้าน vs กลับบ้าน)
+ */
+export function isDiningOptionGroup(groupName?: string | null): boolean {
+  if (!groupName) return false;
+  const trimmed = groupName.trim();
+  return (
+    trimmed === 'รูปแบบการทาน' ||
+    trimmed === 'ทานที่ร้าน / กลับบ้าน' ||
+    trimmed.includes('รูปแบบการทาน') ||
+    trimmed.includes('ทานที่ร้าน / กลับบ้าน')
+  );
+}
+
+/**
  * Check whether an option is a takeaway / packaging option.
  */
 export function isTakeawayOption(name?: string | null): boolean {
@@ -134,7 +148,8 @@ export function isTakeawayOption(name?: string | null): boolean {
     trimmed === 'สั่งกลับบ้าน' ||
     trimmed === 'กลับบ้าน' ||
     trimmed === 'takeaway' ||
-    trimmed.includes('กลับบ้าน')
+    trimmed.includes('กลับบ้าน') ||
+    trimmed.includes('takeaway')
   );
 }
 

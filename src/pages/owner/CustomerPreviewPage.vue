@@ -507,7 +507,7 @@
                       :class="{
                         'mock-option-row--selected': detailSelectedOptions[group.id] === opt.id,
                         'mock-option-row--disabled':
-                          !opt.is_available ||
+                          !isOptionEffectivelyAvailable(opt) ||
                           (isTakeawaySelected &&
                             isDiningOptionGroup(group.name) &&
                             !isTakeawayOption(opt.name)),
@@ -516,14 +516,16 @@
                           isDiningOptionGroup(group.name) &&
                           isTakeawayOption(opt.name),
                       }"
-                      @click="toggleSingleDetailOption(group, opt.id, opt.is_available)"
+                      @click="
+                        toggleSingleDetailOption(group, opt.id, isOptionEffectivelyAvailable(opt))
+                      "
                     >
                       <div class="row items-center">
                         <q-radio
                           :model-value="detailSelectedOptions[group.id]"
                           :val="opt.id"
                           :disable="
-                            !opt.is_available ||
+                            !isOptionEffectivelyAvailable(opt) ||
                             (isTakeawaySelected && isDiningOptionGroup(group.name))
                           "
                           color="primary"
@@ -533,7 +535,7 @@
                         <span
                           :class="{
                             'text-grey-6':
-                              !opt.is_available ||
+                              !isOptionEffectivelyAvailable(opt) ||
                               (isTakeawaySelected &&
                                 isDiningOptionGroup(group.name) &&
                                 !isTakeawayOption(opt.name)),
@@ -541,7 +543,11 @@
                         >
                           {{ opt.name }}
                         </span>
-                        <span v-if="!opt.is_available" class="opt-sold-badge q-ml-xs">หมด</span>
+                        <span
+                          v-if="!isOptionEffectivelyAvailable(opt)"
+                          class="opt-sold-badge q-ml-xs"
+                          >หมด</span
+                        >
                         <span
                           v-else-if="
                             isTakeawaySelected &&
@@ -554,7 +560,9 @@
                         </span>
                       </div>
                       <div class="text-caption text-weight-bold text-primary">
-                        <span v-if="!opt.is_available" class="text-grey-5">หมด</span>
+                        <span v-if="!isOptionEffectivelyAvailable(opt)" class="text-grey-5"
+                          >หมด</span
+                        >
                         <span
                           v-else-if="
                             isTakeawaySelected &&
@@ -585,7 +593,7 @@
                       :class="{
                         'mock-option-row--selected': detailMultiOptions[group.id]?.includes(opt.id),
                         'mock-option-row--disabled':
-                          !opt.is_available ||
+                          !isOptionEffectivelyAvailable(opt) ||
                           (group.max_selections !== null &&
                             (detailMultiOptions[group.id]?.length ?? 0) >= group.max_selections &&
                             !detailMultiOptions[group.id]?.includes(opt.id)),
@@ -595,23 +603,31 @@
                           group.id,
                           opt.id,
                           group.max_selections,
-                          opt.is_available,
+                          isOptionEffectivelyAvailable(opt),
                         )
                       "
                     >
                       <div class="row items-center">
                         <q-checkbox
                           :model-value="detailMultiOptions[group.id]?.includes(opt.id)"
-                          :disable="!opt.is_available"
+                          :disable="!isOptionEffectivelyAvailable(opt)"
                           color="primary"
                           dense
                           class="q-mr-sm pointer-events-none"
                         />
-                        <span :class="{ 'text-grey-6': !opt.is_available }">{{ opt.name }}</span>
-                        <span v-if="!opt.is_available" class="opt-sold-badge q-ml-xs">หมด</span>
+                        <span :class="{ 'text-grey-6': !isOptionEffectivelyAvailable(opt) }">{{
+                          opt.name
+                        }}</span>
+                        <span
+                          v-if="!isOptionEffectivelyAvailable(opt)"
+                          class="opt-sold-badge q-ml-xs"
+                          >หมด</span
+                        >
                       </div>
                       <div class="text-caption text-weight-bold text-primary">
-                        <span v-if="!opt.is_available" class="text-grey-5">หมด</span>
+                        <span v-if="!isOptionEffectivelyAvailable(opt)" class="text-grey-5"
+                          >หมด</span
+                        >
                         <span v-else-if="opt.price_adjustment > 0"
                           >+{{ formatPrice(opt.price_adjustment) }}</span
                         >
@@ -945,6 +961,7 @@ import { useMenuStore } from 'src/stores/menuStore';
 import { fetchRestaurant } from 'src/services/restaurantService';
 import { fetchTables, isTakeawayName } from 'src/services/tableService';
 import { formatPrice, isTakeawayOption, isDiningOptionGroup } from 'src/utils/formatters';
+import { isOptionAvailable } from 'src/utils/ingredientHelper';
 import { SelectionType } from 'src/types/enums';
 import { useNotify } from 'src/composables/useNotify';
 import EmptyState from 'src/components/EmptyState.vue';
@@ -953,7 +970,13 @@ import QuantityStepper from 'src/components/QuantityStepper.vue';
 import RandomMenuGame from 'src/components/RandomMenuGame.vue';
 import logoMarkSvg from 'src/assets/logo-mark.svg';
 import logoSvg from 'src/assets/logo.svg';
-import type { Restaurant, TableWithQR, MenuItem, MenuItemWithOptions } from 'src/types/database';
+import type {
+  Restaurant,
+  TableWithQR,
+  MenuItem,
+  MenuItemWithOptions,
+  Option,
+} from 'src/types/database';
 import type { CartItemOption } from 'src/types/cart';
 
 interface MockCartItem {
@@ -1159,6 +1182,12 @@ function clearSearch() {
 }
 
 // ─── Product Detail & Customization logic ────────────────────
+function isOptionEffectivelyAvailable(
+  opt: Option | { name: string; is_available?: boolean },
+): boolean {
+  return isOptionAvailable(opt, menuStore.items);
+}
+
 async function openProductDetail(item: MenuItem) {
   const itemWithOptions = await menuStore.fetchItemWithOptions(item.id, true);
   if (!itemWithOptions) return;
@@ -1178,7 +1207,7 @@ async function openProductDetail(item: MenuItem) {
     } else if (group.selection_type === SelectionType.SINGLE) {
       if (isDiningOptionGroup(group.name) && isTakeawaySelected.value) {
         const takeawayOpt =
-          group.options.find((o) => isTakeawayOption(o.name) && o.is_available) ||
+          group.options.find((o) => isTakeawayOption(o.name) && isOptionEffectivelyAvailable(o)) ||
           group.options.find((o) => isTakeawayOption(o.name));
         if (takeawayOpt) {
           detailSelectedOptions[group.id] = takeawayOpt.id;
@@ -1268,6 +1297,7 @@ const calculatedDetailTotal = computed(() => {
 function validateDetailOptions(): {
   isValid: boolean;
   missingGroups: { id: string; name: string }[];
+  unavailableOptionName?: string;
 } {
   if (!activeDetailItem.value) return { isValid: false, missingGroups: [] };
 
@@ -1287,6 +1317,30 @@ function validateDetailOptions(): {
         }
       }
     }
+
+    // Check if selected option is unavailable / out of stock
+    if (group.selection_type === SelectionType.SINGLE && detailSelectedOptions[group.id]) {
+      const opt = group.options.find((o) => o.id === detailSelectedOptions[group.id]);
+      if (opt && !isOptionEffectivelyAvailable(opt)) {
+        return {
+          isValid: false,
+          missingGroups: missing,
+          unavailableOptionName: opt.name,
+        };
+      }
+    } else if (group.selection_type === SelectionType.MULTI) {
+      const selected = detailMultiOptions[group.id] ?? [];
+      for (const optId of selected) {
+        const opt = group.options.find((o) => o.id === optId);
+        if (opt && !isOptionEffectivelyAvailable(opt)) {
+          return {
+            isValid: false,
+            missingGroups: missing,
+            unavailableOptionName: opt.name,
+          };
+        }
+      }
+    }
   }
 
   return {
@@ -1300,6 +1354,11 @@ function addDetailToPreviewCart() {
 
   const validation = validateDetailOptions();
   if (!validation.isValid) {
+    if (validation.unavailableOptionName) {
+      notifyWarning(`ตัวเลือก "${validation.unavailableOptionName}" หมดชั่วคราว ไม่สามารถสั่งได้`);
+      return;
+    }
+
     const newMissingSet = new Set<string>();
     validation.missingGroups.forEach((g) => newMissingSet.add(g.id));
     detailMissingGroupIds.value = newMissingSet;

@@ -364,7 +364,7 @@
               :class="{
                 'option-row--selected': newDishSingleOptions[group.id] === opt.id,
                 'option-row--disabled':
-                  !opt.is_available ||
+                  !isOptionEffectivelyAvailable(opt) ||
                   (isTakeawaySession &&
                     isDiningOptionGroup(group.name) &&
                     !isTakeawayOption(opt.name)),
@@ -373,14 +373,15 @@
                   isDiningOptionGroup(group.name) &&
                   isTakeawayOption(opt.name),
               }"
-              @click="toggleSingleOption(group, opt.id, opt.is_available)"
+              @click="toggleSingleOption(group, opt.id, isOptionEffectivelyAvailable(opt))"
             >
               <div class="row items-center">
                 <q-radio
                   :model-value="newDishSingleOptions[group.id]"
                   :val="opt.id"
                   :disable="
-                    !opt.is_available || (isTakeawaySession && isDiningOptionGroup(group.name))
+                    !isOptionEffectivelyAvailable(opt) ||
+                    (isTakeawaySession && isDiningOptionGroup(group.name))
                   "
                   color="primary"
                   dense
@@ -390,7 +391,7 @@
                   class="option-name"
                   :class="{
                     'text-grey-6':
-                      !opt.is_available ||
+                      !isOptionEffectivelyAvailable(opt) ||
                       (isTakeawaySession &&
                         isDiningOptionGroup(group.name) &&
                         !isTakeawayOption(opt.name)),
@@ -398,7 +399,9 @@
                 >
                   {{ opt.name }}
                 </span>
-                <span v-if="!opt.is_available" class="opt-sold-badge q-ml-xs">หมด</span>
+                <span v-if="!isOptionEffectivelyAvailable(opt)" class="opt-sold-badge q-ml-xs"
+                  >หมด</span
+                >
                 <span
                   v-else-if="
                     isTakeawaySession &&
@@ -411,8 +414,11 @@
                 </span>
               </div>
               <div class="option-price-adjust">
+                <span v-if="!isOptionEffectivelyAvailable(opt)" class="text-caption text-grey-5">
+                  หมดชั่วคราว
+                </span>
                 <span
-                  v-if="
+                  v-else-if="
                     isTakeawaySession &&
                     isDiningOptionGroup(group.name) &&
                     !isTakeawayOption(opt.name)
@@ -441,18 +447,25 @@
               :class="{
                 'option-row--selected': newDishMultiOptions[group.id]?.includes(opt.id),
                 'option-row--disabled':
-                  !opt.is_available ||
+                  !isOptionEffectivelyAvailable(opt) ||
                   (group.max_selections !== null &&
                     (newDishMultiOptions[group.id]?.length ?? 0) >= group.max_selections &&
                     !newDishMultiOptions[group.id]?.includes(opt.id)),
               }"
-              @click="toggleMultiOption(group.id, opt.id, group.max_selections, opt.is_available)"
+              @click="
+                toggleMultiOption(
+                  group.id,
+                  opt.id,
+                  group.max_selections,
+                  isOptionEffectivelyAvailable(opt),
+                )
+              "
             >
               <div class="row items-center">
                 <q-checkbox
                   :model-value="newDishMultiOptions[group.id]?.includes(opt.id)"
                   :disable="
-                    !opt.is_available ||
+                    !isOptionEffectivelyAvailable(opt) ||
                     (group.max_selections !== null &&
                       (newDishMultiOptions[group.id]?.length ?? 0) >= group.max_selections &&
                       !newDishMultiOptions[group.id]?.includes(opt.id))
@@ -461,10 +474,21 @@
                   dense
                   class="q-mr-sm pointer-events-none"
                 />
-                <span class="option-name">{{ opt.name }}</span>
+                <span
+                  class="option-name"
+                  :class="{ 'text-grey-6': !isOptionEffectivelyAvailable(opt) }"
+                >
+                  {{ opt.name }}
+                </span>
+                <span v-if="!isOptionEffectivelyAvailable(opt)" class="opt-sold-badge q-ml-xs"
+                  >หมด</span
+                >
               </div>
               <div class="option-price-adjust">
-                <span v-if="opt.price_adjustment > 0"
+                <span v-if="!isOptionEffectivelyAvailable(opt)" class="text-caption text-grey-5">
+                  หมดชั่วคราว
+                </span>
+                <span v-else-if="opt.price_adjustment > 0"
                   >+{{ formatPrice(opt.price_adjustment) }}</span
                 >
                 <span v-else-if="opt.price_adjustment < 0">{{
@@ -531,11 +555,12 @@ import {
   isTakeawayOption,
   isDiningOptionGroup,
 } from 'src/utils/formatters';
+import { isOptionAvailable } from 'src/utils/ingredientHelper';
 import { isTakeawayName } from 'src/services/tableService';
 import { SelectionType } from 'src/types/enums';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
 import OrderHistoryModal from 'src/components/OrderHistoryModal.vue';
-import type { OrderWithItems, MenuItemWithOptions } from 'src/types/database';
+import type { OrderWithItems, MenuItemWithOptions, Option } from 'src/types/database';
 import type { CreateOrderItemPayload } from 'src/types/cart';
 
 interface SelectedOpt {
@@ -711,6 +736,12 @@ async function selectDishToAdd(dishId: string) {
   for (const k in newDishMultiOptions) delete newDishMultiOptions[k];
 
   // Auto-select defaults
+  function isOptionEffectivelyAvailable(
+    opt: Option | { name: string; is_available?: boolean },
+  ): boolean {
+    return isOptionAvailable(opt, menuStore.items);
+  }
+
   const isTakeawaySession = isTakeawayName(
     props.order?.table_session?.table?.name || sessionStore.tableName,
   );
@@ -721,21 +752,25 @@ async function selectDishToAdd(dishId: string) {
       if (isDiningGroup) {
         if (isTakeawaySession) {
           const takeawayOpt = group.options.find(
-            (o) => (o.name === 'สั่งกลับบ้าน' || o.name === 'กลับบ้าน') && o.is_available,
+            (o) =>
+              (o.name === 'สั่งกลับบ้าน' || o.name === 'กลับบ้าน') &&
+              isOptionEffectivelyAvailable(o),
           );
           if (takeawayOpt) {
             newDishSingleOptions[group.id] = takeawayOpt.id;
             continue;
           }
         }
-        const dineInOpt = group.options.find((o) => o.name === 'ทานที่ร้าน' && o.is_available);
+        const dineInOpt = group.options.find(
+          (o) => o.name === 'ทานที่ร้าน' && isOptionEffectivelyAvailable(o),
+        );
         if (dineInOpt) {
           newDishSingleOptions[group.id] = dineInOpt.id;
           continue;
         }
       }
 
-      const firstAvail = group.options.find((o) => o.is_available);
+      const firstAvail = group.options.find((o) => isOptionEffectivelyAvailable(o));
       if (firstAvail) {
         newDishSingleOptions[group.id] = firstAvail.id;
       }
@@ -783,6 +818,12 @@ function toggleMultiOption(
   }
 }
 
+function isOptionEffectivelyAvailable(
+  opt: Option | { name: string; is_available?: boolean },
+): boolean {
+  return isOptionAvailable(opt, menuStore.items);
+}
+
 const isNewDishValid = computed(() => {
   if (!selectedMenuItem.value) return false;
   for (const group of selectedMenuItem.value.option_groups) {
@@ -792,6 +833,18 @@ const isNewDishValid = computed(() => {
       } else {
         const count = newDishMultiOptions[group.id]?.length ?? 0;
         if (count < group.min_selections) return false;
+      }
+    }
+
+    // Check if any selected option is unavailable / sold out
+    if (group.selection_type === SelectionType.SINGLE && newDishSingleOptions[group.id]) {
+      const opt = group.options.find((o) => o.id === newDishSingleOptions[group.id]);
+      if (opt && !isOptionEffectivelyAvailable(opt)) return false;
+    } else if (group.selection_type === SelectionType.MULTI) {
+      const multiIds = newDishMultiOptions[group.id] || [];
+      for (const mId of multiIds) {
+        const opt = group.options.find((o) => o.id === mId);
+        if (opt && !isOptionEffectivelyAvailable(opt)) return false;
       }
     }
   }

@@ -109,6 +109,16 @@
                       <q-icon name="local_fire_department" size="12px" class="q-mr-xs" />
                       ของทอด
                     </q-badge>
+                    <q-badge
+                      v-if="!isOptionAvailable(opt, menuStore.items)"
+                      color="red-1"
+                      text-color="negative"
+                      class="q-ml-sm text-weight-bold"
+                      rounded
+                    >
+                      <q-icon name="inventory_2" size="12px" class="q-mr-xs" />
+                      วัตถุดิบหมด
+                    </q-badge>
                   </div>
 
                   <div class="row items-center q-gutter-md">
@@ -290,6 +300,7 @@ import { useNotify } from 'src/composables/useNotify';
 import { useMenuStore } from 'src/stores/menuStore';
 import { supabase } from 'src/services/supabase';
 import { formatPrice } from 'src/utils/formatters';
+import { isOptionAvailable } from 'src/utils/ingredientHelper';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { OptionGroup, Option } from 'src/types/database';
@@ -348,7 +359,7 @@ function groupOptions(groupId: string): Option[] {
 onMounted(async () => {
   const { data } = await supabase.from('restaurants').select('id').limit(1).single();
   if (data) restaurantId = data.id;
-  await loadData();
+  await Promise.all([menuStore.loadMenu(true), loadData()]);
 });
 
 async function loadData() {

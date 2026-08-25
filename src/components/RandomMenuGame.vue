@@ -247,7 +247,7 @@
                   :class="{
                     'option-row--selected': selectedOptions[group.id] === opt.id,
                     'option-row--disabled':
-                      !opt.is_available ||
+                      !isOptionEffectivelyAvailable(opt) ||
                       (isTakeawaySession &&
                         isDiningOptionGroup(group.name) &&
                         !isTakeawayOption(opt.name)),
@@ -256,14 +256,15 @@
                       isDiningOptionGroup(group.name) &&
                       isTakeawayOption(opt.name),
                   }"
-                  @click="toggleSingleOption(group, opt.id, opt.is_available)"
+                  @click="toggleSingleOption(group, opt.id, isOptionEffectivelyAvailable(opt))"
                 >
                   <div class="row items-center">
                     <q-radio
                       :model-value="selectedOptions[group.id]"
                       :val="opt.id"
                       :disable="
-                        !opt.is_available || (isTakeawaySession && isDiningOptionGroup(group.name))
+                        !isOptionEffectivelyAvailable(opt) ||
+                        (isTakeawaySession && isDiningOptionGroup(group.name))
                       "
                       color="primary"
                       dense
@@ -273,7 +274,7 @@
                       class="option-name"
                       :class="{
                         'text-grey-6':
-                          !opt.is_available ||
+                          !isOptionEffectivelyAvailable(opt) ||
                           (isTakeawaySession &&
                             isDiningOptionGroup(group.name) &&
                             !isTakeawayOption(opt.name)),
@@ -281,7 +282,12 @@
                     >
                       {{ opt.name }}
                     </span>
-                    <span v-if="!opt.is_available" class="opt-sold-out-chip q-ml-sm"> หมด </span>
+                    <span
+                      v-if="!isOptionEffectivelyAvailable(opt)"
+                      class="opt-sold-out-chip q-ml-sm"
+                    >
+                      หมด
+                    </span>
                     <span
                       v-else-if="
                         isTakeawaySession &&
@@ -294,7 +300,7 @@
                     </span>
                   </div>
                   <div class="option-price-adjust">
-                    <span v-if="!opt.is_available" class="text-caption text-grey-5"
+                    <span v-if="!isOptionEffectivelyAvailable(opt)" class="text-caption text-grey-5"
                       >หมดชั่วคราว</span
                     >
                     <span
@@ -327,20 +333,25 @@
                   :class="{
                     'option-row--selected': multiSelectedOptions[group.id]?.includes(opt.id),
                     'option-row--disabled':
-                      !opt.is_available ||
+                      !isOptionEffectivelyAvailable(opt) ||
                       (group.max_selections !== null &&
                         (multiSelectedOptions[group.id]?.length ?? 0) >= group.max_selections &&
                         !multiSelectedOptions[group.id]?.includes(opt.id)),
                   }"
                   @click="
-                    toggleMultiOption(group.id, opt.id, group.max_selections, opt.is_available)
+                    toggleMultiOption(
+                      group.id,
+                      opt.id,
+                      group.max_selections,
+                      isOptionEffectivelyAvailable(opt),
+                    )
                   "
                 >
                   <div class="row items-center">
                     <q-checkbox
                       :model-value="multiSelectedOptions[group.id]?.includes(opt.id)"
                       :disable="
-                        !opt.is_available ||
+                        !isOptionEffectivelyAvailable(opt) ||
                         (group.max_selections !== null &&
                           (multiSelectedOptions[group.id]?.length ?? 0) >= group.max_selections &&
                           !multiSelectedOptions[group.id]?.includes(opt.id))
@@ -349,10 +360,24 @@
                       dense
                       class="q-mr-sm pointer-events-none"
                     />
-                    <span class="option-name">{{ opt.name }}</span>
+                    <span
+                      class="option-name"
+                      :class="{ 'text-grey-6': !isOptionEffectivelyAvailable(opt) }"
+                    >
+                      {{ opt.name }}
+                    </span>
+                    <span
+                      v-if="!isOptionEffectivelyAvailable(opt)"
+                      class="opt-sold-out-chip q-ml-sm"
+                    >
+                      หมด
+                    </span>
                   </div>
                   <div class="option-price-adjust">
-                    <span v-if="opt.price_adjustment > 0"
+                    <span v-if="!isOptionEffectivelyAvailable(opt)" class="text-caption text-grey-5"
+                      >หมดชั่วคราว</span
+                    >
+                    <span v-else-if="opt.price_adjustment > 0"
                       >+{{ formatPrice(opt.price_adjustment) }}</span
                     >
                     <span v-else-if="opt.price_adjustment < 0">{{
@@ -361,6 +386,17 @@
                     <span v-else class="text-grey-5">—</span>
                   </div>
                 </div>
+              </div>
+
+              <!-- Alert if all options in a required group are unavailable -->
+              <div
+                v-if="
+                  group.is_required && !group.options.some((o) => isOptionEffectivelyAvailable(o))
+                "
+                class="group-unavailable-alert q-mt-sm"
+              >
+                <q-icon name="error_outline" size="16px" class="q-mr-xs" />
+                <span>ตัวเลือกที่จำเป็นในกลุ่มนี้หมดชั่วคราว ไม่สามารถสั่งเมนูนี้ได้</span>
               </div>
             </div>
 
@@ -438,11 +474,12 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { isTakeawayName } from 'src/services/tableService';
 import { useNotify } from 'src/composables/useNotify';
 import { formatPrice, isDiningOptionGroup, isTakeawayOption } from 'src/utils/formatters';
+import { isOptionAvailable } from 'src/utils/ingredientHelper';
 import { MAX_SPECIAL_INSTRUCTION_LENGTH } from 'src/utils/constants';
 import { SelectionType } from 'src/types/enums';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
-import type { MenuItem, MenuItemWithOptions } from 'src/types/database';
+import type { MenuItem, MenuItemWithOptions, Option } from 'src/types/database';
 import type { CartItemOption } from 'src/types/cart';
 
 const menuStore = useMenuStore();
@@ -605,6 +642,12 @@ function triggerConfetti() {
 }
 
 // ─── Open Result & Option Selection Dialog ───────────
+function isOptionEffectivelyAvailable(
+  opt: Option | { name: string; is_available?: boolean },
+): boolean {
+  return isOptionAvailable(opt, menuStore.items);
+}
+
 async function openResultDialog(baseItem: MenuItem) {
   // Reset form
   quantity.value = 1;
@@ -628,8 +671,9 @@ async function openResultDialog(baseItem: MenuItem) {
         // If customer is in takeaway session, auto-select and lock the takeaway option in the dining group
         if (isDiningOptionGroup(group.name) && isTakeawaySession.value) {
           const takeawayOpt =
-            group.options.find((o) => isTakeawayOption(o.name) && o.is_available) ||
-            group.options.find((o) => isTakeawayOption(o.name));
+            group.options.find(
+              (o) => isTakeawayOption(o.name) && isOptionEffectivelyAvailable(o),
+            ) || group.options.find((o) => isTakeawayOption(o.name));
           if (takeawayOpt) {
             selectedOptions[group.id] = takeawayOpt.id;
             missingGroupIds.value.delete(group.id);
@@ -756,7 +800,11 @@ function collectSelectedOptions(): CartItemOption[] {
   return result;
 }
 
-function validateOptions(): { isValid: boolean; missingGroups: { id: string; name: string }[] } {
+function validateOptions(): {
+  isValid: boolean;
+  missingGroups: { id: string; name: string }[];
+  unavailableOptionName?: string;
+} {
   if (!selectedItemWithOptions.value) return { isValid: false, missingGroups: [] };
 
   const missing: { id: string; name: string }[] = [];
@@ -775,6 +823,30 @@ function validateOptions(): { isValid: boolean; missingGroups: { id: string; nam
         }
       }
     }
+
+    // Check if any selected option has become unavailable / sold out
+    if (group.selection_type === SelectionType.SINGLE && selectedOptions[group.id]) {
+      const opt = group.options.find((o) => o.id === selectedOptions[group.id]);
+      if (opt && !isOptionEffectivelyAvailable(opt)) {
+        return {
+          isValid: false,
+          missingGroups: missing,
+          unavailableOptionName: opt.name,
+        };
+      }
+    } else if (group.selection_type === SelectionType.MULTI) {
+      const selected = multiSelectedOptions[group.id] ?? [];
+      for (const optId of selected) {
+        const opt = group.options.find((o) => o.id === optId);
+        if (opt && !isOptionEffectivelyAvailable(opt)) {
+          return {
+            isValid: false,
+            missingGroups: missing,
+            unavailableOptionName: opt.name,
+          };
+        }
+      }
+    }
   }
 
   return {
@@ -788,6 +860,11 @@ function addToCart() {
 
   const validation = validateOptions();
   if (!validation.isValid) {
+    if (validation.unavailableOptionName) {
+      notifyWarning(`ตัวเลือก "${validation.unavailableOptionName}" หมดชั่วคราว ไม่สามารถสั่งได้`);
+      return;
+    }
+
     const newMissingSet = new Set<string>();
     validation.missingGroups.forEach((g) => newMissingSet.add(g.id));
     missingGroupIds.value = newMissingSet;

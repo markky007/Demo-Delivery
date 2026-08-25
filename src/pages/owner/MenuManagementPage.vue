@@ -1377,25 +1377,66 @@ async function toggleIngredientStock(
   const itemIds = grp.items.map((i) => i.id);
 
   // Optimistic UI update in menuStore
-  menuStore.updateMultipleItemsLocally(itemIds, { is_available: targetAvailable });
+  if (itemIds.length > 0) {
+    menuStore.updateMultipleItemsLocally(itemIds, { is_available: targetAvailable });
+  }
+
+  // Also update matching options locally in allOptionGroups
+  const matchingOptionIds: string[] = [];
+  allOptionGroups.value.forEach((g) => {
+    g.options.forEach((o) => {
+      if (inferMainIngredient(o.name) === grp.name) {
+        o.is_available = targetAvailable;
+        matchingOptionIds.push(o.id);
+      }
+    });
+  });
+
   notifySuccess(
-    `ปรับวัตถุดิบ "${grp.name}" (${itemIds.length} เมนู) เป็น ${
-      targetAvailable ? 'เปิดขาย' : 'หมดชั่วคราว'
-    } แล้ว`,
+    `ปรับสต็อกวัตถุดิบ "${grp.name}" (${itemIds.length} เมนู${
+      matchingOptionIds.length > 0 ? `, ${matchingOptionIds.length} ตัวเลือก` : ''
+    }) เป็น ${targetAvailable ? 'เปิดขาย' : 'หมดชั่วคราว'} แล้ว`,
   );
 
   try {
-    const { error } = await supabase
-      .from('menu_items')
-      .update({
-        is_available: targetAvailable,
-        updated_at: new Date().toISOString(),
-      })
-      .in('id', itemIds);
+    // 1. Update menu items in DB
+    if (itemIds.length > 0) {
+      const { error: itemErr } = await supabase
+        .from('menu_items')
+        .update({
+          is_available: targetAvailable,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', itemIds);
 
-    if (error) throw error;
+      if (itemErr) throw itemErr;
+    }
+
+    // 2. Fetch and update all matching options in DB
+    const { data: allDbOptions } = await supabase.from('options').select('id, name');
+    if (allDbOptions && allDbOptions.length > 0) {
+      const dbMatchingOptionIds = allDbOptions
+        .filter((opt) => inferMainIngredient(opt.name) === grp.name)
+        .map((opt) => opt.id);
+
+      if (dbMatchingOptionIds.length > 0) {
+        const { error: optErr } = await supabase
+          .from('options')
+          .update({
+            is_available: targetAvailable,
+            updated_at: new Date().toISOString(),
+          })
+          .in('id', dbMatchingOptionIds);
+
+        if (optErr) console.warn('Could not update options stock:', optErr);
+      }
+    }
+
+    // 3. Clear cache so customer views fetch fresh data
+    menuStore.invalidateItemCache();
   } catch (err) {
     await menuStore.loadMenu(true);
+    await loadOptionGroups();
     notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะวัตถุดิบได้');
   } finally {
     isIngredientUpdating.value = null;

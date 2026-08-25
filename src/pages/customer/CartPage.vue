@@ -13,17 +13,36 @@
     <!-- Cart items list -->
     <template v-else>
       <div class="cart-container">
+        <!-- Dining Context Banner -->
+        <div class="cart-context-banner q-mb-sm row items-center justify-between">
+          <div class="row items-center">
+            <q-icon
+              :name="sessionStore.customerName ? 'shopping_bag' : 'table_restaurant'"
+              size="18px"
+              class="q-mr-xs text-primary"
+            />
+            <span class="text-weight-bold text-dark">
+              {{
+                sessionStore.customerName
+                  ? `สั่งกลับบ้าน (${sessionStore.customerName})`
+                  : sessionStore.tableName
+              }}
+            </span>
+          </div>
+          <span class="text-caption text-grey-7">กำลังเลือก {{ cartStore.itemCount }} รายการ</span>
+        </div>
+
         <div class="cart-header row items-center justify-between q-mb-sm">
-          <h6 class="q-my-none text-weight-bold cart-heading">
-            รายการที่เลือก ({{ cartStore.itemCount }} รายการ)
-          </h6>
+          <h6 class="q-my-none text-weight-bold cart-heading">รายการอาหารในตะกร้า</h6>
           <q-btn
             flat
             dense
             no-caps
-            color="grey-7"
+            color="negative"
             size="sm"
-            label="ล้างตะกร้า"
+            icon="delete_outline"
+            label="ล้างทั้งหมด"
+            class="clear-cart-btn"
             @click="cartStore.clearCart()"
           />
         </div>
@@ -80,12 +99,12 @@
 
                 <!-- Special Instruction -->
                 <div v-if="item.special_instruction" class="cart-item-note q-mt-xs">
-                  <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+                  <q-icon name="edit_note" size="16px" class="q-mr-xs text-orange-9" />
                   <span>{{ item.special_instruction }}</span>
                 </div>
 
                 <!-- Price + Quantity Stepper -->
-                <div class="row items-center justify-between q-mt-md">
+                <div class="row items-center justify-between q-mt-sm">
                   <span class="cart-item-subtotal">{{ formatPrice(item.subtotal) }}</span>
                   <QuantityStepper
                     :model-value="item.quantity"
@@ -101,15 +120,27 @@
           </div>
         </div>
 
-        <!-- Summary Card -->
-        <div class="cart-summary-card q-mt-lg">
-          <div class="row justify-between items-center q-mb-xs">
-            <span class="text-grey-7">จำนวนรายการทั้งหมด</span>
-            <span class="text-weight-medium">{{ cartStore.itemCount }} รายการ</span>
+        <!-- Summary Receipt Card -->
+        <div class="cart-summary-card q-mt-md">
+          <div class="summary-card-header row items-center justify-between q-mb-sm">
+            <span class="text-weight-bold text-subtitle2">สรุปรายการคำสั่งซื้อ</span>
+            <span class="text-caption text-grey-6">โต๊ะ {{ sessionStore.tableName }}</span>
           </div>
+
+          <div class="row justify-between items-center text-body2 text-grey-8 q-mb-xs">
+            <span>จำนวนอาหารทั้งหมด</span>
+            <span class="text-weight-medium">{{ cartStore.itemCount }} จาน</span>
+          </div>
+
+          <div class="row justify-between items-center text-body2 text-grey-8 q-mb-xs">
+            <span>ค่าอาหารรวม</span>
+            <span class="text-weight-medium">{{ formatPrice(cartStore.totalAmount) }}</span>
+          </div>
+
           <q-separator class="q-my-sm" />
+
           <div class="row justify-between items-center">
-            <span class="text-subtitle1 text-weight-bold">ยอดรวมสุทธิ</span>
+            <span class="text-subtitle1 text-weight-bold text-dark">ยอดรวมสุทธิ</span>
             <span class="text-h6 text-weight-bold text-primary">{{
               formatPrice(cartStore.totalAmount)
             }}</span>
@@ -128,8 +159,8 @@
             :loading="isSubmitting"
           >
             <div class="row items-center justify-between full-width q-px-sm">
-              <span>ยืนยันการสั่งอาหาร</span>
-              <span>{{ formatPrice(cartStore.totalAmount) }}</span>
+              <span class="text-weight-bold">ยืนยันการสั่งอาหาร</span>
+              <span class="text-weight-bold text-h6">{{ formatPrice(cartStore.totalAmount) }}</span>
             </div>
           </q-btn>
         </div>
@@ -257,12 +288,26 @@ async function confirmOrder() {
   color: var(--color-text-primary);
 }
 
+.cart-context-banner {
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.clear-cart-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .cart-item-card {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   padding: 14px;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 2px 8px rgba(45, 35, 30, 0.04);
+  transition: transform 0.15s ease;
 }
 
 .cart-item-thumb {
@@ -284,7 +329,7 @@ async function confirmOrder() {
 }
 
 .cart-item-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.98rem;
   color: var(--color-text-primary);
   line-height: 1.3;
@@ -313,15 +358,19 @@ async function confirmOrder() {
 
 .cart-item-note {
   font-size: 0.8rem;
-  color: var(--color-status-preparing);
+  color: #c2410c;
   display: flex;
   align-items: center;
+  background: #fff7ed;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  width: fit-content;
 }
 
 .cart-item-subtotal {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-primary);
-  font-size: 1.05rem;
+  font-size: 1.1rem;
 }
 
 .cart-summary-card {
@@ -329,7 +378,12 @@ async function confirmOrder() {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   padding: 16px;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 4px 16px rgba(45, 35, 30, 0.05);
+}
+
+.summary-card-header {
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 8px;
 }
 
 .confirm-wrapper {
@@ -349,9 +403,14 @@ async function confirmOrder() {
 }
 
 .confirm-btn {
-  border-radius: var(--radius-lg);
-  height: 52px;
-  font-size: 1rem;
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-xl);
+  height: 54px;
+  font-size: 1.05rem;
+  box-shadow: 0 8px 24px rgba(224, 88, 54, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.confirm-btn:active {
+  transform: scale(0.98);
 }
 </style>

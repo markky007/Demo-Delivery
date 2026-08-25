@@ -248,3 +248,71 @@ body {
     transform: translateY(0);
   }
 }
+
+@keyframes springPop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes steamWave {
+  0% {
+    transform: translateY(0) scaleX(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-4px) scaleX(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scaleX(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes subtleFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes badgeBounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.28);
+  }
+  60% {
+    transform: scale(0.92);
+  }
+}
+
+.animate-spring-pop {
+  animation: springPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-steam {
+  animation: steamWave 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+.animate-badge-bounce {
+  animation: badgeBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

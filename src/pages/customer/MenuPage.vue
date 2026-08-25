@@ -21,7 +21,8 @@
             }"
             @click="selectCategory(cat.id)"
           >
-            {{ cat.name }}
+            <span class="category-emoji q-mr-xs">{{ getCategoryIcon(cat.name) }}</span>
+            <span>{{ cat.name }}</span>
           </button>
         </div>
 
@@ -75,7 +76,10 @@
             v-for="item in currentItems"
             :key="item.id"
             class="menu-item-card"
-            :class="{ 'menu-item-card--sold-out': !item.is_available }"
+            :class="{
+              'menu-item-card--sold-out': !item.is_available,
+              'menu-item-card--in-cart': getItemCartCount(item.id) > 0,
+            }"
             @click="openItem(item)"
           >
             <!-- Food Image -->
@@ -90,6 +94,12 @@
               />
               <div v-else class="menu-item-placeholder">
                 <q-icon name="restaurant" size="36px" color="grey-4" />
+              </div>
+
+              <!-- In-Cart Quantity Badge -->
+              <div v-if="getItemCartCount(item.id) > 0" class="in-cart-badge animate-spring-pop">
+                <q-icon name="shopping_bag" size="12px" class="q-mr-xs" />
+                <span>{{ getItemCartCount(item.id) }}</span>
               </div>
 
               <!-- Sold out soft badge -->
@@ -107,9 +117,26 @@
 
               <div class="row items-center justify-between q-mt-sm">
                 <div class="menu-item-price">{{ formatPrice(item.base_price) }}</div>
-                <div class="add-mini-btn" :class="{ 'add-mini-btn--disabled': !item.is_available }">
-                  <q-icon :name="item.is_available ? 'add' : 'block'" size="16px" />
-                  <span class="q-ml-xs">{{ item.is_available ? 'เพิ่ม' : 'หมด' }}</span>
+                <div
+                  class="add-mini-btn"
+                  :class="{
+                    'add-mini-btn--disabled': !item.is_available,
+                    'add-mini-btn--active': getItemCartCount(item.id) > 0,
+                  }"
+                >
+                  <q-icon
+                    :name="
+                      !item.is_available ? 'block' : getItemCartCount(item.id) > 0 ? 'check' : 'add'
+                    "
+                    size="15px"
+                  />
+                  <span class="q-ml-xs">{{
+                    !item.is_available
+                      ? 'หมด'
+                      : getItemCartCount(item.id) > 0
+                        ? 'เลือกแล้ว'
+                        : 'เพิ่ม'
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -124,6 +151,7 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useMenuStore } from 'src/stores/menuStore';
+import { useCartStore } from 'src/stores/cartStore';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { formatPrice } from 'src/utils/formatters';
 import EmptyState from 'src/components/EmptyState.vue';
@@ -134,6 +162,7 @@ import type { MenuItem } from 'src/types/database';
 const router = useRouter();
 const route = useRoute();
 const menuStore = useMenuStore();
+const cartStore = useCartStore();
 const sessionStore = useSessionStore();
 
 const activeCategory = ref('');
@@ -142,6 +171,54 @@ const searchQuery = ref('');
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const isSearching = computed(() => searchQuery.value.trim().length > 0);
+
+function getItemCartCount(itemId: string): number {
+  return cartStore.items
+    .filter((i) => i.menu_item_id === itemId)
+    .reduce((sum, i) => sum + i.quantity, 0);
+}
+
+function getCategoryIcon(catName: string): string {
+  const name = catName.toLowerCase();
+  if (name.includes('ต้ม') || name.includes('ซุป') || name.includes('แกง')) return '🍲';
+  if (name.includes('ทอด') || name.includes('ไก่')) return '🍗';
+  if (name.includes('ยำ') || name.includes('ส้มตำ') || name.includes('สลัด')) return '🥗';
+  if (name.includes('ผัด') || name.includes('กะเพรา')) return '🍳';
+  if (
+    name.includes('เส้น') ||
+    name.includes('ก๋วยเตี๋ยว') ||
+    name.includes('บะหมี่') ||
+    name.includes('สปาเก็ตตี้')
+  )
+    return '🍜';
+  if (name.includes('ข้าว') || name.includes('อาหารจานเดียว')) return '🍚';
+  if (
+    name.includes('น้ำ') ||
+    name.includes('เครื่องดื่ม') ||
+    name.includes('ชา') ||
+    name.includes('กาแฟ')
+  )
+    return '🧋';
+  if (
+    name.includes('หวาน') ||
+    name.includes('ขนม') ||
+    name.includes('ไอศกรีม') ||
+    name.includes('ของหวาน')
+  )
+    return '🍰';
+  if (name.includes('ทานเล่น') || name.includes('ของว่าง') || name.includes('ออร์เดิร์ฟ'))
+    return '🥟';
+  if (name.includes('ย่าง') || name.includes('ปิ้ง') || name.includes('สเต๊ก')) return '🥩';
+  if (
+    name.includes('ซีฟู้ด') ||
+    name.includes('ทะเล') ||
+    name.includes('กุ้ง') ||
+    name.includes('ปลา')
+  )
+    return '🦐';
+  if (name.includes('แนะนำ') || name.includes('เด็ด') || name.includes('พิเศษ')) return '⭐';
+  return '🍽️';
+}
 
 onMounted(async () => {
   if (!sessionStore.hasSession) {
@@ -239,22 +316,35 @@ function openItem(item: MenuItem) {
   display: none;
 }
 
+.category-emoji {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .category-pill {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--color-border);
   background: #ffffff;
   color: var(--color-text-secondary);
-  padding: 6px 18px;
+  padding: 7px 16px;
   border-radius: var(--radius-pill);
   font-family: var(--app-font-family);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .category-pill:hover {
   border-color: var(--color-primary-tint);
+  transform: translateY(-1px);
+}
+
+.category-pill:active {
+  transform: scale(0.96);
 }
 
 .category-pill--active {
@@ -262,7 +352,7 @@ function openItem(item: MenuItem) {
   color: #ffffff;
   border-color: var(--color-primary);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(224, 88, 54, 0.25);
+  box-shadow: 0 4px 12px rgba(224, 88, 54, 0.3);
 }
 
 /* Search Bar */
@@ -278,7 +368,7 @@ function openItem(item: MenuItem) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   padding: 0 12px;
-  height: 38px;
+  height: 40px;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -286,7 +376,7 @@ function openItem(item: MenuItem) {
 
 .search-input-container:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(224, 88, 54, 0.1);
+  box-shadow: 0 0 0 3px rgba(224, 88, 54, 0.12);
 }
 
 .search-icon {
@@ -301,7 +391,7 @@ function openItem(item: MenuItem) {
   outline: none;
   background: transparent;
   font-family: var(--app-font-family);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: var(--color-text-primary);
   padding: 0;
   min-width: 0;
@@ -363,20 +453,27 @@ function openItem(item: MenuItem) {
   overflow: hidden;
   cursor: pointer;
   transition:
-    transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.18s ease;
-  box-shadow: var(--shadow-subtle);
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(45, 35, 30, 0.04);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .menu-item-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(45, 35, 30, 0.08);
 }
 
 .menu-item-card:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+}
+
+.menu-item-card--in-cart {
+  border-color: var(--color-primary-tint);
+  box-shadow: 0 4px 16px rgba(224, 88, 54, 0.12);
 }
 
 .menu-item-card--sold-out {
@@ -398,11 +495,11 @@ function openItem(item: MenuItem) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s ease;
 }
 
 .menu-item-card:hover .menu-item-img {
-  transform: scale(1.04);
+  transform: scale(1.06);
 }
 
 .menu-item-placeholder {
@@ -416,6 +513,24 @@ function openItem(item: MenuItem) {
   justify-content: center;
 }
 
+/* In-Cart Floating Badge */
+.in-cart-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 3px 10px rgba(224, 88, 54, 0.4);
+  border: 1.5px solid #ffffff;
+  z-index: 2;
+}
+
 .sold-out-overlay {
   position: absolute;
   top: 0;
@@ -427,6 +542,7 @@ function openItem(item: MenuItem) {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 3;
 }
 
 .sold-out-tag {
@@ -447,7 +563,7 @@ function openItem(item: MenuItem) {
 }
 
 .menu-item-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
   color: var(--color-text-primary);
   line-height: 1.35;
@@ -458,9 +574,9 @@ function openItem(item: MenuItem) {
 }
 
 .menu-item-desc {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--color-text-secondary);
-  margin-top: 3px;
+  margin-top: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -470,7 +586,7 @@ function openItem(item: MenuItem) {
 }
 
 .menu-item-price {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1.05rem;
   color: var(--color-primary);
 }
@@ -480,10 +596,17 @@ function openItem(item: MenuItem) {
   align-items: center;
   background: var(--color-primary-soft);
   color: var(--color-primary);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-pill);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.add-mini-btn--active {
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(224, 88, 54, 0.3);
 }
 
 .add-mini-btn--disabled {

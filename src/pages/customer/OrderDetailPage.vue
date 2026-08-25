@@ -121,14 +121,33 @@
 
           <!-- Dynamic Status Message Banner -->
           <div class="queue-status-banner" :class="statusBannerClass">
-            <q-icon :name="statusBannerIcon" size="18px" class="q-mr-xs flex-shrink-0" />
+            <q-icon
+              :name="statusBannerIcon"
+              size="18px"
+              class="q-mr-xs flex-shrink-0"
+              :class="{
+                'animate-steam': order.status === OrderStatus.PREPARING,
+                'bounce-anim': order.status === OrderStatus.PREPARED,
+              }"
+            />
             <span>{{ statusBannerMessage }}</span>
           </div>
         </div>
 
         <!-- Status Progress Stepper -->
         <div class="status-tracker-card q-mb-md">
-          <div class="text-weight-bold text-subtitle2 q-mb-md">สถานะการทำอาหาร</div>
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-weight-bold text-subtitle2">สถานะการทำอาหาร</div>
+            <div v-if="order.status === OrderStatus.PREPARING" class="cooking-hint-pill">
+              <span class="q-mr-xs">👨‍🍳</span>
+              <span>กำลังปรุงอย่างพิถีพิถัน</span>
+            </div>
+            <div v-else-if="order.status === OrderStatus.PREPARED" class="ready-hint-pill">
+              <span class="q-mr-xs">🔔</span>
+              <span>อาหารพร้อมเสิร์ฟแล้ว</span>
+            </div>
+          </div>
+
           <div class="tracker-steps">
             <!-- Step 1: Queued -->
             <div
@@ -139,7 +158,7 @@
               }"
             >
               <div class="step-dot">
-                <q-icon :name="isStepCompleted(1) ? 'check' : 'schedule'" size="16px" />
+                <q-icon :name="isStepCompleted(1) ? 'check' : 'receipt_long'" size="16px" />
               </div>
               <div class="step-label">รับออเดอร์แล้ว</div>
             </div>
@@ -154,8 +173,15 @@
                 'tracker-step--completed': isStepCompleted(2),
               }"
             >
-              <div class="step-dot">
-                <q-icon :name="isStepCompleted(2) ? 'check' : 'soup_kitchen'" size="16px" />
+              <div
+                class="step-dot"
+                :class="{ 'step-dot--cooking': order.status === OrderStatus.PREPARING }"
+              >
+                <q-icon
+                  :name="isStepCompleted(2) ? 'check' : 'soup_kitchen'"
+                  size="16px"
+                  :class="{ 'animate-steam': order.status === OrderStatus.PREPARING }"
+                />
               </div>
               <div class="step-label">กำลังเตรียมอาหาร</div>
             </div>
@@ -170,7 +196,10 @@
                 'tracker-step--completed': isStepCompleted(3),
               }"
             >
-              <div class="step-dot">
+              <div
+                class="step-dot"
+                :class="{ 'step-dot--served': order.status === OrderStatus.SERVED }"
+              >
                 <q-icon name="done_all" size="16px" />
               </div>
               <div class="step-label">เสิร์ฟแล้ว</div>
@@ -633,6 +662,32 @@ onUnmounted(() => {
   box-shadow: var(--shadow-subtle);
 }
 
+.cooking-hint-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid #fde68a;
+  animation: subtleFloat 2.5s ease-in-out infinite;
+}
+
+.ready-hint-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid #bbf7d0;
+  animation: subtleFloat 2.5s ease-in-out infinite;
+}
+
 .tracker-steps {
   display: flex;
   align-items: center;
@@ -661,6 +716,19 @@ onUnmounted(() => {
   justify-content: center;
   margin-bottom: 6px;
   transition: all 0.25s ease;
+}
+
+.step-dot--cooking {
+  background: #fff7ed !important;
+  color: #ea580c !important;
+  border-color: #ea580c !important;
+  box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15);
+}
+
+.step-dot--served {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
 }
 
 .tracker-step--active .step-dot {

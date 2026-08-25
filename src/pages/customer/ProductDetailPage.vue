@@ -169,12 +169,27 @@
         <!-- Special Instruction -->
         <div class="option-group-card q-mt-md">
           <div class="option-group-name q-mb-xs">รายละเอียดเพิ่มเติม / หมายเหตุถึงร้าน</div>
-          <p class="option-group-hint q-mb-sm">เช่น ไม่ใส่ผัก, เผ็ดน้อย, แยกน้ำซุป</p>
+          <p class="option-group-hint q-mb-sm">พิมพ์เองหรือกดเลือกตัวเลือกด่วนด้านล่างได้เลย</p>
+
+          <!-- Quick Preset Chips -->
+          <div class="quick-preset-chips q-mb-sm">
+            <button
+              v-for="preset in PRESET_NOTES"
+              :key="preset"
+              type="button"
+              class="preset-chip"
+              :class="{ 'preset-chip--selected': isNoteSelected(preset) }"
+              @click="togglePresetNote(preset)"
+            >
+              <span>{{ preset }}</span>
+            </button>
+          </div>
+
           <q-input
             v-model="specialInstruction"
             outlined
             autogrow
-            placeholder="ระบุข้อความถึงทางร้าน..."
+            placeholder="ระบุข้อความเพิ่มเติมถึงทางร้าน..."
             :maxlength="MAX_SPECIAL_INSTRUCTION_LENGTH"
             counter
             class="special-input"
@@ -206,7 +221,7 @@
             <span class="text-weight-bold">{{
               !item.is_available ? 'เมนูนี้หมดชั่วคราว' : 'เพิ่มลงตะกร้า'
             }}</span>
-            <span class="text-weight-bold">{{ formatPrice(itemTotal) }}</span>
+            <span class="text-weight-bold add-price-tag">{{ formatPrice(itemTotal) }}</span>
           </div>
         </q-btn>
       </div>
@@ -228,6 +243,15 @@ import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { MenuItemWithOptions } from 'src/types/database';
 import type { CartItemOption } from 'src/types/cart';
 
+const PRESET_NOTES = [
+  'เผ็ดน้อย 🌶️',
+  'ไม่เผ็ด ❌',
+  'ไม่ใส่ผัก 🥬',
+  'ไม่ใส่กระเทียม 🧄',
+  'แยกน้ำซุป / น้ำซอส 🥣',
+  'หวานน้อย 🍯',
+];
+
 const route = useRoute();
 const router = useRouter();
 const menuStore = useMenuStore();
@@ -241,6 +265,37 @@ const specialInstruction = ref('');
 const selectedOptions = reactive<Record<string, string>>({});
 const multiSelectedOptions = reactive<Record<string, string[]>>({});
 const missingGroupIds = ref<Set<string>>(new Set());
+
+function cleanPresetText(preset: string): string {
+  // Strip emojis & icons for the clean text in instruction
+  return preset.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9\s/]/g, '').trim();
+}
+
+function togglePresetNote(preset: string) {
+  const text = cleanPresetText(preset);
+  const current = specialInstruction.value.trim();
+
+  if (isNoteSelected(preset)) {
+    // Remove note
+    const parts = current
+      .split(',')
+      .map((p) => p.trim())
+      .filter((p) => p !== text && p.length > 0);
+    specialInstruction.value = parts.join(', ');
+  } else {
+    // Append note
+    if (current) {
+      specialInstruction.value = `${current}, ${text}`;
+    } else {
+      specialInstruction.value = text;
+    }
+  }
+}
+
+function isNoteSelected(preset: string): boolean {
+  const text = cleanPresetText(preset);
+  return specialInstruction.value.includes(text);
+}
 
 onMounted(async () => {
   const itemId = route.params.itemId as string;
@@ -503,7 +558,10 @@ function addToCart() {
   border: 1px solid var(--color-border);
   padding: 14px 16px;
   box-shadow: var(--shadow-subtle);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .option-group-card--error {
@@ -514,9 +572,18 @@ function addToCart() {
 }
 
 @keyframes shake-error {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-3px); }
-  40%, 80% { transform: translateX(3px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
 }
 
 .group-validation-error {
@@ -630,6 +697,44 @@ function addToCart() {
   color: var(--color-primary);
 }
 
+/* Quick Preset Chips */
+.quick-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-chip {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  font-family: var(--app-font-family);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.preset-chip:hover {
+  background: #ffffff;
+  border-color: var(--color-primary-tint);
+}
+
+.preset-chip:active {
+  transform: scale(0.95);
+}
+
+.preset-chip--selected {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
+  border-color: var(--color-primary-tint) !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(224, 88, 54, 0.15);
+}
+
 .special-input :deep(.q-field__control) {
   border-radius: var(--radius-sm);
 }
@@ -659,9 +764,20 @@ function addToCart() {
 }
 
 .add-to-cart-btn {
-  border-radius: var(--radius-lg);
-  height: 52px;
-  font-size: 1rem;
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-xl);
+  height: 54px;
+  font-size: 1.05rem;
+  box-shadow: 0 8px 24px rgba(224, 88, 54, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.add-to-cart-btn:active {
+  transform: scale(0.98);
+}
+
+.add-price-tag {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 </style>

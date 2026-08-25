@@ -460,9 +460,14 @@
                   </div>
 
                   <!-- Validation Error Alert -->
-                  <div v-if="detailMissingGroupIds.has(group.id)" class="group-validation-error q-mb-sm">
+                  <div
+                    v-if="detailMissingGroupIds.has(group.id)"
+                    class="group-validation-error q-mb-sm"
+                  >
                     <q-icon name="error_outline" size="16px" class="q-mr-xs" />
-                    <span v-if="group.selection_type === 'single'">กรุณาเลือกตัวเลือกในกลุ่มนี้</span>
+                    <span v-if="group.selection_type === 'single'"
+                      >กรุณาเลือกตัวเลือกในกลุ่มนี้</span
+                    >
                     <span v-else>กรุณาเลือกอย่างน้อย {{ group.min_selections || 1 }} รายการ</span>
                   </div>
 
@@ -1176,7 +1181,10 @@ const calculatedDetailTotal = computed(() => {
   return (activeDetailItem.value.base_price + optTotal) * detailQuantity.value;
 });
 
-function validateDetailOptions(): { isValid: boolean; missingGroups: { id: string; name: string }[] } {
+function validateDetailOptions(): {
+  isValid: boolean;
+  missingGroups: { id: string; name: string }[];
+} {
   if (!activeDetailItem.value) return { isValid: false, missingGroups: [] };
 
   const missing: { id: string; name: string }[] = [];
@@ -1840,7 +1848,10 @@ async function submitMockOrder() {
   border-radius: var(--radius-md);
   padding: 10px 12px;
   box-shadow: var(--shadow-subtle);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .detail-option-group--error {
@@ -1851,9 +1862,18 @@ async function submitMockOrder() {
 }
 
 @keyframes shake-error {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-3px); }
-  40%, 80% { transform: translateX(3px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
 }
 
 .group-validation-error {

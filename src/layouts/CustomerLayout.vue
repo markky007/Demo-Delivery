@@ -63,6 +63,7 @@
     <div v-if="showCartBar" class="floating-cart-wrapper">
       <q-btn
         class="floating-cart-btn full-width"
+        :class="{ 'floating-cart-btn--bouncing': isCartBouncing }"
         color="primary"
         unelevated
         no-caps
@@ -70,14 +71,20 @@
       >
         <div class="row items-center justify-between full-width q-px-sm">
           <div class="row items-center">
-            <div class="cart-count-badge q-mr-sm">
+            <div
+              class="cart-count-badge q-mr-sm"
+              :class="{ 'animate-badge-bounce': isCartBouncing }"
+            >
               {{ cartStore.itemCount }}
             </div>
-            <span class="cart-btn-label">ดูตะกร้าอาหาร</span>
+            <div class="column text-left">
+              <span class="cart-btn-label">ดูตะกร้าอาหาร</span>
+              <span class="cart-btn-sub">พร้อมส่งออเดอร์</span>
+            </div>
           </div>
           <div class="row items-center">
             <span class="cart-total-price">{{ formatPrice(cartStore.totalAmount) }}</span>
-            <q-icon name="arrow_forward" size="18px" class="q-ml-xs" />
+            <q-icon name="arrow_forward" size="18px" class="q-ml-xs cart-arrow-icon" />
           </div>
         </div>
       </q-btn>
@@ -86,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import { useCartStore } from 'src/stores/cartStore';
@@ -103,7 +110,22 @@ const sessionStore = useSessionStore();
 const cartStore = useCartStore();
 
 const isScrolled = ref(false);
+const isCartBouncing = ref(false);
 let sessionRealtimeChannel: RealtimeChannel | null = null;
+let bounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+  () => cartStore.itemCount,
+  (newCount, oldCount) => {
+    if (newCount > (oldCount || 0)) {
+      isCartBouncing.value = true;
+      if (bounceTimeout) clearTimeout(bounceTimeout);
+      bounceTimeout = setTimeout(() => {
+        isCartBouncing.value = false;
+      }, 400);
+    }
+  },
+);
 
 const publicToken = computed(
   () => (route.params.publicToken as string) || sessionStore.publicToken || '',
@@ -298,32 +320,75 @@ onUnmounted(() => {
 .floating-cart-btn {
   pointer-events: auto;
   border-radius: var(--radius-xl);
-  height: 56px;
-  box-shadow: var(--shadow-float);
+  height: 58px;
+  box-shadow: 0 8px 28px rgba(224, 88, 54, 0.35);
   font-weight: 600;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
+}
+
+.floating-cart-btn:active {
+  transform: scale(0.97);
+}
+
+.floating-cart-btn--bouncing {
+  animation: cartBtnPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cartBtnPop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04) translateY(-3px);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .cart-count-badge {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.28);
   color: #ffffff;
-  width: 26px;
-  height: 26px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .cart-btn-label {
-  font-size: 0.95rem;
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cart-btn-sub {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .cart-total-price {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.cart-arrow-icon {
+  transition: transform 0.2s ease;
+}
+
+.floating-cart-btn:hover .cart-arrow-icon {
+  transform: translateX(3px);
 }
 
 /* Page transitions */

@@ -431,8 +431,10 @@
                 <!-- Option Groups -->
                 <div
                   v-for="group in activeDetailItem.option_groups"
+                  :id="`preview-group-${group.id}`"
                   :key="group.id"
                   class="detail-option-group q-mt-md"
+                  :class="{ 'detail-option-group--error': detailMissingGroupIds.has(group.id) }"
                 >
                   <div class="row items-center justify-between q-mb-xs">
                     <div class="text-weight-bold text-subtitle2">{{ group.name }}</div>
@@ -455,6 +457,13 @@
                         >, สูงสุด {{ group.max_selections }} รายการ</template
                       >
                     </template>
+                  </div>
+
+                  <!-- Validation Error Alert -->
+                  <div v-if="detailMissingGroupIds.has(group.id)" class="group-validation-error q-mb-sm">
+                    <q-icon name="error_outline" size="16px" class="q-mr-xs" />
+                    <span v-if="group.selection_type === 'single'">กรุณาเลือกตัวเลือกในกลุ่มนี้</span>
+                    <span v-else>กรุณาเลือกอย่างน้อย {{ group.min_selections || 1 }} รายการ</span>
                   </div>
 
                   <!-- Radio Options (Single) -->
@@ -575,7 +584,7 @@
                   unelevated
                   no-caps
                   class="full-width detail-add-btn"
-                  :disable="!activeDetailItem.is_available || !isDetailValid"
+                  :disable="!activeDetailItem.is_available"
                   @click="addDetailToPreviewCart"
                 >
                   <div class="row items-center justify-between full-width q-px-sm">
@@ -896,7 +905,7 @@ interface MockOrderRecord {
 }
 
 const menuStore = useMenuStore();
-const { notifySuccess } = useNotify();
+const { notifySuccess, notifyWarning } = useNotify();
 
 // State
 const restaurantInfo = ref<Restaurant | null>(null);
@@ -921,6 +930,7 @@ const detailQuantity = ref(1);
 const detailSpecialInstruction = ref('');
 const detailSelectedOptions = reactive<Record<string, string>>({});
 const detailMultiOptions = reactive<Record<string, string[]>>({});
+const detailMissingGroupIds = ref<Set<string>>(new Set());
 
 // In-Memory Preview Cart (Isolated from real store)
 const previewCartItems = ref<MockCartItem[]>([]);
@@ -1087,35 +1097,9 @@ async function openProductDetail(item: MenuItem) {
   // Reset option selections
   Object.keys(detailSelectedOptions).forEach((k) => delete detailSelectedOptions[k]);
   Object.keys(detailMultiOptions).forEach((k) => delete detailMultiOptions[k]);
+  detailMissingGroupIds.value = new Set();
 
-  // Set default single required options
-  const isTakeaway = isTakeawaySelected.value;
   for (const group of itemWithOptions.option_groups) {
-    if (group.selection_type === SelectionType.SINGLE && group.is_required) {
-      const isDiningGroup = group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
-
-      if (isDiningGroup) {
-        if (isTakeaway) {
-          const takeawayOpt = group.options.find(
-            (o) => (o.name === 'สั่งกลับบ้าน' || o.name === 'กลับบ้าน') && o.is_available,
-          );
-          if (takeawayOpt) {
-            detailSelectedOptions[group.id] = takeawayOpt.id;
-            continue;
-          }
-        }
-        const dineInOpt = group.options.find((o) => o.name === 'ทานที่ร้าน' && o.is_available);
-        if (dineInOpt) {
-          detailSelectedOptions[group.id] = dineInOpt.id;
-          continue;
-        }
-      }
-
-      const firstAvail = group.options.find((o) => o.is_available);
-      if (firstAvail) {
-        detailSelectedOptions[group.id] = firstAvail.id;
-      }
-    }
     if (group.selection_type === SelectionType.MULTI) {
       detailMultiOptions[group.id] = [];
     }
@@ -1137,6 +1121,10 @@ function toggleSingleDetailOption(
   } else {
     detailSelectedOptions[group.id] = optId;
   }
+
+  if (detailSelectedOptions[group.id]) {
+    detailMissingGroupIds.value.delete(group.id);
+  }
 }
 
 function toggleMultiDetailOption(
@@ -1157,23 +1145,15 @@ function toggleMultiDetailOption(
     }
   }
   detailMultiOptions[groupId] = [...current];
-}
 
-const isDetailValid = computed(() => {
-  if (!activeDetailItem.value) return false;
-  for (const group of activeDetailItem.value.option_groups) {
-    if (group.is_required) {
-      if (group.selection_type === SelectionType.SINGLE && !detailSelectedOptions[group.id]) {
-        return false;
-      }
-      if (group.selection_type === SelectionType.MULTI) {
-        const selected = detailMultiOptions[group.id] ?? [];
-        if (selected.length < group.min_selections) return false;
-      }
+  const group = activeDetailItem.value?.option_groups.find((g) => g.id === groupId);
+  if (group) {
+    const min = group.min_selections || 1;
+    if (detailMultiOptions[groupId].length >= min) {
+      detailMissingGroupIds.value.delete(groupId);
     }
   }
-  return true;
-});
+}
 
 const calculatedDetailTotal = computed(() => {
   if (!activeDetailItem.value) return 0;
@@ -1196,8 +1176,56 @@ const calculatedDetailTotal = computed(() => {
   return (activeDetailItem.value.base_price + optTotal) * detailQuantity.value;
 });
 
+function validateDetailOptions(): { isValid: boolean; missingGroups: { id: string; name: string }[] } {
+  if (!activeDetailItem.value) return { isValid: false, missingGroups: [] };
+
+  const missing: { id: string; name: string }[] = [];
+
+  for (const group of activeDetailItem.value.option_groups) {
+    if (group.is_required) {
+      if (group.selection_type === SelectionType.SINGLE) {
+        if (!detailSelectedOptions[group.id]) {
+          missing.push({ id: group.id, name: group.name });
+        }
+      } else if (group.selection_type === SelectionType.MULTI) {
+        const selected = detailMultiOptions[group.id] ?? [];
+        const min = group.min_selections || 1;
+        if (selected.length < min) {
+          missing.push({ id: group.id, name: group.name });
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: missing.length === 0,
+    missingGroups: missing,
+  };
+}
+
 function addDetailToPreviewCart() {
-  if (!activeDetailItem.value || !isDetailValid.value) return;
+  if (!activeDetailItem.value || !activeDetailItem.value.is_available) return;
+
+  const validation = validateDetailOptions();
+  if (!validation.isValid) {
+    const newMissingSet = new Set<string>();
+    validation.missingGroups.forEach((g) => newMissingSet.add(g.id));
+    detailMissingGroupIds.value = newMissingSet;
+
+    if (validation.missingGroups.length === 1) {
+      notifyWarning(`กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`);
+    } else {
+      const names = validation.missingGroups.map((g) => g.name).join(', ');
+      notifyWarning(`กรุณาเลือกตัวเลือกที่จำเป็น: ${names}`);
+    }
+
+    const firstMissing = validation.missingGroups[0];
+    if (firstMissing) {
+      const el = document.getElementById(`preview-group-${firstMissing.id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
 
   const chosenOptions: CartItemOption[] = [];
   for (const group of activeDetailItem.value.option_groups) {
@@ -1812,6 +1840,31 @@ async function submitMockOrder() {
   border-radius: var(--radius-md);
   padding: 10px 12px;
   box-shadow: var(--shadow-subtle);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.detail-option-group--error {
+  border: 1.5px solid #ef4444 !important;
+  background-color: #fffaf9 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+  animation: shake-error 0.35s ease-in-out;
+}
+
+@keyframes shake-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+.group-validation-error {
+  display: flex;
+  align-items: center;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #fee2e2;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
 }
 
 .group-pill-tag {

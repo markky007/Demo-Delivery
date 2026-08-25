@@ -178,8 +178,10 @@
             <!-- Option Groups -->
             <div
               v-for="group in selectedItemWithOptions.option_groups"
+              :id="`random-group-${group.id}`"
               :key="group.id"
               class="option-group-card q-mt-md"
+              :class="{ 'option-group-card--error': missingGroupIds.has(group.id) }"
             >
               <div class="row items-center justify-between q-mb-xs">
                 <div class="option-group-name">{{ group.name }}</div>
@@ -202,6 +204,13 @@
                     >, สูงสุด {{ group.max_selections }} รายการ</template
                   >
                 </template>
+              </div>
+
+              <!-- Validation Error Alert -->
+              <div v-if="missingGroupIds.has(group.id)" class="group-validation-error q-mb-sm">
+                <q-icon name="error_outline" size="16px" class="q-mr-xs" />
+                <span v-if="group.selection_type === 'single'">กรุณาเลือกตัวเลือกในกลุ่มนี้</span>
+                <span v-else>กรุณาเลือกอย่างน้อย {{ group.min_selections || 1 }} รายการ</span>
               </div>
 
               <!-- Single Select (Radio) -->
@@ -335,7 +344,7 @@
                 unelevated
                 no-caps
                 class="full-width add-cart-btn"
-                :disable="isLoadingOptions || !isValid"
+                :disable="isLoadingOptions"
                 @click="addToCart"
               >
                 <div class="row items-center justify-between full-width no-wrap q-px-xs">
@@ -355,9 +364,7 @@
 import { ref, reactive, computed, onUnmounted } from 'vue';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
-import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
-import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import { MAX_SPECIAL_INSTRUCTION_LENGTH } from 'src/utils/constants';
 import { SelectionType } from 'src/types/enums';
@@ -368,7 +375,6 @@ import type { CartItemOption } from 'src/types/cart';
 
 const menuStore = useMenuStore();
 const cartStore = useCartStore();
-const sessionStore = useSessionStore();
 const { notifySuccess, notifyWarning } = useNotify();
 
 // ─── Available Items for Randomizer ──────────────────
@@ -392,6 +398,7 @@ const quantity = ref(1);
 const specialInstruction = ref('');
 const selectedOptions = reactive<Record<string, string>>({});
 const multiSelectedOptions = reactive<Record<string, string[]>>({});
+const missingGroupIds = ref<Set<string>>(new Set());
 
 // ─── Start Minigame ──────────────────────────────────
 function startRandomizer() {
@@ -529,6 +536,7 @@ async function openResultDialog(baseItem: MenuItem) {
   specialInstruction.value = '';
   Object.keys(selectedOptions).forEach((k) => delete selectedOptions[k]);
   Object.keys(multiSelectedOptions).forEach((k) => delete multiSelectedOptions[k]);
+  missingGroupIds.value = new Set();
 
   isResultOpen.value = true;
   isLoadingOptions.value = true;
@@ -538,36 +546,7 @@ async function openResultDialog(baseItem: MenuItem) {
   isLoadingOptions.value = false;
 
   if (fullItem) {
-    const isTakeawaySession = isTakeawayName(sessionStore.tableName);
-
     for (const group of fullItem.option_groups) {
-      if (group.selection_type === SelectionType.SINGLE && group.is_required) {
-        const isDiningGroup =
-          group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
-
-        if (isDiningGroup) {
-          if (isTakeawaySession) {
-            const takeawayOpt = group.options.find(
-              (o) => (o.name === 'สั่งกลับบ้าน' || o.name === 'กลับบ้าน') && o.is_available,
-            );
-            if (takeawayOpt) {
-              selectedOptions[group.id] = takeawayOpt.id;
-              continue;
-            }
-          }
-
-          const dineInOpt = group.options.find((o) => o.name === 'ทานที่ร้าน' && o.is_available);
-          if (dineInOpt) {
-            selectedOptions[group.id] = dineInOpt.id;
-            continue;
-          }
-        }
-
-        const firstAvailable = group.options.find((o) => o.is_available);
-        if (firstAvailable) {
-          selectedOptions[group.id] = firstAvailable.id;
-        }
-      }
       if (group.selection_type === SelectionType.MULTI) {
         multiSelectedOptions[group.id] = [];
       }
@@ -589,6 +568,10 @@ function toggleSingleOption(
   } else {
     selectedOptions[group.id] = optId;
   }
+
+  if (selectedOptions[group.id]) {
+    missingGroupIds.value.delete(group.id);
+  }
 }
 
 function toggleMultiOption(
@@ -609,25 +592,15 @@ function toggleMultiOption(
     }
   }
   multiSelectedOptions[groupId] = [...current];
-}
 
-const isValid = computed(() => {
-  if (!selectedItemWithOptions.value) return false;
-
-  for (const group of selectedItemWithOptions.value.option_groups) {
-    if (group.is_required) {
-      if (group.selection_type === SelectionType.SINGLE && !selectedOptions[group.id]) {
-        return false;
-      }
-      if (group.selection_type === SelectionType.MULTI) {
-        const selected = multiSelectedOptions[group.id] ?? [];
-        if (selected.length < group.min_selections) return false;
-      }
+  const group = selectedItemWithOptions.value?.option_groups.find((g) => g.id === groupId);
+  if (group) {
+    const min = group.min_selections || 1;
+    if (multiSelectedOptions[groupId].length >= min) {
+      missingGroupIds.value.delete(groupId);
     }
   }
-
-  return true;
-});
+}
 
 const optionsTotal = computed(() => {
   if (!selectedItemWithOptions.value) return 0;
@@ -692,8 +665,56 @@ function collectSelectedOptions(): CartItemOption[] {
   return result;
 }
 
+function validateOptions(): { isValid: boolean; missingGroups: { id: string; name: string }[] } {
+  if (!selectedItemWithOptions.value) return { isValid: false, missingGroups: [] };
+
+  const missing: { id: string; name: string }[] = [];
+
+  for (const group of selectedItemWithOptions.value.option_groups) {
+    if (group.is_required) {
+      if (group.selection_type === SelectionType.SINGLE) {
+        if (!selectedOptions[group.id]) {
+          missing.push({ id: group.id, name: group.name });
+        }
+      } else if (group.selection_type === SelectionType.MULTI) {
+        const selected = multiSelectedOptions[group.id] ?? [];
+        const min = group.min_selections || 1;
+        if (selected.length < min) {
+          missing.push({ id: group.id, name: group.name });
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: missing.length === 0,
+    missingGroups: missing,
+  };
+}
+
 function addToCart() {
-  if (!selectedItemWithOptions.value || !isValid.value) return;
+  if (!selectedItemWithOptions.value) return;
+
+  const validation = validateOptions();
+  if (!validation.isValid) {
+    const newMissingSet = new Set<string>();
+    validation.missingGroups.forEach((g) => newMissingSet.add(g.id));
+    missingGroupIds.value = newMissingSet;
+
+    if (validation.missingGroups.length === 1) {
+      notifyWarning(`กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`);
+    } else {
+      const names = validation.missingGroups.map((g) => g.name).join(', ');
+      notifyWarning(`กรุณาเลือกตัวเลือกที่จำเป็น: ${names}`);
+    }
+
+    const firstMissing = validation.missingGroups[0];
+    if (firstMissing) {
+      const el = document.getElementById(`random-group-${firstMissing.id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
 
   cartStore.addItem(
     selectedItemWithOptions.value.id,
@@ -1180,6 +1201,31 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.option-group-card--error {
+  border: 1.5px solid #ef4444 !important;
+  background-color: #fffaf9 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+  animation: shake-error 0.35s ease-in-out;
+}
+
+@keyframes shake-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+.group-validation-error {
+  display: flex;
+  align-items: center;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #fee2e2;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
 }
 
 .option-group-name {

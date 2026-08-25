@@ -33,7 +33,13 @@
         </div>
 
         <!-- Option Groups -->
-        <div v-for="group in item.option_groups" :key="group.id" class="option-group-card q-mt-md">
+        <div
+          v-for="group in item.option_groups"
+          :id="`option-group-${group.id}`"
+          :key="group.id"
+          class="option-group-card q-mt-md"
+          :class="{ 'option-group-card--error': missingGroupIds.has(group.id) }"
+        >
           <div class="row items-center justify-between q-mb-xs">
             <div class="option-group-name">{{ group.name }}</div>
             <span
@@ -55,6 +61,13 @@
                 >, สูงสุด {{ group.max_selections }} รายการ</template
               >
             </template>
+          </div>
+
+          <!-- Validation Error Alert -->
+          <div v-if="missingGroupIds.has(group.id)" class="group-validation-error q-mb-sm">
+            <q-icon name="error_outline" size="16px" class="q-mr-xs" />
+            <span v-if="group.selection_type === 'single'">กรุณาเลือกตัวเลือกในกลุ่มนี้</span>
+            <span v-else>กรุณาเลือกอย่างน้อย {{ group.min_selections || 1 }} รายการ</span>
           </div>
 
           <!-- Single Select (Radio options styled as rows) -->
@@ -186,7 +199,7 @@
           no-caps
           size="lg"
           class="full-width add-to-cart-btn"
-          :disable="!item.is_available || !isValid"
+          :disable="!item.is_available"
           @click="addToCart"
         >
           <div class="row items-center justify-between full-width q-px-sm">
@@ -207,8 +220,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { useNotify } from 'src/composables/useNotify';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
-import { useSessionStore } from 'src/stores/sessionStore';
-import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import { MAX_SPECIAL_INSTRUCTION_LENGTH } from 'src/utils/constants';
 import { SelectionType } from 'src/types/enums';
@@ -221,8 +232,7 @@ const route = useRoute();
 const router = useRouter();
 const menuStore = useMenuStore();
 const cartStore = useCartStore();
-const sessionStore = useSessionStore();
-const { notifySuccess } = useNotify();
+const { notifySuccess, notifyWarning } = useNotify();
 
 const item = ref<MenuItemWithOptions | null>(null);
 const isLoading = ref(true);
@@ -230,6 +240,7 @@ const quantity = ref(1);
 const specialInstruction = ref('');
 const selectedOptions = reactive<Record<string, string>>({});
 const multiSelectedOptions = reactive<Record<string, string[]>>({});
+const missingGroupIds = ref<Set<string>>(new Set());
 
 onMounted(async () => {
   const itemId = route.params.itemId as string;
@@ -237,36 +248,7 @@ onMounted(async () => {
   isLoading.value = false;
 
   if (item.value) {
-    const isTakeawaySession = isTakeawayName(sessionStore.tableName);
-
     for (const group of item.value.option_groups) {
-      if (group.selection_type === SelectionType.SINGLE && group.is_required) {
-        const isDiningGroup =
-          group.name === 'รูปแบบการทาน' || group.name === 'ทานที่ร้าน / กลับบ้าน';
-
-        if (isDiningGroup) {
-          if (isTakeawaySession) {
-            const takeawayOpt = group.options.find(
-              (o) => (o.name === 'สั่งกลับบ้าน' || o.name === 'กลับบ้าน') && o.is_available,
-            );
-            if (takeawayOpt) {
-              selectedOptions[group.id] = takeawayOpt.id;
-              continue;
-            }
-          }
-
-          const dineInOpt = group.options.find((o) => o.name === 'ทานที่ร้าน' && o.is_available);
-          if (dineInOpt) {
-            selectedOptions[group.id] = dineInOpt.id;
-            continue;
-          }
-        }
-
-        const firstAvailable = group.options.find((o) => o.is_available);
-        if (firstAvailable) {
-          selectedOptions[group.id] = firstAvailable.id;
-        }
-      }
       if (group.selection_type === SelectionType.MULTI) {
         multiSelectedOptions[group.id] = [];
       }
@@ -288,6 +270,10 @@ function toggleSingleOption(
   } else {
     selectedOptions[group.id] = optId;
   }
+
+  if (selectedOptions[group.id]) {
+    missingGroupIds.value.delete(group.id);
+  }
 }
 
 function toggleMultiOption(
@@ -308,25 +294,15 @@ function toggleMultiOption(
     }
   }
   multiSelectedOptions[groupId] = [...current];
-}
 
-const isValid = computed(() => {
-  if (!item.value) return false;
-
-  for (const group of item.value.option_groups) {
-    if (group.is_required) {
-      if (group.selection_type === SelectionType.SINGLE && !selectedOptions[group.id]) {
-        return false;
-      }
-      if (group.selection_type === SelectionType.MULTI) {
-        const selected = multiSelectedOptions[group.id] ?? [];
-        if (selected.length < group.min_selections) return false;
-      }
+  const group = item.value?.option_groups.find((g) => g.id === groupId);
+  if (group) {
+    const min = group.min_selections || 1;
+    if (multiSelectedOptions[groupId].length >= min) {
+      missingGroupIds.value.delete(groupId);
     }
   }
-
-  return true;
-});
+}
 
 const optionsTotal = computed(() => {
   if (!item.value) return 0;
@@ -391,8 +367,56 @@ function collectSelectedOptions(): CartItemOption[] {
   return result;
 }
 
+function validateOptions(): { isValid: boolean; missingGroups: { id: string; name: string }[] } {
+  if (!item.value) return { isValid: false, missingGroups: [] };
+
+  const missing: { id: string; name: string }[] = [];
+
+  for (const group of item.value.option_groups) {
+    if (group.is_required) {
+      if (group.selection_type === SelectionType.SINGLE) {
+        if (!selectedOptions[group.id]) {
+          missing.push({ id: group.id, name: group.name });
+        }
+      } else if (group.selection_type === SelectionType.MULTI) {
+        const selected = multiSelectedOptions[group.id] ?? [];
+        const min = group.min_selections || 1;
+        if (selected.length < min) {
+          missing.push({ id: group.id, name: group.name });
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: missing.length === 0,
+    missingGroups: missing,
+  };
+}
+
 function addToCart() {
-  if (!item.value || !isValid.value) return;
+  if (!item.value || !item.value.is_available) return;
+
+  const validation = validateOptions();
+  if (!validation.isValid) {
+    const newMissingSet = new Set<string>();
+    validation.missingGroups.forEach((g) => newMissingSet.add(g.id));
+    missingGroupIds.value = newMissingSet;
+
+    if (validation.missingGroups.length === 1) {
+      notifyWarning(`กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`);
+    } else {
+      const names = validation.missingGroups.map((g) => g.name).join(', ');
+      notifyWarning(`กรุณาเลือกตัวเลือกที่จำเป็น: ${names}`);
+    }
+
+    const firstMissing = validation.missingGroups[0];
+    if (firstMissing) {
+      const el = document.getElementById(`option-group-${firstMissing.id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
 
   cartStore.addItem(
     item.value.id,
@@ -479,6 +503,31 @@ function addToCart() {
   border: 1px solid var(--color-border);
   padding: 14px 16px;
   box-shadow: var(--shadow-subtle);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.option-group-card--error {
+  border: 1.5px solid #ef4444 !important;
+  background-color: #fffaf9 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+  animation: shake-error 0.35s ease-in-out;
+}
+
+@keyframes shake-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+.group-validation-error {
+  display: flex;
+  align-items: center;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #fee2e2;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
 }
 
 .option-group-name {

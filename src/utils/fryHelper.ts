@@ -46,7 +46,11 @@ export function inferFryConfigFromName(name: string): FryConfig | null {
   }
 
   // 2. เอ็นไก่ทอด
-  if (cleanName.includes('เอ็นไก่ทอด')) {
+  if (
+    cleanName.includes('เอ็นไก่ทอด') ||
+    cleanName.includes('เอ็นข้อไก่') ||
+    cleanName.includes('เอ็นไก่')
+  ) {
     return {
       is_fried: true,
       fry_name: 'เอ็นไก่ทอด',

@@ -14,26 +14,32 @@ export interface IngredientGroupInfo {
 }
 
 export const STANDARD_INGREDIENTS = [
-  { name: 'ไก่ทอด', icon: 'mdi-food-drumstick', keywords: ['ไก่ทอด'] },
-  { name: 'เอ็นไก่ทอด', icon: 'mdi-food-drumstick', keywords: ['เอ็นไก่ทอด', 'เอ็นข้อไก่ทอด'] },
-  { name: 'ปีกไก่', icon: 'mdi-food-drumstick', keywords: ['ปีกไก่', 'ปีกไก่ทอด'] },
+  {
+    name: 'เอ็นไก่ทอด',
+    icon: 'mdi-food-drumstick',
+    keywords: ['เอ็นไก่ทอด', 'เอ็นข้อไก่ทอด', 'เอ็นไก่', 'เอ็นข้อไก่'],
+  },
+  { name: 'ปีกไก่', icon: 'mdi-food-drumstick', keywords: ['ปีกไก่ทอด', 'ปีกไก่'] },
+  { name: 'ไก่ทอด', icon: 'mdi-food-drumstick', keywords: ['ไก่ทอด', 'ไก่กรอบ'] },
   { name: 'หมูกรอบ', icon: 'mdi-pig', keywords: ['หมูกรอบ'] },
-  { name: 'สามชั้น', icon: 'mdi-pig', keywords: ['สามชั้น', 'สามชั้นทอด'] },
+  { name: 'สามชั้น', icon: 'mdi-pig', keywords: ['สามชั้นทอด', 'สามชั้น'] },
+  { name: 'หมูทอด', icon: 'mdi-pig', keywords: ['หมูทอด'] },
   { name: 'หมูสับ', icon: 'mdi-pig', keywords: ['หมูสับ'] },
   { name: 'หมูชิ้น', icon: 'mdi-pig', keywords: ['หมูชิ้น', 'หมุชิ้น'] },
+  { name: 'กระดูกอ่อน', icon: 'mdi-pig', keywords: ['กระดูกอ่อน', 'ซี่โครงอ่อน'] },
   {
     name: 'กุ้งทอด',
     icon: 'fa-solid fa-shrimp',
-    keywords: ['กุ้งทอด', 'กุ้งชุบแป้งทอด', 'ทอดมันกุ้ง'],
+    keywords: ['กุ้งชุบแป้งทอด', 'กุ้งทอด', 'ทอดมันกุ้ง'],
   },
   {
     name: 'ปลาหมึกทอด',
     icon: 'fa-solid fa-fish',
     keywords: [
+      'ปลาหมึกชุบแป้งทอด',
+      'หมึกชุบแป้งทอด',
       'ปลาหมึกทอด',
       'หมึกทอด',
-      'หมึกชุบแป้งทอด',
-      'ปลาหมึกชุบแป้งทอด',
       'หนวดหมึกทอด',
       'หมึกวงทอด',
     ],
@@ -41,22 +47,30 @@ export const STANDARD_INGREDIENTS = [
   {
     name: 'ทะเลทอด',
     icon: 'fa-solid fa-fish',
-    keywords: ['ทะเลทอด', 'ซีฟู้ดทอด', 'ทะเลชุบแป้งทอด', 'รวมมิตรทะเลทอด'],
+    keywords: ['ทะเลชุบแป้งทอด', 'รวมมิตรทะเลทอด', 'ทะเลทอด', 'ซีฟู้ดทอด'],
   },
   { name: 'กุ้ง', icon: 'fa-solid fa-shrimp', keywords: ['กุ้ง'] },
   { name: 'ปลาหมึก', icon: 'fa-solid fa-fish', keywords: ['ปลาหมึก', 'หมึก'] },
   { name: 'ทะเล', icon: 'fa-solid fa-fish', keywords: ['ทะเล', 'ซีฟู้ด'] },
   { name: 'ไก่', icon: 'mdi-food-drumstick', keywords: ['ไก่'] },
-  { name: 'หมูทอด', icon: 'mdi-pig', keywords: ['หมูทอด'] },
-  { name: 'กระดูกอ่อน', icon: 'mdi-pig', keywords: ['กระดูกอ่อน'] },
+  { name: 'หมูยอ', icon: 'mdi-pig', keywords: ['หมูยอ'] },
+  { name: 'หมู', icon: 'mdi-pig', keywords: ['หมู'] },
+  { name: 'ไข่เยี่ยวม้า', icon: 'mdi-egg-fried', keywords: ['ไข่เยี่ยวม้า'] },
+  { name: 'ไข่เค็ม', icon: 'mdi-egg-fried', keywords: ['ไข่เค็ม'] },
   { name: 'ไข่ดาว', icon: 'mdi-egg-fried', keywords: ['ไข่ดาว'] },
   { name: 'ไข่เจียว', icon: 'mdi-egg-fried', keywords: ['ไข่เจียว'] },
   { name: 'ไข่ข้น', icon: 'mdi-egg-fried', keywords: ['ไข่ข้น'] },
-  { name: 'ไข่เยี่ยวม้า', icon: 'mdi-egg-fried', keywords: ['ไข่เยี่ยวม้า'] },
-  { name: 'หมูยอ', icon: 'mdi-pig', keywords: ['หมูยอ'] },
   { name: 'วุ้นเส้น', icon: 'mdi-noodles', keywords: ['วุ้นเส้น'] },
   { name: 'มาม่า', icon: 'mdi-noodles', keywords: ['มาม่า'] },
 ];
+
+/**
+ * Pre-sorted list of keyword mappings by keyword length descending
+ * to ensure specific compound terms (e.g. 'เอ็นไก่ทอด') match before generic substrings (e.g. 'ไก่ทอด', 'ไก่').
+ */
+const SORTED_KEYWORD_MAPPINGS = STANDARD_INGREDIENTS.flatMap((item) =>
+  item.keywords.map((kw) => ({ keyword: kw, ingredient: item.name })),
+).sort((a, b) => b.keyword.length - a.keyword.length);
 
 /**
  * Infer or normalize the main ingredient of a menu item.
@@ -69,12 +83,10 @@ export function inferMainIngredient(dishName: string, customIngredient?: string 
 
   const cleanName = dishName.trim();
 
-  // Try matching known ingredients in priority order (longer names first)
-  for (const item of STANDARD_INGREDIENTS) {
-    for (const kw of item.keywords) {
-      if (cleanName.includes(kw)) {
-        return item.name;
-      }
+  // Match known ingredients in priority order (longer keyword matches first)
+  for (const mapping of SORTED_KEYWORD_MAPPINGS) {
+    if (cleanName.includes(mapping.keyword)) {
+      return mapping.ingredient;
     }
   }
 

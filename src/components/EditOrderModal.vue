@@ -58,6 +58,30 @@
           </span>
         </div>
 
+        <!-- History Banner (If revised previously) -->
+        <div
+          v-if="order.revision > 1"
+          class="edit-history-banner q-mb-md row items-center justify-between"
+        >
+          <div class="row items-center col-auto">
+            <q-icon name="history" size="18px" color="amber-9" class="q-mr-xs" />
+            <span class="text-caption text-weight-bold text-amber-10">
+              ออเดอร์นี้เคยมีการแก้ไข (เวอร์ชันปัจจุบัน {{ order.revision }})
+            </span>
+          </div>
+          <q-btn
+            flat
+            dense
+            no-caps
+            size="xs"
+            color="amber-10"
+            icon="visibility"
+            label="ย้อนดูเมนูก่อนแก้ไข"
+            class="q-px-xs text-weight-bold"
+            @click="showHistoryModal = true"
+          />
+        </div>
+
         <div v-if="items.length === 0" class="text-center q-pa-lg text-grey-6">
           <q-icon name="remove_shopping_cart" size="48px" class="q-mb-sm text-grey-4" />
           <div>ยังไม่มีรายการอาหารในออเดอร์นี้</div>
@@ -212,6 +236,14 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
+
+  <!-- View Order History Modal (View-only) -->
+  <OrderHistoryModal
+    v-if="order"
+    v-model="showHistoryModal"
+    :order-id="order.id"
+    :queue-number="order.queue_number"
+  />
 
   <!-- Nested Dialog for Adding / Customizing a Menu Item -->
   <q-dialog
@@ -435,6 +467,7 @@ import { formatPrice, formatQueueNumber, isTakeawayOption } from 'src/utils/form
 import { isTakeawayName } from 'src/services/tableService';
 import { SelectionType } from 'src/types/enums';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
+import OrderHistoryModal from 'src/components/OrderHistoryModal.vue';
 import type { OrderWithItems, MenuItemWithOptions } from 'src/types/database';
 import type { CreateOrderItemPayload } from 'src/types/cart';
 
@@ -476,6 +509,7 @@ const sessionStore = useSessionStore();
 
 const isSaving = ref(false);
 const items = ref<LocalEditableItem[]>([]);
+const showHistoryModal = ref(false);
 
 // Nested Add/Edit Item dialog states
 const showAddItemDialog = ref(false);
@@ -778,6 +812,8 @@ async function saveOrderChanges() {
       const optIds = it.selected_options.map((o) => o.option_id);
       return {
         menu_item_id: it.menu_item_id,
+        name: it.name,
+        base_price: it.base_price,
         quantity: it.quantity,
         special_instruction: it.special_instruction,
         selected_option_ids: optIds,
@@ -1026,5 +1062,12 @@ async function saveOrderChanges() {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-text-secondary);
+}
+
+.edit-history-banner {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+  padding: 8px 12px;
 }
 </style>

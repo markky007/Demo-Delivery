@@ -35,6 +35,8 @@ export interface CreateOrderPayload {
 
 export interface CreateOrderItemPayload {
   menu_item_id: string;
+  name?: string;
+  base_price?: number;
   quantity: number;
   special_instruction: string;
   selected_option_ids: string[];

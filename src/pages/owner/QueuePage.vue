@@ -688,13 +688,31 @@
                     </div>
 
                     <!-- Revision Alert Banner -->
-                    <div v-if="order.revision > 1" class="slip-revision-alert q-mt-xs">
-                      <q-icon
-                        name="notification_important"
-                        size="17px"
-                        class="q-mr-xs animate-bounce"
-                      />
-                      <span><strong>แก้ไขรายการ:</strong> เวอร์ชัน {{ order.revision }}</span>
+                    <div
+                      v-if="order.revision > 1"
+                      class="slip-revision-alert q-mt-xs row items-center justify-between"
+                    >
+                      <div class="row items-center col-auto">
+                        <q-icon
+                          name="notification_important"
+                          size="17px"
+                          class="q-mr-xs animate-bounce"
+                        />
+                        <span><strong>แก้ไขรายการ:</strong> เวอร์ชัน {{ order.revision }}</span>
+                      </div>
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        size="xs"
+                        color="amber-10"
+                        icon="history"
+                        label="ย้อนดูเมนูก่อนแก้ไข"
+                        class="slip-history-btn q-px-xs text-weight-bold"
+                        @click.stop="openOrderHistoryDialog(order)"
+                      >
+                        <q-tooltip>ย้อนดูรายการอาหารก่อนถูกแก้ไข</q-tooltip>
+                      </q-btn>
                     </div>
                   </div>
 
@@ -1077,9 +1095,27 @@
                 </div>
 
                 <!-- Revision alert -->
-                <div v-if="order.revision > 1" class="revision-banner q-mb-xs">
-                  <q-icon name="notification_important" size="14px" class="q-mr-xs" />
-                  <span>ลูกค้ารายการนี้มีการแก้ไข</span>
+                <div
+                  v-if="order.revision > 1"
+                  class="revision-banner q-mb-xs row items-center justify-between"
+                >
+                  <div class="row items-center col-auto">
+                    <q-icon name="notification_important" size="14px" class="q-mr-xs" />
+                    <span>ลูกค้ารายการนี้มีการแก้ไข</span>
+                  </div>
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    size="xs"
+                    color="amber-10"
+                    icon="history"
+                    label="ย้อนดูเมนูก่อนแก้ไข"
+                    class="q-px-xs text-caption text-weight-bold"
+                    @click.stop="openOrderHistoryDialog(order)"
+                  >
+                    <q-tooltip>ย้อนดูรายการอาหารก่อนถูกแก้ไข</q-tooltip>
+                  </q-btn>
                 </div>
 
                 <!-- Dishes List -->
@@ -1953,6 +1989,14 @@
         :is-kitchen="true"
         @saved="onOrderEdited"
       />
+
+      <!-- Order Revision History Modal (View-only) -->
+      <OrderHistoryModal
+        v-if="historyOrder"
+        v-model="showHistoryModal"
+        :order-id="historyOrder.id"
+        :queue-number="historyOrder.queue_number"
+      />
     </template>
   </q-page>
 </template>
@@ -1989,6 +2033,7 @@ import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems } from 'src/types/database';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import EditOrderModal from 'src/components/EditOrderModal.vue';
+import OrderHistoryModal from 'src/components/OrderHistoryModal.vue';
 import {
   playNewOrderChime,
   playStatusDoneChime,
@@ -2049,6 +2094,15 @@ const testButtonLabel = computed(() => {
 // Kitchen Order Edit Modal States
 const showEditModal = ref(false);
 const editingOrder = ref<OrderWithItems | null>(null);
+
+// Order Revision History Modal States
+const showHistoryModal = ref(false);
+const historyOrder = ref<OrderWithItems | null>(null);
+
+function openOrderHistoryDialog(order: OrderWithItems) {
+  historyOrder.value = order;
+  showHistoryModal.value = true;
+}
 
 function openEditOrderDialog(order: OrderWithItems) {
   editingOrder.value = order;

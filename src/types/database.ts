@@ -219,3 +219,35 @@ export interface TableSessionWithOrders extends TableSession {
   guest_sessions: GuestSession[];
   table: Table;
 }
+
+// ─── Order Revision History ───────────────────────────────────
+export interface OrderHistorySnapshotOption {
+  id?: string;
+  option_id?: string;
+  option_group_id?: string;
+  snapshot_option_name: string;
+  snapshot_group_name?: string;
+  snapshot_price_adjustment: number;
+}
+
+export interface OrderHistorySnapshotItem {
+  id?: string;
+  menu_item_id?: string | null;
+  snapshot_name: string;
+  snapshot_base_price: number;
+  snapshot_description?: string | null;
+  quantity: number;
+  special_instruction?: string | null;
+  subtotal: number;
+  options?: OrderHistorySnapshotOption[];
+}
+
+export interface OrderHistory {
+  id: string;
+  order_id: string;
+  revision: number;
+  items_snapshot: OrderHistorySnapshotItem[];
+  total_amount: number;
+  edited_by?: string;
+  created_at: string;
+}

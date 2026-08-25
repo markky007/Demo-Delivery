@@ -389,7 +389,8 @@
                     {{ editingItem.snapshot_name }}
                   </div>
                   <div class="text-caption text-grey-7">
-                    จำนวน {{ editingItem.quantity }} จาน • ราคาเดิม {{ formatPrice(editingItem.snapshot_base_price) }}/จาน
+                    จำนวน {{ editingItem.quantity }} จาน • ราคาเดิม
+                    {{ formatPrice(editingItem.snapshot_base_price) }}/จาน
                   </div>
                 </div>
                 <div class="text-right">
@@ -401,7 +402,10 @@
               </div>
 
               <!-- Customer Special Instruction Note Highlight -->
-              <div v-if="editingItem.special_instruction" class="customer-note-highlight-box q-pa-xs q-mt-sm">
+              <div
+                v-if="editingItem.special_instruction"
+                class="customer-note-highlight-box q-pa-xs q-mt-sm"
+              >
                 <div class="row items-start no-wrap">
                   <q-icon name="comment" size="16px" color="amber-9" class="q-mr-xs q-mt-xs" />
                   <div class="text-caption text-amber-10 font-weight-500">
@@ -534,15 +538,24 @@
             <div v-if="editingItem" class="price-preview-calc-card q-pa-sm q-mt-md">
               <div class="row justify-between text-caption text-grey-8 q-mb-xs">
                 <span>ราคาตั้งต้นใหม่:</span>
-                <span class="font-mono font-weight-600">{{ formatPrice(newBasePrice || 0) }} / จาน</span>
+                <span class="font-mono font-weight-600"
+                  >{{ formatPrice(newBasePrice || 0) }} / จาน</span
+                >
               </div>
-              <div v-if="itemOptionsTotal > 0" class="row justify-between text-caption text-grey-8 q-mb-xs">
+              <div
+                v-if="itemOptionsTotal > 0"
+                class="row justify-between text-caption text-grey-8 q-mb-xs"
+              >
                 <span>ตัวเลือกเสริม (Options):</span>
-                <span class="font-mono font-weight-600">+{{ formatPrice(itemOptionsTotal) }} / จาน</span>
+                <span class="font-mono font-weight-600"
+                  >+{{ formatPrice(itemOptionsTotal) }} / จาน</span
+                >
               </div>
               <div class="row justify-between text-caption text-grey-8 q-mb-xs">
                 <span>ราคารวมต่อหน่วย ({{ editingItem.quantity }} จาน):</span>
-                <span class="font-mono font-weight-600">{{ formatPrice(previewUnitTotal) }} × {{ editingItem.quantity }}</span>
+                <span class="font-mono font-weight-600"
+                  >{{ formatPrice(previewUnitTotal) }} × {{ editingItem.quantity }}</span
+                >
               </div>
               <q-separator class="q-my-xs" />
               <div class="row justify-between items-center text-subtitle2 q-pt-xs">
@@ -645,12 +658,8 @@ const itemOptionsTotal = computed(() => {
 });
 
 const previewUnitTotal = computed(() => (newBasePrice.value || 0) + itemOptionsTotal.value);
-const previewSubtotal = computed(
-  () => previewUnitTotal.value * (editingItem.value?.quantity || 1),
-);
-const priceDiff = computed(
-  () => previewSubtotal.value - (editingItem.value?.subtotal || 0),
-);
+const previewSubtotal = computed(() => previewUnitTotal.value * (editingItem.value?.quantity || 1));
+const priceDiff = computed(() => previewSubtotal.value - (editingItem.value?.subtotal || 0));
 
 // Transfer Table Modal State
 const showTransferModal = ref(false);
@@ -827,10 +836,7 @@ async function handleCancelEmptySession() {
   }
 }
 
-function handleOpenEditPriceModal(payload: {
-  item: OrderItemWithOptions;
-  order: OrderWithItems;
-}) {
+function handleOpenEditPriceModal(payload: { item: OrderItemWithOptions; order: OrderWithItems }) {
   editingItem.value = payload.item;
   editingOrder.value = payload.order;
   newBasePrice.value = payload.item.snapshot_base_price;

@@ -2,7 +2,7 @@
  * Order service — create, edit, and manage orders.
  */
 import { supabase } from './supabase';
-import type { Order, OrderWithItems } from 'src/types/database';
+import type { Order, OrderWithItems, OrderHistory } from 'src/types/database';
 import type {
   CreateOrderPayload,
   UpdateOrderPayload,
@@ -55,6 +55,30 @@ export async function kitchenUpdateOrder(
 
   if (error) throw new Error(error.message);
   return data as Order;
+}
+
+/**
+ * Fetch revision history of an order (before edits).
+ */
+export async function fetchOrderHistory(orderId: string): Promise<OrderHistory[]> {
+  // Try RPC first
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_order_history', {
+    p_order_id: orderId,
+  });
+
+  if (!rpcError && rpcData) {
+    return rpcData as OrderHistory[];
+  }
+
+  // Fallback to table query
+  const { data, error } = await supabase
+    .from('order_histories')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('revision', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderHistory[];
 }
 
 /**

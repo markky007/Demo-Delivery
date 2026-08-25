@@ -301,7 +301,10 @@ export async function ownerUpdateOrderItemPrice(
   }
 
   const options = (itemData.options ?? []) as { snapshot_price_adjustment: number }[];
-  const optionsSubtotal = options.reduce((sum, opt) => sum + (opt.snapshot_price_adjustment || 0), 0);
+  const optionsSubtotal = options.reduce(
+    (sum, opt) => sum + (opt.snapshot_price_adjustment || 0),
+    0,
+  );
   const quantity = itemData.quantity || 1;
   const calculatedSubtotal =
     newSubtotal !== undefined && newSubtotal !== null && newSubtotal >= 0
@@ -365,4 +368,3 @@ export async function ownerUpdateOrderItemPrice(
     );
   }
 }
-

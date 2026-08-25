@@ -197,6 +197,30 @@
             </q-btn>
           </div>
 
+          <!-- Revision Info Banner (If edited) -->
+          <div
+            v-if="order.revision > 1"
+            class="revised-info-banner q-mb-sm row items-center justify-between"
+          >
+            <div class="row items-center col-auto">
+              <q-icon name="history" size="16px" color="amber-9" class="q-mr-xs" />
+              <span class="text-caption text-weight-bold text-amber-10">
+                รายการนี้เคยมีการแก้ไข (เวอร์ชัน {{ order.revision }})
+              </span>
+            </div>
+            <q-btn
+              flat
+              dense
+              no-caps
+              size="xs"
+              color="amber-10"
+              icon="visibility"
+              label="ย้อนดูเมนูก่อนแก้ไข"
+              class="q-px-xs text-weight-bold"
+              @click="showHistoryModal = true"
+            />
+          </div>
+
           <!-- Editable Notice Banner when shop hasn't started -->
           <div v-if="isEditable" class="editable-hint-banner q-mb-sm">
             <div class="row items-center justify-between full-width">
@@ -267,6 +291,14 @@
 
         <!-- Edit Order Modal Dialog -->
         <EditOrderModal v-if="order" v-model="showEditModal" :order="order" @saved="onOrderSaved" />
+
+        <!-- Order History Modal (View-only) -->
+        <OrderHistoryModal
+          v-if="order"
+          v-model="showHistoryModal"
+          :order-id="order.id"
+          :queue-number="order.queue_number"
+        />
       </div>
     </template>
   </q-page>
@@ -292,6 +324,7 @@ import { OrderStatus, EditableStatuses } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import EditOrderModal from 'src/components/EditOrderModal.vue';
+import OrderHistoryModal from 'src/components/OrderHistoryModal.vue';
 import type { OrderWithItems } from 'src/types/database';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -301,6 +334,7 @@ const order = ref<OrderWithItems | null>(null);
 const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
 const isLoading = ref(true);
 const showEditModal = ref(false);
+const showHistoryModal = ref(false);
 let realtimeChannel: RealtimeChannel | null = null;
 let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -721,6 +755,13 @@ onUnmounted(() => {
 .editable-hint-banner {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.revised-info-banner {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
   border-radius: 8px;
   padding: 6px 10px;
 }

@@ -129,8 +129,14 @@
             >
               <div class="row items-center">
                 <q-icon name="comment" size="13px" class="q-mr-xs text-amber-9" />
-                <span class="text-weight-medium text-amber-10">หมายเหตุ: {{ item.special_instruction }}</span>
-                <span v-if="allowEditPrice" class="text-caption text-primary q-ml-xs text-weight-bold no-print">(กดเพื่อแก้ราคา)</span>
+                <span class="text-weight-medium text-amber-10"
+                  >หมายเหตุ: {{ item.special_instruction }}</span
+                >
+                <span
+                  v-if="allowEditPrice"
+                  class="text-caption text-primary q-ml-xs text-weight-bold no-print"
+                  >(กดเพื่อแก้ราคา)</span
+                >
               </div>
             </div>
           </div>

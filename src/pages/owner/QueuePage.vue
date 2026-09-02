@@ -442,7 +442,7 @@
       </div>
 
       <!-- ========================================================================= -->
-      <!-- VIEW 1: FOCUS COOK SLIP MODE (มุมมองโฟกัสทำอาหาร แสดงครั้งละสูงสุด 3 ออเดอร์ สไตล์สลิป) -->
+      <!-- VIEW 1: FOCUS COOK SLIP MODE (มุมมองโฟกัสทำอาหาร แสดงครั้งละ 1 ออเดอร์ สไตล์สลิป) -->
       <!-- ========================================================================= -->
       <div v-if="viewMode === 'focus'" class="focus-mode-container animate-fade-in">
         <!-- Focus Filter & Navigation Header -->
@@ -858,7 +858,7 @@
               <div class="text-caption text-grey-7 text-weight-medium">
                 รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
               </div>
-              <div class="text-caption text-grey-6">แสดงผลทีละสูงสุด 3 ออเดอร์ / หน้า</div>
+              <div class="text-caption text-grey-6">แสดงผลทีละ 1 ออเดอร์ / หน้า</div>
             </div>
             <div class="thumbnails-scroll-row">
               <div
@@ -2062,7 +2062,7 @@ const viewMode = ref<'focus' | 'overview' | 'fry' | 'rice'>('focus');
 const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
 const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
 const riceFilter = ref<'all' | 'pending' | 'completed'>('all');
-const FOCUS_PAGE_SIZE = 3;
+const FOCUS_PAGE_SIZE = 1;
 const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
 const soundVolume = ref<number>(getSoundVolume());

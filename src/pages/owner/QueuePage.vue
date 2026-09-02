@@ -442,7 +442,7 @@
       </div>
 
       <!-- ========================================================================= -->
-      <!-- VIEW 1: FOCUS COOK SLIP MODE (มุมมองโฟกัสทำอาหาร แสดงครั้งละ 1 ออเดอร์ สไตล์สลิป) -->
+      <!-- VIEW 1: FOCUS COOK SLIP MODE (มุมมองโฟกัสทำอาหาร แสดงครั้งละสูงสุด 3 ออเดอร์ เลื่อนทีละ 1 ออเดอร์ สไตล์สลิป) -->
       <!-- ========================================================================= -->
       <div v-if="viewMode === 'focus'" class="focus-mode-container animate-fade-in">
         <!-- Focus Filter & Navigation Header -->
@@ -858,7 +858,7 @@
               <div class="text-caption text-grey-7 text-weight-medium">
                 รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
               </div>
-              <div class="text-caption text-grey-6">แสดงผลทีละ 1 ออเดอร์ / หน้า</div>
+              <div class="text-caption text-grey-6">แสดงผลหน้าละสูงสุด 3 ออเดอร์ (เลื่อนทีละ 1 ออเดอร์)</div>
             </div>
             <div class="thumbnails-scroll-row">
               <div
@@ -2062,7 +2062,7 @@ const viewMode = ref<'focus' | 'overview' | 'fry' | 'rice'>('focus');
 const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
 const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
 const riceFilter = ref<'all' | 'pending' | 'completed'>('all');
-const FOCUS_PAGE_SIZE = 1;
+const FOCUS_PAGE_SIZE = 3;
 const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
 const soundVolume = ref<number>(getSoundVolume());
@@ -2182,12 +2182,15 @@ const filteredFocusOrders = computed<OrderWithItems[]>(() => {
   return activeKitchenOrders.value;
 });
 
-// Group filtered focus orders into pages of up to 3 orders
+// Group filtered focus orders into sliding window pages (up to 3 orders per view, sliding by 1 order at a time)
 const focusPages = computed<OrderWithItems[][]>(() => {
   const list = filteredFocusOrders.value;
   if (list.length === 0) return [];
+  if (list.length <= FOCUS_PAGE_SIZE) {
+    return [list];
+  }
   const pages: OrderWithItems[][] = [];
-  for (let i = 0; i < list.length; i += FOCUS_PAGE_SIZE) {
+  for (let i = 0; i <= list.length - FOCUS_PAGE_SIZE; i++) {
     pages.push(list.slice(i, i + FOCUS_PAGE_SIZE));
   }
   return pages;
@@ -2223,9 +2226,9 @@ function nextPage() {
 }
 
 function jumpToOrder(orderId: string) {
-  const pageIdx = focusPages.value.findIndex((page) => page.some((o) => o.id === orderId));
-  if (pageIdx !== -1) {
-    focusPage.value = pageIdx;
+  const orderIdx = filteredFocusOrders.value.findIndex((o) => o.id === orderId);
+  if (orderIdx !== -1 && focusPages.value.length > 0) {
+    focusPage.value = Math.min(orderIdx, focusPages.value.length - 1);
   }
 }
 
@@ -2237,8 +2240,8 @@ function isOrderOnCurrentPage(orderId: string): boolean {
 function getPageRangeText(pageIdx: number): string {
   const total = filteredFocusOrders.value.length;
   if (total === 0) return '0 ออเดอร์';
-  const start = pageIdx * FOCUS_PAGE_SIZE + 1;
-  const end = Math.min((pageIdx + 1) * FOCUS_PAGE_SIZE, total);
+  const start = pageIdx + 1;
+  const end = Math.min(pageIdx + FOCUS_PAGE_SIZE, total);
   if (start === end) {
     return `ออเดอร์ที่ ${start} จากทั้งหมด ${total}`;
   }

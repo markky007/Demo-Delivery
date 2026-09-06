@@ -255,7 +255,7 @@ async function confirmOrder() {
     });
 
     // 3. Submit order
-    await createOrder({
+    const createdOrder = await createOrder({
       table_session_id: sessionStore.tableSession.id,
       guest_session_token: sessionStore.guestSession.session_token,
       items,
@@ -263,7 +263,11 @@ async function confirmOrder() {
 
     cartStore.clearCart();
     notifySuccess('ส่งออเดอร์เรียบร้อยแล้ว!');
-    void router.push(`/t/${publicToken.value}/orders`);
+    if (createdOrder?.id) {
+      void router.push(`/t/${publicToken.value}/orders/${createdOrder.id}`);
+    } else {
+      void router.push(`/t/${publicToken.value}/orders`);
+    }
   } catch (err) {
     const rawMsg = err instanceof Error ? err.message : '';
     if (rawMsg.includes('session is not active') || rawMsg.includes('closed')) {

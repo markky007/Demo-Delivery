@@ -9,17 +9,21 @@
       <div class="order-detail-container">
         <!-- Order Header & Number -->
         <div class="order-header-card q-mb-md">
-          <div class="row items-center justify-between">
+          <div class="row items-center justify-between no-wrap">
             <div>
-              <div class="text-caption text-grey-7">หมายเลขรายการ</div>
-              <h4 class="q-my-none text-weight-bold order-number">
+              <div class="order-badge-label row items-center q-gutter-x-xs q-mb-xs">
+                <q-icon name="receipt_long" size="14px" color="grey-7" />
+                <span class="text-caption text-grey-7 text-weight-medium">หมายเลขรายการ</span>
+              </div>
+              <div class="order-number text-weight-bolder">
                 {{ formatQueueNumber(order.queue_number) }}
-              </h4>
+              </div>
             </div>
             <StatusBadge :status="order.status" mode="customer" />
           </div>
-          <div class="text-grey-6 text-caption q-mt-xs">
-            สั่งเมื่อ {{ formatDateTime(order.created_at) }}
+          <div class="text-grey-6 text-caption q-mt-sm row items-center">
+            <q-icon name="schedule" size="14px" class="q-mr-xs text-grey-5" />
+            <span>สั่งเมื่อ {{ formatDateTime(order.created_at) }}</span>
           </div>
         </div>
 
@@ -27,7 +31,7 @@
         <div class="queue-hero-card q-mb-md">
           <div class="row items-center justify-between q-mb-sm">
             <div class="row items-center q-gutter-x-xs">
-              <q-icon name="schedule" size="18px" color="primary" />
+              <q-icon name="query_builder" size="18px" color="primary" />
               <span class="text-weight-bold text-subtitle2 text-dark">ข้อมูลลำดับคิวในครัว</span>
             </div>
             <div class="row items-center text-caption live-badge">
@@ -148,61 +152,71 @@
             </div>
           </div>
 
-          <div class="tracker-steps">
-            <!-- Step 1: Queued -->
-            <div
-              class="tracker-step"
-              :class="{
-                'tracker-step--active': true,
-                'tracker-step--completed': isStepCompleted(1),
-              }"
-            >
-              <div class="step-dot">
-                <q-icon :name="isStepCompleted(1) ? 'check' : 'receipt_long'" size="16px" />
-              </div>
-              <div class="step-label">รับออเดอร์แล้ว</div>
-            </div>
-
-            <div class="tracker-line" :class="{ 'tracker-line--active': isStepCompleted(1) }"></div>
-
-            <!-- Step 2: Preparing -->
-            <div
-              class="tracker-step"
-              :class="{
-                'tracker-step--active': isStepActive(2),
-                'tracker-step--completed': isStepCompleted(2),
-              }"
-            >
+          <div class="tracker-stepper">
+            <div class="stepper-dots-row">
+              <!-- Step 1: Queued -->
               <div
                 class="step-dot"
-                :class="{ 'step-dot--cooking': order.status === OrderStatus.PREPARING }"
+                :class="{
+                  'step-dot--active': true,
+                  'step-dot--completed': isStepCompleted(1),
+                }"
+              >
+                <q-icon :name="isStepCompleted(1) ? 'check' : 'receipt_long'" size="18px" />
+              </div>
+
+              <!-- Connector 1-2 -->
+              <div
+                class="step-connector"
+                :class="{ 'step-connector--active': isStepCompleted(1) }"
+              ></div>
+
+              <!-- Step 2: Preparing -->
+              <div
+                class="step-dot"
+                :class="{
+                  'step-dot--active': isStepActive(2),
+                  'step-dot--completed': isStepCompleted(2),
+                  'step-dot--cooking': order.status === OrderStatus.PREPARING,
+                }"
               >
                 <q-icon
                   :name="isStepCompleted(2) ? 'check' : 'soup_kitchen'"
-                  size="16px"
+                  size="18px"
                   :class="{ 'animate-steam': order.status === OrderStatus.PREPARING }"
                 />
               </div>
-              <div class="step-label">กำลังเตรียมอาหาร</div>
-            </div>
 
-            <div class="tracker-line" :class="{ 'tracker-line--active': isStepCompleted(2) }"></div>
+              <!-- Connector 2-3 -->
+              <div
+                class="step-connector"
+                :class="{ 'step-connector--active': isStepCompleted(2) }"
+              ></div>
 
-            <!-- Step 3: Served -->
-            <div
-              class="tracker-step"
-              :class="{
-                'tracker-step--active': isStepActive(3),
-                'tracker-step--completed': isStepCompleted(3),
-              }"
-            >
+              <!-- Step 3: Served -->
               <div
                 class="step-dot"
-                :class="{ 'step-dot--served': order.status === OrderStatus.SERVED }"
+                :class="{
+                  'step-dot--active': isStepActive(3),
+                  'step-dot--completed': isStepCompleted(3),
+                  'step-dot--served': order.status === OrderStatus.SERVED,
+                }"
               >
-                <q-icon name="done_all" size="16px" />
+                <q-icon
+                  :name="order.status === OrderStatus.SERVED ? 'done_all' : 'check'"
+                  size="18px"
+                />
               </div>
-              <div class="step-label">เสิร์ฟแล้ว</div>
+            </div>
+
+            <div class="stepper-labels-row q-mt-sm">
+              <div class="step-label" :class="{ 'step-label--active': true }">รับออเดอร์แล้ว</div>
+              <div class="step-label" :class="{ 'step-label--active': isStepActive(2) }">
+                กำลังเตรียมอาหาร
+              </div>
+              <div class="step-label" :class="{ 'step-label--active': isStepActive(3) }">
+                เสิร์ฟแล้ว
+              </div>
             </div>
           </div>
         </div>
@@ -210,20 +224,10 @@
         <!-- Order Items Breakdown -->
         <div class="order-items-card q-mb-md">
           <div class="row items-center justify-between q-mb-sm">
-            <div class="text-weight-bold text-subtitle2">รายการอาหารที่สั่ง</div>
-            <q-btn
-              v-if="isEditable"
-              unelevated
-              no-caps
-              rounded
-              color="primary"
-              size="sm"
-              class="edit-order-btn"
-              @click="showEditModal = true"
-            >
-              <q-icon name="edit_note" size="16px" class="q-mr-xs" />
-              <span>แก้ไขออเดอร์</span>
-            </q-btn>
+            <div class="text-weight-bold text-subtitle2">
+              รายการอาหารที่สั่ง
+              <span class="text-caption text-grey-6 q-ml-xs">({{ order.items.length }} รายการ)</span>
+            </div>
           </div>
 
           <!-- Revision Info Banner (If edited) -->
@@ -252,21 +256,23 @@
 
           <!-- Editable Notice Banner when shop hasn't started -->
           <div v-if="isEditable" class="editable-hint-banner q-mb-sm">
-            <div class="row items-center justify-between full-width">
-              <div class="row items-center text-caption text-primary">
-                <q-icon name="edit_note" size="16px" class="q-mr-xs flex-shrink-0" />
+            <div class="row items-center justify-between full-width no-wrap">
+              <div class="row items-center text-caption text-primary q-mr-sm">
+                <q-icon name="edit_note" size="18px" class="q-mr-xs flex-shrink-0" />
                 <span>ร้านยังไม่เริ่มทำ สามารถแก้ไขรายการได้</span>
               </div>
               <q-btn
-                flat
-                dense
+                unelevated
                 no-caps
+                rounded
                 color="primary"
                 size="sm"
-                label="กดแก้ไข"
-                class="q-ml-xs text-weight-bold"
+                class="edit-order-btn q-px-sm"
                 @click="showEditModal = true"
-              />
+              >
+                <q-icon name="edit" size="13px" class="q-mr-xs" />
+                <span>แก้ไข</span>
+              </q-btn>
             </div>
           </div>
 
@@ -285,8 +291,19 @@
                       v-for="opt in getVisibleOptions(item.options)"
                       :key="opt.id"
                       class="opt-tag"
+                      :class="{ 'opt-tag--takeaway': isTakeawayOption(opt.snapshot_option_name) }"
                     >
-                      {{ opt.snapshot_option_name }}
+                      <q-icon
+                        v-if="isTakeawayOption(opt.snapshot_option_name)"
+                        name="shopping_bag"
+                        size="11px"
+                        class="q-mr-xs"
+                      />
+                      {{
+                        isTakeawayOption(opt.snapshot_option_name)
+                          ? opt.snapshot_option_name
+                          : `+ ${opt.snapshot_option_name}`
+                      }}
                       <template v-if="opt.snapshot_price_adjustment > 0">
                         (+{{ formatPrice(opt.snapshot_price_adjustment) }})
                       </template>
@@ -295,7 +312,7 @@
 
                   <!-- Special Instruction -->
                   <div v-if="item.special_instruction" class="dish-note q-mt-xs">
-                    <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+                    <q-icon name="edit_note" size="15px" class="q-mr-xs" />
                     <span>{{ item.special_instruction }}</span>
                   </div>
                 </div>
@@ -311,11 +328,38 @@
           <!-- Total calculation -->
           <q-separator class="q-my-md" />
           <div class="row justify-between items-center">
-            <span class="text-subtitle1 text-weight-bold">ยอดรวมรายการนี้</span>
-            <span class="text-h6 text-weight-bold text-primary">
+            <span class="text-subtitle1 text-weight-bold text-grey-8">ยอดรวมรายการนี้</span>
+            <span class="text-h6 text-weight-bolder text-primary">
               {{ formatPrice(order.total_amount) }}
             </span>
           </div>
+        </div>
+
+        <!-- Action Buttons: Order More & View Table Orders -->
+        <div class="order-actions-section q-mt-md q-mb-xl q-gutter-y-sm">
+          <q-btn
+            unelevated
+            no-caps
+            rounded
+            color="primary"
+            class="full-width add-more-order-btn"
+            :to="`/t/${publicToken}/menu`"
+          >
+            <q-icon name="add" size="20px" class="q-mr-xs" />
+            <span class="text-weight-bold">สั่งอาหารเพิ่ม</span>
+          </q-btn>
+
+          <q-btn
+            outline
+            no-caps
+            rounded
+            color="grey-8"
+            class="full-width view-all-orders-btn"
+            :to="`/t/${publicToken}/orders`"
+          >
+            <q-icon name="receipt_long" size="18px" class="q-mr-xs text-primary" />
+            <span>ดูรายการอาหารทั้งหมดของโต๊ะ</span>
+          </q-btn>
         </div>
 
         <!-- Edit Order Modal Dialog -->
@@ -336,6 +380,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useSessionStore } from 'src/stores/sessionStore';
 import {
   fetchOrder,
   fetchActiveKitchenOrders,
@@ -348,6 +393,7 @@ import {
   formatDateTime,
   formatQueueNumber,
   getVisibleOptions,
+  isTakeawayOption,
 } from 'src/utils/formatters';
 import { OrderStatus, EditableStatuses } from 'src/types/enums';
 import StatusBadge from 'src/components/StatusBadge.vue';
@@ -358,6 +404,7 @@ import type { OrderWithItems } from 'src/types/database';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const route = useRoute();
+const sessionStore = useSessionStore();
 
 const order = ref<OrderWithItems | null>(null);
 const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
@@ -366,6 +413,10 @@ const showEditModal = ref(false);
 const showHistoryModal = ref(false);
 let realtimeChannel: RealtimeChannel | null = null;
 let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const publicToken = computed(
+  () => (route.params.publicToken as string) || sessionStore.publicToken || '',
+);
 
 const isEditable = computed(() => !!order.value && EditableStatuses.includes(order.value.status));
 
@@ -521,6 +572,7 @@ onUnmounted(() => {
 .order-detail-page {
   background: var(--color-background);
   min-height: 100vh;
+  padding-bottom: 40px;
 }
 
 .order-detail-container {
@@ -532,13 +584,19 @@ onUnmounted(() => {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  padding: 16px;
+  padding: 16px 20px;
   box-shadow: var(--shadow-subtle);
+}
+
+.order-badge-label {
+  letter-spacing: 0.02em;
 }
 
 .order-number {
   color: var(--color-primary);
-  line-height: 1.2;
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 /* Queue Hero Card */
@@ -546,7 +604,7 @@ onUnmounted(() => {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  padding: 16px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-subtle);
 }
 
@@ -583,15 +641,19 @@ onUnmounted(() => {
 .queue-metric-box {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 14px;
+  padding: 14px 12px;
   text-align: center;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 96px;
 }
 
 .queue-metric-box--highlight {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: #fffdf5;
+  border-color: #fed7aa;
 }
 
 .queue-metric-box--prepared {
@@ -605,52 +667,59 @@ onUnmounted(() => {
 }
 
 .metric-label {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--color-text-secondary);
   font-weight: 500;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .metric-value {
-  font-size: 1.25rem;
+  font-size: 1.45rem;
   font-weight: 800;
   line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .metric-sub {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: var(--color-text-muted);
-  margin-top: 2px;
+  margin-top: 4px;
+  font-weight: 500;
 }
 
 .queue-status-banner {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  line-height: 1.4;
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  line-height: 1.45;
   font-weight: 500;
+  border: 1px solid transparent;
 }
 
 .queue-status-banner--queued {
-  background-color: var(--color-status-queued-bg);
+  background-color: #f0f9ff;
   color: #0369a1;
+  border-color: #bae6fd;
 }
 
 .queue-status-banner--preparing {
-  background-color: var(--color-status-preparing-bg);
+  background-color: #fffbeb;
   color: #b45309;
+  border-color: #fde68a;
 }
 
 .queue-status-banner--prepared {
-  background-color: var(--color-status-prepared-bg);
+  background-color: #f0fdf4;
   color: #15803d;
+  border-color: #bbf7d0;
 }
 
 .queue-status-banner--served {
-  background-color: var(--color-status-served-bg);
+  background-color: #f8fafc;
   color: #475569;
+  border-color: #e2e8f0;
 }
 
 /* Status Tracker */
@@ -658,7 +727,7 @@ onUnmounted(() => {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  padding: 18px 16px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-subtle);
 }
 
@@ -688,34 +757,36 @@ onUnmounted(() => {
   animation: subtleFloat 2.5s ease-in-out infinite;
 }
 
-.tracker-steps {
+.tracker-stepper {
+  padding: 8px 4px 4px;
+}
+
+.stepper-dots-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
 }
 
-.tracker-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  z-index: 2;
-  flex: 1;
-}
-
 .step-dot {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-subtle);
-  color: var(--color-text-muted);
-  border: 2px solid var(--color-border);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 2px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 6px;
+  flex-shrink: 0;
+  z-index: 2;
   transition: all 0.25s ease;
+}
+
+.step-dot--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .step-dot--cooking {
@@ -725,46 +796,47 @@ onUnmounted(() => {
   box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15);
 }
 
+.step-dot--completed {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+}
+
 .step-dot--served {
   background: #f1f5f9 !important;
   color: #64748b !important;
   border-color: #cbd5e1 !important;
 }
 
-.tracker-step--active .step-dot {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.tracker-step--completed .step-dot {
-  background: var(--color-status-prepared);
-  color: #ffffff;
-  border-color: var(--color-status-prepared);
-}
-
-.step-label {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.tracker-step--active .step-label {
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.tracker-line {
-  height: 2px;
-  background: var(--color-border);
+.step-connector {
   flex: 1;
-  margin: 0 4px;
-  margin-bottom: 24px;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 8px;
   transition: background-color 0.25s ease;
 }
 
-.tracker-line--active {
-  background: var(--color-status-prepared);
+.step-connector--active {
+  background: #16a34a;
+}
+
+.stepper-labels-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.step-label {
+  flex: 1;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 0 4px;
+}
+
+.step-label--active {
+  color: var(--color-text-primary);
+  font-weight: 600;
 }
 
 /* Items breakdown */
@@ -772,7 +844,7 @@ onUnmounted(() => {
   background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  padding: 16px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-subtle);
 }
 
@@ -781,7 +853,7 @@ onUnmounted(() => {
 }
 
 .dish-name {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   color: var(--color-text-primary);
 }
 
@@ -792,17 +864,32 @@ onUnmounted(() => {
 }
 
 .opt-tag {
-  background: var(--color-surface-subtle);
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 2px 9px;
   border-radius: var(--radius-pill);
 }
 
+.opt-tag--takeaway {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #ea580c;
+  font-weight: 600;
+}
+
 .dish-note {
-  font-size: 0.8rem;
-  color: var(--color-status-preparing);
-  display: flex;
+  font-size: 0.78rem;
+  color: #d97706;
+  background: #fffdf5;
+  border: 1px solid #fef3c7;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
   align-items: center;
 }
 
@@ -811,7 +898,7 @@ onUnmounted(() => {
 }
 
 .dish-price {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--color-text-primary);
 }
 
@@ -823,14 +910,28 @@ onUnmounted(() => {
 .editable-hint-banner {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 10px;
+  padding: 8px 12px;
 }
 
 .revised-info-banner {
   background: #fffbeb;
   border: 1px solid #fef3c7;
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+/* Action buttons */
+.add-more-order-btn {
+  height: 48px;
+  font-size: 0.96rem;
+  box-shadow: 0 4px 14px rgba(224, 88, 54, 0.25);
+}
+
+.view-all-orders-btn {
+  height: 44px;
+  font-size: 0.92rem;
+  background: #ffffff;
+  border-color: var(--color-border);
 }
 </style>

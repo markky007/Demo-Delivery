@@ -157,6 +157,13 @@ const cartRoute = computed(() => `/t/${publicToken.value}/cart`);
 const ordersRoute = computed(() => `/t/${publicToken.value}/orders`);
 
 function goBack() {
+  if (route.name === 'customer-order-detail') {
+    const backState = (window.history.state as { back?: string } | null)?.back;
+    if (!backState || backState.includes('/cart')) {
+      void router.push(`/t/${publicToken.value}/menu`);
+      return;
+    }
+  }
   router.back();
 }
 

@@ -252,27 +252,13 @@
         <!-- Special Instruction -->
         <div class="option-group-card q-mt-md">
           <div class="option-group-name q-mb-xs">รายละเอียดเพิ่มเติม / หมายเหตุถึงร้าน</div>
-          <p class="option-group-hint q-mb-sm">พิมพ์เองหรือกดเลือกตัวเลือกด่วนด้านล่างได้เลย</p>
-
-          <!-- Quick Preset Chips -->
-          <div class="quick-preset-chips q-mb-sm">
-            <button
-              v-for="preset in PRESET_NOTES"
-              :key="preset"
-              type="button"
-              class="preset-chip"
-              :class="{ 'preset-chip--selected': isNoteSelected(preset) }"
-              @click="togglePresetNote(preset)"
-            >
-              <span>{{ preset }}</span>
-            </button>
-          </div>
+          <p class="option-group-hint q-mb-sm">เช่น ไม่ใส่ผัก, เผ็ดน้อย, แยกน้ำซุป</p>
 
           <q-input
             v-model="specialInstruction"
             outlined
             autogrow
-            placeholder="ระบุข้อความเพิ่มเติมถึงทางร้าน..."
+            placeholder="ระบุข้อความถึงทางร้าน..."
             :maxlength="MAX_SPECIAL_INSTRUCTION_LENGTH"
             counter
             class="special-input"
@@ -329,15 +315,6 @@ import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { MenuItemWithOptions, Option } from 'src/types/database';
 import type { CartItemOption } from 'src/types/cart';
 
-const PRESET_NOTES = [
-  'เผ็ดน้อย 🌶️',
-  'ไม่เผ็ด ❌',
-  'ไม่ใส่ผัก 🥬',
-  'ไม่ใส่กระเทียม 🧄',
-  'แยกน้ำซุป / น้ำซอส 🥣',
-  'หวานน้อย 🍯',
-];
-
 const route = useRoute();
 const router = useRouter();
 const menuStore = useMenuStore();
@@ -361,36 +338,6 @@ function isOptionEffectivelyAvailable(
   return isOptionAvailable(opt, menuStore.items);
 }
 
-function cleanPresetText(preset: string): string {
-  // Strip emojis & icons for the clean text in instruction
-  return preset.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9\s/]/g, '').trim();
-}
-
-function togglePresetNote(preset: string) {
-  const text = cleanPresetText(preset);
-  const current = specialInstruction.value.trim();
-
-  if (isNoteSelected(preset)) {
-    // Remove note
-    const parts = current
-      .split(',')
-      .map((p) => p.trim())
-      .filter((p) => p !== text && p.length > 0);
-    specialInstruction.value = parts.join(', ');
-  } else {
-    // Append note
-    if (current) {
-      specialInstruction.value = `${current}, ${text}`;
-    } else {
-      specialInstruction.value = text;
-    }
-  }
-}
-
-function isNoteSelected(preset: string): boolean {
-  const text = cleanPresetText(preset);
-  return specialInstruction.value.includes(text);
-}
 
 onMounted(async () => {
   if (!menuStore.isLoaded) {
@@ -875,44 +822,6 @@ function addToCart() {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--color-primary);
-}
-
-/* Quick Preset Chips */
-.quick-preset-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.preset-chip {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-subtle);
-  color: var(--color-text-secondary);
-  padding: 5px 11px;
-  border-radius: var(--radius-pill);
-  font-family: var(--app-font-family);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
-
-.preset-chip:hover {
-  background: #ffffff;
-  border-color: var(--color-primary-tint);
-}
-
-.preset-chip:active {
-  transform: scale(0.95);
-}
-
-.preset-chip--selected {
-  background: var(--color-primary-soft) !important;
-  color: var(--color-primary) !important;
-  border-color: var(--color-primary-tint) !important;
-  font-weight: 700;
-  box-shadow: 0 1px 4px rgba(224, 88, 54, 0.15);
 }
 
 .special-input :deep(.q-field__control) {

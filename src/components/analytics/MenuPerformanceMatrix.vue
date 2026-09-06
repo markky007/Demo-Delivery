@@ -2,33 +2,46 @@
   <div class="analytics-card">
     <!-- Header -->
     <div class="row items-center justify-between q-mb-md header-row">
-      <div>
+      <div class="header-title-box">
         <div class="row items-center q-gutter-xs">
           <q-icon name="restaurant_menu" color="primary" size="22px" />
           <span class="text-subtitle1 text-weight-bold">
             ประสิทธิภาพเมนู & รายการขายช้า (Menu Analytics)
           </span>
         </div>
-        <div class="text-caption text-grey-7">
+        <div class="text-caption text-grey-7 q-mt-xs">
           วิเคราะห์เมนูยอดนิยม เมนูที่ทำรายได้สูงสุด เมนูขายช้า และสัดส่วนหมวดหมู่อาหาร
         </div>
       </div>
 
-      <!-- Tab Switcher -->
+      <!-- Tab Switcher (Mobile Friendly Pill / Horizontal Scrollable) -->
       <div class="tab-switcher-pill">
         <q-tabs
           v-model="activeTab"
           dense
           no-caps
+          inline-label
           active-color="white"
           active-bg-color="primary"
           indicator-color="transparent"
           class="matrix-tabs"
         >
-          <q-tab name="best" icon="military_tech" label="เมนูขายดี (Top 10)" />
-          <q-tab name="slow" icon="warning_amber" label="เมนูขายช้า / เสี่ยงสต็อกค้าง" />
-          <q-tab name="categories" icon="pie_chart" label="สัดส่วนหมวดหมู่" />
-          <q-tab name="addons" icon="add_circle" label="ท็อปปิ้งยอดฮิต" />
+          <q-tab name="best" icon="military_tech">
+            <span class="gt-xs q-ml-xs">เมนูขายดี (Top 10)</span>
+            <span class="lt-sm q-ml-xs">เมนูขายดี</span>
+          </q-tab>
+          <q-tab name="slow" icon="warning_amber">
+            <span class="gt-xs q-ml-xs">เมนูขายช้า / เสี่ยงสต็อกค้าง</span>
+            <span class="lt-sm q-ml-xs">เมนูขายช้า</span>
+          </q-tab>
+          <q-tab name="categories" icon="pie_chart">
+            <span class="gt-xs q-ml-xs">สัดส่วนหมวดหมู่</span>
+            <span class="lt-sm q-ml-xs">หมวดหมู่</span>
+          </q-tab>
+          <q-tab name="addons" icon="add_circle">
+            <span class="gt-xs q-ml-xs">ท็อปปิ้งยอดฮิต</span>
+            <span class="lt-sm q-ml-xs">ท็อปปิ้ง</span>
+          </q-tab>
         </q-tabs>
       </div>
     </div>
@@ -37,15 +50,17 @@
     <!-- 1. TOP SELLING ITEMS TAB (CHART + RANKING LIST)           -->
     <!-- ========================================================= -->
     <div v-if="activeTab === 'best'">
-      <div v-if="topSellingItems.length === 0" class="empty-tab-box text-center q-pa-xl">
-        <q-icon name="restaurant" size="44px" color="grey-4" />
+      <div v-if="topSellingItems.length === 0" class="empty-tab-box text-center q-pa-lg">
+        <q-icon name="restaurant" size="40px" color="grey-4" />
         <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีรายการสั่งอาหารในช่วงเวลานี้</div>
       </div>
 
       <div v-else>
         <!-- Top Controls: Mode Toggle & Subtext -->
-        <div class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-xs">
-          <div class="text-caption text-grey-8">
+        <div
+          class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-xs top-controls-row"
+        >
+          <div class="text-caption text-grey-8 top-control-caption">
             แสดง 10 อันดับเมนูอาหารยอดนิยม (ไม่รวมหมวดหมู่เครื่องดื่ม)
           </div>
           <div class="top-menu-toggle-group">
@@ -57,16 +72,14 @@
               rounded
               no-caps
               size="sm"
-              :options="[
-                { label: 'เรียงตามจำนวนจาน (จาน)', value: 'quantity' },
-                { label: 'เรียงตามยอดขาย (฿)', value: 'revenue' },
-              ]"
+              :spread="$q.screen.xs"
+              :options="sortOptions"
             />
           </div>
         </div>
 
         <!-- 2-Column Responsive Layout: Chart on Left, Ranked List on Right -->
-        <div class="row q-col-gutter-lg items-start">
+        <div class="row q-col-gutter-md items-start">
           <!-- Left: Horizontal Bar Chart -->
           <div class="col-12 col-md-7">
             <div class="top-chart-wrapper">
@@ -84,15 +97,15 @@
                 :class="{ 'ranked-item-card--top3': idx < 3 }"
               >
                 <div class="row items-center justify-between no-wrap q-mb-xs">
-                  <div class="row items-center q-gutter-sm ellipsis">
+                  <div class="row items-center q-gutter-xs ellipsis col">
                     <span class="rank-badge" :class="`rank-badge--${idx + 1}`">
                       #{{ idx + 1 }}
                     </span>
-                    <div class="ellipsis">
+                    <div class="ellipsis col">
                       <div class="text-weight-bold text-dark text-body2 ellipsis">
                         {{ item.name }}
                       </div>
-                      <div class="text-caption text-grey-6">
+                      <div class="text-caption text-grey-6 ellipsis">
                         {{ item.categoryName }} • พื้นฐาน {{ formatPrice(item.basePrice) }}
                       </div>
                     </div>
@@ -130,8 +143,13 @@
     <!-- ========================================================= -->
     <div v-else-if="activeTab === 'slow'">
       <div class="slow-banner q-mb-md">
-        <div class="row items-center q-gutter-sm">
-          <q-icon name="tips_and_updates" color="amber-9" size="22px" />
+        <div class="row items-start no-wrap q-gutter-sm">
+          <q-icon
+            name="tips_and_updates"
+            color="amber-9"
+            size="22px"
+            class="flex-shrink-0 q-mt-xs"
+          />
           <div class="text-caption text-grey-9">
             <strong>คำแนะนำสำหรับเจ้าของร้าน:</strong>
             เมนูที่มียอดขายน้อยหรือไม่มีคนสั่งเลย ควรพิจารณาปรับปรุงรูปภาพเมนูให้ดึงดูดขึ้น,
@@ -162,13 +180,15 @@
               <div
                 v-for="item in zeroSalesItems"
                 :key="item.id"
-                class="slow-item-row row items-center justify-between"
+                class="slow-item-row row items-center justify-between no-wrap"
               >
-                <div>
-                  <div class="text-weight-medium text-dark text-caption">{{ item.name }}</div>
-                  <div class="text-grey-6 text-caption">{{ item.categoryName }}</div>
+                <div class="ellipsis col q-pr-sm">
+                  <div class="text-weight-medium text-dark text-body2 ellipsis">
+                    {{ item.name }}
+                  </div>
+                  <div class="text-grey-6 text-caption ellipsis">{{ item.categoryName }}</div>
                 </div>
-                <div class="text-right">
+                <div class="text-right flex-shrink-0">
                   <span class="text-negative text-caption text-weight-bold font-mono">0 จาน</span>
                   <div class="text-grey-6 text-caption">{{ formatPrice(item.basePrice) }}</div>
                 </div>
@@ -198,13 +218,15 @@
               <div
                 v-for="item in slowMovingItems"
                 :key="item.id"
-                class="slow-item-row row items-center justify-between"
+                class="slow-item-row row items-center justify-between no-wrap"
               >
-                <div>
-                  <div class="text-weight-medium text-dark text-caption">{{ item.name }}</div>
-                  <div class="text-grey-6 text-caption">{{ item.categoryName }}</div>
+                <div class="ellipsis col q-pr-sm">
+                  <div class="text-weight-medium text-dark text-body2 ellipsis">
+                    {{ item.name }}
+                  </div>
+                  <div class="text-grey-6 text-caption ellipsis">{{ item.categoryName }}</div>
                 </div>
-                <div class="text-right">
+                <div class="text-right flex-shrink-0">
                   <span class="text-warning text-caption text-weight-bold font-mono">
                     ขายได้ {{ item.quantitySold }} จาน
                   </span>
@@ -223,7 +245,7 @@
     <!-- 3. CATEGORIES DISTRIBUTION TAB                            -->
     <!-- ========================================================= -->
     <div v-else-if="activeTab === 'categories'">
-      <div class="row q-col-gutter-lg items-center">
+      <div class="row q-col-gutter-md items-center">
         <div class="col-12 col-md-5">
           <div class="category-chart-wrapper">
             <canvas ref="categoryCanvasRef"></canvas>
@@ -231,31 +253,79 @@
         </div>
 
         <div class="col-12 col-md-7">
-          <div class="table-responsive">
-            <table class="analytics-table">
-              <thead>
-                <tr>
-                  <th>หมวดหมู่อาหาร</th>
-                  <th class="text-right">จำนวนที่ขาย</th>
-                  <th class="text-right">ยอดขายรวม</th>
-                  <th class="text-right">สัดส่วนรายได้</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="cat in categoryDistribution" :key="cat.id">
-                  <td>
-                    <div class="text-weight-bold text-dark">{{ cat.name }}</div>
-                  </td>
-                  <td class="text-right font-mono">
-                    {{ cat.totalQuantity }} <span class="text-caption text-grey-6">จาน</span>
-                  </td>
-                  <td class="text-right font-mono text-weight-bold text-primary">
-                    {{ formatPrice(cat.totalSales) }}
-                  </td>
-                  <td class="text-right font-mono text-weight-bold">{{ cat.percentage }}%</td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Desktop Table View -->
+          <div class="gt-xs">
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead>
+                  <tr>
+                    <th>หมวดหมู่อาหาร</th>
+                    <th class="text-right">จำนวนที่ขาย</th>
+                    <th class="text-right">ยอดขายรวม</th>
+                    <th class="text-right">สัดส่วนรายได้</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(cat, idx) in categoryDistribution" :key="cat.id">
+                    <td>
+                      <div class="row items-center q-gutter-xs">
+                        <span
+                          class="category-color-dot"
+                          :style="{ backgroundColor: getCategoryColor(idx) }"
+                        ></span>
+                        <span class="text-weight-bold text-dark">{{ cat.name }}</span>
+                      </div>
+                    </td>
+                    <td class="text-right font-mono">
+                      {{ cat.totalQuantity }} <span class="text-caption text-grey-6">จาน</span>
+                    </td>
+                    <td class="text-right font-mono text-weight-bold text-primary">
+                      {{ formatPrice(cat.totalSales) }}
+                    </td>
+                    <td class="text-right font-mono text-weight-bold">{{ cat.percentage }}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile Card List View -->
+          <div class="lt-sm mobile-category-list q-gutter-y-sm">
+            <div
+              v-for="(cat, idx) in categoryDistribution"
+              :key="cat.id"
+              class="mobile-category-card"
+            >
+              <div class="row items-center justify-between no-wrap q-mb-xs">
+                <div class="row items-center q-gutter-xs ellipsis col">
+                  <span
+                    class="category-color-dot"
+                    :style="{ backgroundColor: getCategoryColor(idx) }"
+                  ></span>
+                  <span class="text-weight-bold text-dark text-body2 ellipsis">{{ cat.name }}</span>
+                </div>
+                <div
+                  class="text-right flex-shrink-0 font-mono text-weight-bold text-primary text-body2"
+                >
+                  {{ formatPrice(cat.totalSales) }}
+                </div>
+              </div>
+
+              <div class="item-progress-track q-my-xs">
+                <div
+                  class="item-progress-bar"
+                  :style="{
+                    width: `${Math.min(100, Math.max(4, cat.percentage))}%`,
+                    background: getCategoryColor(idx),
+                  }"
+                ></div>
+              </div>
+
+              <div class="row items-center justify-between text-caption text-grey-7 font-mono">
+                <span>ขายได้ {{ cat.totalQuantity }} จาน</span>
+                <span class="text-weight-bold text-dark">{{ cat.percentage }}% ของยอดขาย</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -276,19 +346,25 @@
         <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีรายการตัวเลือกเสริมในช่วงเวลานี้</div>
       </div>
 
-      <div v-else class="row q-col-gutter-md">
+      <div v-else class="row q-col-gutter-sm">
         <div v-for="(addon, idx) in topAddons" :key="idx" class="col-12 col-sm-6 col-md-3">
           <div class="addon-card">
-            <div class="row items-center justify-between q-mb-xs">
-              <span class="addon-rank">#{{ idx + 1 }}</span>
-              <q-badge color="grey-3" text-color="grey-9" class="q-px-xs text-caption">
+            <div class="row items-center justify-between no-wrap q-mb-xs">
+              <div class="row items-center q-gutter-xs ellipsis col">
+                <span class="addon-rank">#{{ idx + 1 }}</span>
+                <div class="text-weight-bold text-dark text-body2 ellipsis">
+                  {{ addon.name }}
+                </div>
+              </div>
+              <q-badge
+                color="grey-3"
+                text-color="grey-9"
+                class="q-px-xs text-caption flex-shrink-0"
+              >
                 {{ addon.groupName }}
               </q-badge>
             </div>
-            <div class="text-weight-bold text-dark text-body2 truncate-1 q-mb-xs">
-              {{ addon.name }}
-            </div>
-            <div class="row items-center justify-between text-caption">
+            <div class="row items-center justify-between text-caption q-mt-xs">
               <span class="text-grey-7">จำนวนสั่ง:</span>
               <span class="font-mono text-weight-bold text-primary">{{ addon.count }} ครั้ง</span>
             </div>
@@ -307,6 +383,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useQuasar } from 'quasar';
 import Chart from 'chart.js/auto';
 import type { ChartConfiguration } from 'chart.js';
 import { formatPrice } from 'src/utils/formatters';
@@ -324,8 +401,22 @@ const props = defineProps<{
   topAddons: TopAddonOption[];
 }>();
 
+const $q = useQuasar();
+
 const activeTab = ref<'best' | 'slow' | 'categories' | 'addons'>('best');
 const topMenuSortBy = ref<'quantity' | 'revenue'>('quantity');
+
+const sortOptions = computed(() => {
+  return $q.screen.xs
+    ? [
+        { label: 'เรียงตามจาน (จาน)', value: 'quantity' as const },
+        { label: 'เรียงตามยอดขาย (฿)', value: 'revenue' as const },
+      ]
+    : [
+        { label: 'เรียงตามจำนวนจาน (จาน)', value: 'quantity' as const },
+        { label: 'เรียงตามยอดขาย (฿)', value: 'revenue' as const },
+      ];
+});
 
 // ─── Canvases & Chart Instances ─────────────────────────────────────────────
 const topMenuCanvasRef = ref<HTMLCanvasElement | null>(null);
@@ -385,6 +476,10 @@ function getBarColor(idx: number): string {
   return TOP_MENU_COLORS[idx] || '#64748b';
 }
 
+function getCategoryColor(idx: number): string {
+  return CATEGORY_COLORS[idx % CATEGORY_COLORS.length] || '#64748b';
+}
+
 // ─── Initialize Top Selling Menu Horizontal Bar Chart ───────────────────────
 function initTopMenuChart() {
   if (!topMenuCanvasRef.value) return;
@@ -401,6 +496,7 @@ function initTopMenuChart() {
       : items.map((it) => it.quantitySold);
 
   const datasetLabel = topMenuSortBy.value === 'revenue' ? 'ยอดขายรวม (บาท)' : 'จำนวนที่ขาย (จาน)';
+  const isMobile = $q.screen.xs;
 
   const config: ChartConfiguration<'bar'> = {
     type: 'bar',
@@ -413,7 +509,7 @@ function initTopMenuChart() {
           backgroundColor: TOP_MENU_COLORS.slice(0, items.length),
           borderRadius: 6,
           borderSkipped: false,
-          barPercentage: 0.68,
+          barPercentage: isMobile ? 0.75 : 0.68,
         },
       ],
     },
@@ -452,7 +548,7 @@ function initTopMenuChart() {
           },
           ticks: {
             precision: 0,
-            font: { family: 'Prompt, sans-serif', size: 10 },
+            font: { family: 'Prompt, sans-serif', size: isMobile ? 9 : 10 },
             color: '#64748b',
             callback: (val) => {
               if (topMenuSortBy.value === 'revenue') {
@@ -469,11 +565,12 @@ function initTopMenuChart() {
             display: false,
           },
           ticks: {
-            font: { family: 'Prompt, sans-serif', size: 11, weight: 'bold' },
+            font: { family: 'Prompt, sans-serif', size: isMobile ? 10 : 11, weight: 'bold' },
             color: '#334155',
             callback: function (val: string | number) {
               const label = this.getLabelForValue(Number(val));
-              return label.length > 16 ? label.slice(0, 14) + '...' : label;
+              const maxLen = isMobile ? 10 : 16;
+              return label.length > maxLen ? label.slice(0, maxLen - 2) + '...' : label;
             },
           },
         },
@@ -496,6 +593,7 @@ function initCategoryChart() {
 
   const labels = props.categoryDistribution.map((c) => c.name);
   const data = props.categoryDistribution.map((c) => c.totalSales);
+  const isMobile = $q.screen.xs;
 
   const config: ChartConfiguration<'doughnut'> = {
     type: 'doughnut',
@@ -520,8 +618,9 @@ function initCategoryChart() {
           position: 'bottom',
           labels: {
             usePointStyle: true,
-            boxWidth: 8,
-            font: { family: 'Prompt, sans-serif', size: 11 },
+            boxWidth: isMobile ? 6 : 8,
+            padding: isMobile ? 8 : 10,
+            font: { family: 'Prompt, sans-serif', size: isMobile ? 10 : 11 },
           },
         },
         tooltip: {
@@ -572,6 +671,19 @@ watch(
   { deep: true },
 );
 
+watch(
+  () => $q.screen.xs,
+  () => {
+    void nextTick(() => {
+      if (activeTab.value === 'best') {
+        initTopMenuChart();
+      } else if (activeTab.value === 'categories') {
+        initCategoryChart();
+      }
+    });
+  },
+);
+
 onMounted(() => {
   void nextTick(() => {
     if (activeTab.value === 'best') {
@@ -612,12 +724,21 @@ onBeforeUnmount(() => {
   background: var(--color-surface-subtle, #f5efe9);
   padding: 3px;
   border-radius: 20px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tab-switcher-pill::-webkit-scrollbar {
+  display: none;
 }
 
 .matrix-tabs :deep(.q-tab) {
   min-height: 36px;
   border-radius: 18px;
   font-size: 0.84rem;
+  padding: 0 14px;
 }
 
 .top-menu-toggle-group {
@@ -740,6 +861,14 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
+.category-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -768,6 +897,19 @@ onBeforeUnmount(() => {
   background-color: var(--color-surface-subtle, #f5efe9);
 }
 
+/* Mobile Category Card List */
+.mobile-category-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-category-card {
+  background: var(--color-surface-subtle, #f5efe9);
+  border: 1px solid var(--color-border, #ede5dc);
+  border-radius: var(--radius-sm, 10px);
+  padding: 10px 12px;
+}
+
 /* Addon Tab */
 .addon-card {
   background: var(--color-surface-subtle, #f5efe9);
@@ -787,15 +929,97 @@ onBeforeUnmount(() => {
   font-size: 0.76rem;
   font-weight: 700;
   color: var(--color-primary, #e05836);
+  flex-shrink: 0;
 }
 
 .font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.truncate-1 {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Mobile Responsive Optimizations (< 600px) */
+@media (max-width: 599px) {
+  .analytics-card {
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+
+  .header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .header-title-box {
+    width: 100%;
+  }
+
+  .tab-switcher-pill {
+    width: 100%;
+  }
+
+  .matrix-tabs :deep(.q-tabs__content) {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .matrix-tabs :deep(.q-tab) {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 0.78rem;
+    flex: 1 1 auto;
+  }
+
+  .matrix-tabs :deep(.q-tab__icon) {
+    font-size: 18px;
+  }
+
+  .top-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .top-control-caption {
+    width: 100%;
+  }
+
+  .top-menu-toggle-group {
+    width: 100%;
+  }
+
+  .top-chart-wrapper {
+    height: 290px;
+  }
+
+  .ranked-items-container {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .ranked-item-card {
+    padding: 10px;
+  }
+
+  .category-chart-wrapper {
+    height: 210px;
+  }
+
+  .sub-section-card {
+    padding: 12px;
+  }
+
+  .slow-items-list {
+    max-height: none;
+  }
+
+  .slow-item-row {
+    padding: 10px 0;
+  }
+
+  .addon-card {
+    padding: 10px 12px;
+  }
 }
 </style>

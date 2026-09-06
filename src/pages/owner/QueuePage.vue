@@ -685,227 +685,206 @@
                 <div
                   v-for="order in pageOrders"
                   :key="order.id"
-                  class="kitchen-slip"
+                  class="kitchen-slip kds-receipt-card"
                   :class="{
-                    'kitchen-slip--queued': order.status === OrderStatus.QUEUED,
-                    'kitchen-slip--preparing': order.status === OrderStatus.PREPARING,
-                    'kitchen-slip--prepared': order.status === OrderStatus.PREPARED,
+                    'kds-receipt-card--queued': order.status === OrderStatus.QUEUED,
+                    'kds-receipt-card--preparing': order.status === OrderStatus.PREPARING,
+                    'kds-receipt-card--prepared': order.status === OrderStatus.PREPARED,
                   }"
                 >
-                  <!-- Slip Top Perforation Edge -->
-                  <div class="slip-ticket-edge slip-ticket-edge--top"></div>
+                  <!-- Receipt Top Perforation / Punch Hole Bar -->
+                  <div class="receipt-hanger-bar">
+                    <div class="receipt-hanger-hole"></div>
+                  </div>
 
-                  <!-- Slip Header: Queue Number, Table, Status, Elapsed Time, Total Dishes -->
-                  <div class="slip-header">
-                    <div class="row items-center justify-between no-wrap q-mb-sm">
-                      <!-- Big Queue Badge -->
-                      <div class="slip-queue-badge">
-                        <span class="slip-queue-label">คิวที่</span>
-                        <span class="slip-queue-number">{{
-                          formatQueueNumber(order.queue_number)
-                        }}</span>
+                  <!-- 1. Receipt Header -->
+                  <div class="receipt-header">
+                    <!-- Slip Title Tag & Edit Button -->
+                    <div class="row items-center justify-between no-wrap q-mb-xs">
+                      <div class="receipt-type-tag">
+                        <q-icon name="receipt_long" size="14px" class="q-mr-xs text-primary" />
+                        <span>ใบสั่งอาหาร (ครัว)</span>
                       </div>
 
-                      <!-- Table Badge & Single Clean Edit Button -->
-                      <div class="row items-center q-gutter-x-xs">
+                      <!-- Edit Button -->
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        size="xs"
+                        class="receipt-edit-btn"
+                        @click.stop="openEditOrderDialog(order)"
+                      >
+                        <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+                        <span>แก้ไข</span>
+                        <q-tooltip>แก้ไขรายการอาหาร</q-tooltip>
+                      </q-btn>
+                    </div>
+
+                    <!-- Queue Number & Table Row -->
+                    <div class="row items-center justify-between no-wrap q-mt-xs q-mb-sm">
+                      <div class="row items-baseline no-wrap q-gutter-x-sm">
+                        <div class="receipt-queue-block">
+                          <span class="receipt-queue-prefix">คิวที่</span>
+                          <span class="receipt-queue-number font-mono">{{ formatQueueNumber(order.queue_number) }}</span>
+                        </div>
+
                         <div
-                          class="slip-table-badge"
+                          class="receipt-table-tag"
                           :class="{
-                            'slip-table-badge--takeaway': isTakeawayName(getTableName(order)),
+                            'receipt-table-tag--takeaway': isTakeawayName(getTableName(order)),
                           }"
                         >
                           <q-icon
-                            :name="
-                              isTakeawayName(getTableName(order))
-                                ? 'shopping_bag'
-                                : 'table_restaurant'
-                            "
-                            size="18px"
+                            :name="isTakeawayName(getTableName(order)) ? 'shopping_bag' : 'table_restaurant'"
+                            size="16px"
                             class="q-mr-xs"
-                            :color="isTakeawayName(getTableName(order)) ? 'orange-9' : 'primary'"
                           />
-                          <span
-                            class="slip-table-name"
-                            :class="{ 'text-orange-9': isTakeawayName(getTableName(order)) }"
-                          >
-                            {{ getTableName(order) }}
-                          </span>
+                          <span>{{ getTableName(order) }}</span>
                         </div>
+                      </div>
 
-                        <!-- Single Edit Button in Card Header -->
-                        <q-btn
-                          flat
-                          dense
-                          no-caps
-                          size="sm"
-                          class="slip-single-edit-btn"
-                          @click.stop="openEditOrderDialog(order)"
-                        >
-                          <q-icon name="edit_note" size="16px" class="q-mr-xs" />
-                          <span>แก้ไข</span>
-                          <q-tooltip>แก้ไข/เพิ่ม/ลบ รายการอาหาร (กรณีลูกค้าสั่งผิด)</q-tooltip>
-                        </q-btn>
+                      <!-- Status Stamp -->
+                      <div
+                        class="receipt-status-stamp"
+                        :class="{
+                          'receipt-status-stamp--queued': order.status === OrderStatus.QUEUED,
+                          'receipt-status-stamp--preparing': order.status === OrderStatus.PREPARING,
+                          'receipt-status-stamp--prepared': order.status === OrderStatus.PREPARED,
+                        }"
+                      >
+                        <q-icon :name="getStatusIcon(order.status)" size="13px" class="q-mr-xs" />
+                        <span>{{ getStatusLabel(order.status) }}</span>
                       </div>
                     </div>
 
-                    <!-- Status, Timer & Total Dishes Count Badges Row -->
-                    <div class="row items-center justify-between q-gutter-x-xs q-gutter-y-xs">
-                      <div class="row items-center q-gutter-x-xs">
-                        <div
-                          class="slip-status-pill"
-                          :class="{
-                            'slip-status-pill--queued': order.status === OrderStatus.QUEUED,
-                            'slip-status-pill--preparing': order.status === OrderStatus.PREPARING,
-                            'slip-status-pill--prepared': order.status === OrderStatus.PREPARED,
-                          }"
-                        >
-                          <q-icon :name="getStatusIcon(order.status)" size="15px" class="q-mr-xs" />
-                          <span>{{ getStatusLabel(order.status) }}</span>
-                        </div>
-
-                        <div class="slip-timer-pill" :class="getTimerColorClass(order.created_at)">
-                          <q-icon name="timer" size="14px" class="q-mr-xs" />
-                          <span>รอ {{ formatElapsed(order.created_at) }}</span>
-                        </div>
+                    <!-- Receipt Meta Grid: Time & Timer -->
+                    <div class="receipt-meta-box row items-center justify-between no-wrap">
+                      <div class="row items-center text-caption text-grey-7">
+                        <q-icon name="schedule" size="13px" class="q-mr-xs" />
+                        <span>สั่ง: {{ formatTime(order.created_at) }} น.</span>
                       </div>
 
-                      <!-- Distinct Total Order Dish Counter -->
-                      <div class="slip-order-count-pill">
-                        <q-icon name="restaurant" size="14px" class="q-mr-xs text-primary" />
-                        <span
-                          >รวม <strong>{{ getTotalDishesCount(order) }}</strong> จาน</span
-                        >
+                      <div class="receipt-timer-chip" :class="getTimerColorClass(order.created_at)">
+                        <q-icon name="timer" size="13px" class="q-mr-xs" />
+                        <span class="font-mono">รอ {{ formatElapsed(order.created_at) }}</span>
                       </div>
                     </div>
 
-                    <!-- Revision Alert Banner -->
+                    <!-- Customer Revision Alert Banner -->
                     <div
                       v-if="order.revision > 1"
-                      class="slip-revision-alert q-mt-xs row items-center justify-between"
+                      class="receipt-revision-banner q-mt-xs row items-center justify-between no-wrap"
                     >
-                      <div class="row items-center col-auto">
-                        <q-icon
-                          name="notification_important"
-                          size="17px"
-                          class="q-mr-xs animate-bounce"
-                        />
-                        <span><strong>แก้ไขรายการ:</strong> เวอร์ชัน {{ order.revision }}</span>
+                      <div class="row items-center no-wrap text-weight-medium text-caption">
+                        <q-icon name="notifications_active" size="14px" class="q-mr-xs text-amber-9" />
+                        <span>แก้ไขรายการ: เวอร์ชัน {{ order.revision }}</span>
                       </div>
                       <q-btn
                         flat
                         dense
                         no-caps
                         size="xs"
-                        color="amber-10"
+                        label="ดูประวัติแก้ไข"
                         icon="history"
-                        label="ย้อนดูเมนูก่อนแก้ไข"
-                        class="slip-history-btn q-px-xs text-weight-bold"
+                        class="receipt-rev-btn"
                         @click.stop="openOrderHistoryDialog(order)"
-                      >
-                        <q-tooltip>ย้อนดูรายการอาหารก่อนถูกแก้ไข</q-tooltip>
-                      </q-btn>
+                      />
                     </div>
                   </div>
 
-                  <!-- Perforated Dashed Divider -->
-                  <div class="slip-divider-dashed"></div>
+                  <!-- 2. Perforated Tear Divider (with Side Cutout Notches) -->
+                  <div class="receipt-tear-divider">
+                    <div class="receipt-tear-notch-left"></div>
+                    <div class="receipt-tear-dash"></div>
+                    <div class="receipt-tear-notch-right"></div>
+                  </div>
 
-                  <!-- Slip Body: Dish Items List with crystal clear option badges -->
-                  <div class="slip-body">
-                    <div class="slip-dishes-header row items-center justify-between">
-                      <div class="row items-center">
-                        <q-icon
-                          name="format_list_bulleted"
-                          size="16px"
-                          class="q-mr-xs text-grey-7"
-                        />
-                        <span class="slip-dishes-title">
-                          รายการอาหาร ({{ order.items?.length || 0 }} เมนู)
-                        </span>
-                      </div>
-                      <span class="text-caption text-grey-6">
-                        สั่งเมื่อ {{ formatTime(order.created_at) }}
+                  <!-- 3. Receipt Items Body -->
+                  <div class="receipt-body">
+                    <!-- Columns Header -->
+                    <div class="receipt-table-header row items-center justify-between no-wrap q-mb-xs">
+                      <span class="text-caption text-weight-bold text-grey-7">
+                        รายการอาหาร ({{ order.items?.length || 0 }})
+                      </span>
+                      <span class="text-caption text-weight-bold text-grey-7">
+                        จำนวน
                       </span>
                     </div>
 
-                    <div class="slip-dishes-list">
+                    <!-- Items List -->
+                    <div class="receipt-items-list">
                       <div
                         v-for="(item, idx) in order.items"
                         :key="item.id || idx"
-                        class="slip-dish-card"
-                        :class="{ 'slip-dish-card--multi': (item.quantity || 1) > 1 }"
+                        class="receipt-dish-line"
+                        :class="{ 'receipt-dish-line--multi': (item.quantity || 1) > 1 }"
                       >
-                        <div class="row items-center no-wrap">
-                          <!-- Distinct Quantity Box -->
-                          <div
-                            class="slip-dish-qty-box"
-                            :class="{ 'slip-dish-qty-box--multi': (item.quantity || 1) > 1 }"
-                          >
-                            {{ item.quantity }}
-                          </div>
-
-                          <!-- Dish Details -->
-                          <div class="slip-dish-info q-ml-sm col">
-                            <div class="row items-baseline justify-between no-wrap">
-                              <div class="slip-dish-name">
-                                {{ item.snapshot_name }}
-                              </div>
-                              <span
-                                v-if="(item.quantity || 1) > 1"
-                                class="slip-dish-count-tag q-ml-xs"
-                              >
-                                {{ item.quantity }} จาน
-                              </span>
+                        <div class="row items-start justify-between no-wrap">
+                          <!-- Dish Title & Options & Comment -->
+                          <div class="receipt-dish-left col q-pr-sm">
+                            <div class="receipt-dish-title">
+                              {{ item.snapshot_name }}
                             </div>
 
-                            <!-- Options / Addons List (Highlighted & Categorized) -->
+                            <!-- Options Breakdown Chips -->
                             <div
                               v-if="item.options && getVisibleOptions(item.options).length > 0"
-                              class="slip-options-wrap q-mt-xs"
+                              class="receipt-options-flow q-mt-xs"
                             >
                               <span
                                 v-for="opt in getVisibleOptions(item.options)"
                                 :key="opt.id"
-                                class="slip-option-chip"
-                                :class="`slip-option-chip--${getOptionDisplayInfo(opt.snapshot_option_name).category}`"
+                                class="receipt-opt-badge"
+                                :class="`receipt-opt-badge--${getOptionDisplayInfo(opt.snapshot_option_name).category}`"
                               >
                                 <q-icon
                                   :name="getOptionDisplayInfo(opt.snapshot_option_name).icon"
-                                  size="13px"
+                                  size="11px"
                                   class="q-mr-xs"
                                 />
                                 {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
                               </span>
                             </div>
 
-                            <!-- Special Instruction / Note -->
-                            <div v-if="item.special_instruction" class="slip-special-note q-mt-xs">
-                              <q-icon
-                                name="warning_amber"
-                                size="16px"
-                                class="q-mr-xs text-negative"
-                              />
-                              <span>{{ item.special_instruction }}</span>
+                            <!-- Special Instruction / Customer Comment (No 'หมายเหตุ:', chat_bubble_outline icon) -->
+                            <div v-if="item.special_instruction" class="receipt-note-strip q-mt-xs">
+                              <q-icon name="chat_bubble_outline" size="13px" class="q-mr-xs receipt-note-icon" />
+                              <span class="receipt-note-text">{{ item.special_instruction }}</span>
                             </div>
+                          </div>
+
+                          <!-- Quantity Box (Monospace Receipt Stamp) -->
+                          <div
+                            class="receipt-dish-qty font-mono"
+                            :class="{ 'receipt-dish-qty--multi': (item.quantity || 1) > 1 }"
+                          >
+                            {{ item.quantity }}x
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Slip Footer & Action Button (Single Full-Width Action) -->
-                  <div class="slip-footer">
+                  <!-- 4. Tear-off Footer Divider -->
+                  <div class="receipt-tear-divider receipt-tear-divider--footer">
+                    <div class="receipt-tear-notch-left"></div>
+                    <div class="receipt-tear-dash"></div>
+                    <div class="receipt-tear-notch-right"></div>
+                  </div>
+
+                  <!-- 5. Footer Action Button -->
+                  <div class="receipt-footer">
                     <!-- Step 1: QUEUED -> กดรับออเดอร์ (เริ่มทำ) -->
                     <q-btn
                       v-if="order.status === OrderStatus.QUEUED"
                       unelevated
                       no-caps
-                      size="md"
-                      class="full-width slip-action-btn slip-action-btn--start"
+                      class="full-width receipt-action-btn receipt-action-btn--start"
                       @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
                     >
-                      <q-icon name="soup_kitchen" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">🍳 กดรับออเดอร์ (เริ่มปรุง)</span>
+                      <q-icon name="soup_kitchen" size="19px" class="q-mr-xs" />
+                      <span>กดรับออเดอร์ (เริ่มปรุง)</span>
                     </q-btn>
 
                     <!-- Step 2: PREPARING or PREPARED -> กดส่งออเดอร์ (เสร็จสิ้น) -->
@@ -916,19 +895,16 @@
                       "
                       unelevated
                       no-caps
-                      size="md"
-                      class="full-width slip-action-btn slip-action-btn--serve"
+                      class="full-width receipt-action-btn receipt-action-btn--serve"
                       @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
                     >
-                      <q-icon name="done_all" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">
-                        🍽️ กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)
-                      </span>
+                      <q-icon name="check_circle" size="19px" class="q-mr-xs" />
+                      <span>กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)</span>
                     </q-btn>
                   </div>
 
-                  <!-- Slip Bottom Perforation Edge -->
-                  <div class="slip-ticket-edge slip-ticket-edge--bottom"></div>
+                  <!-- 6. Bottom Sawtooth Jagged Edge -->
+                  <div class="receipt-sawtooth-bottom"></div>
                 </div>
               </div>
             </q-carousel-slide>
@@ -2263,10 +2239,13 @@
                         v-for="opt in getVisibleOptions(item.options)"
                         :key="opt.id"
                         class="serving-opt-chip"
-                        :class="{
-                          'serving-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
-                        }"
+                        :class="`serving-opt-chip--${getOptionDisplayInfo(opt.snapshot_option_name).category}`"
                       >
+                        <q-icon
+                          :name="getOptionDisplayInfo(opt.snapshot_option_name).icon"
+                          size="11px"
+                          class="q-mr-xs"
+                        />
                         {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
                       </span>
                     </div>
@@ -2292,8 +2271,8 @@
                   size="md"
                   @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
                 >
-                  <q-icon name="done_all" size="20px" class="q-mr-xs" />
-                  <span>🍽️ กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)</span>
+                  <q-icon name="check_circle" size="20px" class="q-mr-xs" />
+                  <span>กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)</span>
                 </q-btn>
               </template>
               <template v-else>
@@ -3333,395 +3312,452 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   }
 }
 
-/* Kitchen Order Slip Card */
-.kitchen-slip {
+/* ==========================================================
+   AUTHENTIC RECEIPT / SLIP KDS TICKET
+   ========================================================== */
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.kds-receipt-card {
   background: #ffffff;
-  border-radius: 14px;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--color-border, #ede5dc);
+  border-bottom: none;
+  box-shadow: 0 4px 18px -2px rgba(45, 35, 30, 0.07), 0 2px 6px -1px rgba(45, 35, 30, 0.03);
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
-  transition: all 0.22s ease;
-  min-height: 460px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 480px;
+  margin-bottom: 12px;
 }
 
-.kitchen-slip:hover {
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.11);
+.kds-receipt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -4px rgba(45, 35, 30, 0.1), 0 4px 10px -2px rgba(45, 35, 30, 0.04);
 }
 
-.kitchen-slip--queued {
-  border-top: 6px solid #0284c7;
+.kds-receipt-card--queued {
+  border-top: 4px solid var(--color-status-queued, #0284c7);
 }
 
-.kitchen-slip--preparing {
-  border-top: 6px solid #d97706;
-  background: #fffdfb;
+.kds-receipt-card--preparing {
+  border-top: 4px solid var(--color-status-preparing, #d97706);
 }
 
-.kitchen-slip--prepared {
-  border-top: 6px solid #16a34a;
-  background: #fbfdfb;
+.kds-receipt-card--prepared {
+  border-top: 4px solid var(--color-status-prepared, #16a34a);
 }
 
-/* Ticket Edge Pattern */
-.slip-ticket-edge {
-  height: 4px;
-  background-image: radial-gradient(circle, #e2e8f0 2px, transparent 2px);
-  background-size: 8px 8px;
-  opacity: 0.9;
-}
-
-.slip-header {
-  padding: 14px 16px 10px 16px;
-  background: inherit;
-}
-
-.slip-queue-badge {
-  display: inline-flex;
-  align-items: baseline;
-  background: #1e293b;
-  color: #ffffff;
-  padding: 4px 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.slip-queue-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  opacity: 0.85;
-  margin-right: 4px;
-}
-
-.slip-queue-number {
-  font-size: 1.45rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.04em;
-}
-
-.slip-table-badge {
-  display: inline-flex;
-  align-items: center;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  padding: 4px 10px;
-  border-radius: 8px;
-}
-
-.slip-table-badge--takeaway {
-  background: #ffedd5;
-  border-color: #fed7aa;
-}
-
-.slip-table-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.slip-status-pill {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 9999px;
-}
-
-.slip-status-pill--queued {
-  background: #e0f2fe;
-  color: #0284c7;
-}
-
-.slip-status-pill--preparing {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.slip-status-pill--prepared {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.slip-timer-pill {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  border: 1px solid #e2e8f0;
-}
-
-.slip-timer-pill--normal {
-  background: #f8fafc;
-  color: #64748b;
-}
-
-.slip-timer-pill--warning {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
-  font-weight: 700;
-}
-
-.slip-timer-pill--danger {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
-  font-weight: 800;
-  animation: pulse-danger 2s infinite;
-}
-
-.slip-revision-alert {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  display: flex;
-  align-items: center;
-}
-
-.slip-divider-dashed {
-  border-bottom: 2px dashed #e2e8f0;
-  margin: 0 14px;
-}
-
-/* Slip Body */
-.slip-body {
-  padding: 12px 16px;
-  flex: 1;
-}
-
-.slip-dishes-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 6px;
-  margin-bottom: 10px;
-  border-bottom: 1px dashed #cbd5e1;
-}
-
-.slip-dishes-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.slip-dishes-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.slip-dish-card {
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 12px;
-  transition: all 0.15s ease;
-}
-
-.slip-dish-card:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
-
-.slip-dish-card--multi {
-  border-color: #fdba74;
-  background: #fffdfb;
-}
-
-.slip-dish-qty-box {
-  background: #f1f5f9;
-  color: #334155;
-  border: 1.5px solid #cbd5e1;
-  font-size: 1.15rem;
-  font-weight: 800;
-  min-width: 40px;
-  height: 40px;
-  border-radius: 8px;
+/* Top Hanger / Ticket Hole Punch */
+.receipt-hanger-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  letter-spacing: -0.5px;
+  position: relative;
+  padding: 8px 16px 4px 16px;
+  background: #ffffff;
 }
 
-.slip-dish-qty-box--multi {
-  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 3px 8px rgba(234, 88, 12, 0.3);
-  font-size: 1.2rem;
+.receipt-hanger-hole {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-bg, #fbf9f6);
+  border: 1px solid var(--color-border, #ede5dc);
+  box-shadow: inset 0 1.5px 2px rgba(45, 35, 30, 0.12);
+  z-index: 1;
 }
 
-.slip-dish-count-tag {
-  background: #ffedd5;
-  color: #c2410c;
+/* Receipt Header */
+.receipt-header {
+  padding: 4px 16px 8px 16px;
+  background: #ffffff;
+}
+
+.receipt-type-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
   font-weight: 700;
-  font-size: 0.75rem;
-  padding: 2px 7px;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary, #7a6e65);
+  text-transform: uppercase;
+}
+
+.receipt-edit-btn {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #ede5dc);
+  color: var(--color-text-secondary, #7a6e65);
   border-radius: 6px;
-  border: 1px solid #fed7aa;
-  flex-shrink: 0;
+  padding: 2px 8px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  transition: all 0.18s ease;
 }
 
-.slip-dish-name {
-  font-size: 1.1rem;
+.receipt-edit-btn:hover {
+  background: var(--color-primary-soft, #fff3ed);
+  border-color: var(--color-primary-tint, #ffe6dc);
+  color: var(--color-primary, #e05836);
+}
+
+.receipt-queue-block {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.receipt-queue-prefix {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #7a6e65);
+}
+
+.receipt-queue-number {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--color-text-primary, #2d231e);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.receipt-table-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #f0f7ff;
+  border: 1px solid #c8e1fd;
+  color: #0369a1;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.92rem;
   font-weight: 700;
-  color: #0f172a;
+  line-height: 1;
+}
+
+.receipt-table-tag--takeaway {
+  background: var(--color-primary-soft, #fff3ed);
+  border-color: var(--color-primary-tint, #ffe6dc);
+  color: var(--color-primary, #e05836);
+}
+
+.receipt-status-stamp {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.receipt-status-stamp--queued {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0284c7;
+}
+
+.receipt-status-stamp--preparing {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #d97706;
+}
+
+.receipt-status-stamp--prepared {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+.receipt-meta-box {
+  background: #fbf9f6;
+  border: 1px solid var(--color-border, #ede5dc);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 6px;
+}
+
+.receipt-timer-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid var(--color-border, #ede5dc);
+  color: var(--color-text-secondary, #7a6e65);
+}
+
+.receipt-timer-chip.slip-timer-pill--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.receipt-timer-chip.slip-timer-pill--danger {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #dc2626;
+  animation: pulse-danger 2s infinite;
+}
+
+.receipt-revision-banner {
+  background: #fffbeb;
+  border: 1px dashed #fde68a;
+  color: #92400e;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.receipt-rev-btn {
+  color: #92400e;
+  font-weight: 700;
+}
+
+/* Ticket Perforated Tear Divider with Side Notches */
+.receipt-tear-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 16px;
+  margin: 4px 0;
+}
+
+.receipt-tear-divider--footer {
+  margin-top: auto;
+}
+
+.receipt-tear-notch-left {
+  position: absolute;
+  left: -1px;
+  width: 10px;
+  height: 16px;
+  background: var(--color-bg, #fbf9f6);
+  border-radius: 0 10px 10px 0;
+  border: 1px solid var(--color-border, #ede5dc);
+  border-left: none;
+  box-shadow: inset -1px 0 2px rgba(45, 35, 30, 0.05);
+  z-index: 2;
+}
+
+.receipt-tear-notch-right {
+  position: absolute;
+  right: -1px;
+  width: 10px;
+  height: 16px;
+  background: var(--color-bg, #fbf9f6);
+  border-radius: 10px 0 0 10px;
+  border: 1px solid var(--color-border, #ede5dc);
+  border-right: none;
+  box-shadow: inset 1px 0 2px rgba(45, 35, 30, 0.05);
+  z-index: 2;
+}
+
+.receipt-tear-dash {
+  width: 100%;
+  border-top: 1.5px dashed var(--color-border, #ede5dc);
+  margin: 0 14px;
+}
+
+/* Receipt Body */
+.receipt-body {
+  padding: 6px 16px 12px 16px;
+  flex: 1;
+  background: #ffffff;
+}
+
+.receipt-table-header {
+  border-bottom: 1px dashed #e5ded6;
+  padding-bottom: 4px;
+}
+
+.receipt-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receipt-dish-line {
+  padding: 8px 10px;
+  background: #faf8f5;
+  border: 1px solid var(--color-border, #ede5dc);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.receipt-dish-line:hover {
+  background: #ffffff;
+  border-color: #dfd5c8;
+}
+
+.receipt-dish-line--multi {
+  background: #fffaf7;
+  border-color: var(--color-primary-tint, #ffe6dc);
+}
+
+.receipt-dish-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #2d231e);
   line-height: 1.35;
 }
 
-/* Slip Option Chips with High Clarity & Categorized Colors */
-.slip-options-wrap {
+.receipt-dish-qty {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-text-primary, #2d231e);
+  background: #ffffff;
+  border: 1.5px solid var(--color-border, #ede5dc);
+  border-radius: 6px;
+  padding: 2px 8px;
+  min-width: 36px;
+  text-align: center;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.receipt-dish-qty--multi {
+  background: var(--color-primary, #e05836);
+  color: #ffffff;
+  border-color: var(--color-primary, #e05836);
+  box-shadow: 0 2px 6px rgba(224, 88, 54, 0.3);
+}
+
+.receipt-options-flow {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
-.slip-option-chip {
+.receipt-opt-badge {
   font-size: 0.8rem;
-  font-weight: 600;
-  padding: 2px 8px;
+  font-weight: 700;
+  padding: 3px 8px;
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
-  line-height: 1.3;
-}
-
-.slip-option-chip--special {
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  color: #92400e;
-  font-weight: 700;
-}
-
-.slip-option-chip--egg {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #b45309;
-  font-weight: 700;
-}
-
-.slip-option-chip--spicy {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #b91c1c;
-  font-weight: 700;
-}
-
-.slip-option-chip--takeaway {
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
-  color: #c2410c;
-  font-weight: 700;
-}
-
-.slip-option-chip--sweet {
-  background: #e0f2fe;
-  border: 1px solid #bae6fd;
-  color: #0369a1;
-  font-weight: 600;
-}
-
-.slip-option-chip--addon {
-  background: #e2e8f0;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-  font-weight: 600;
-}
-
-.slip-special-note {
-  background: #fef2f2;
-  border: 1.5px solid #fecaca;
-  color: #b91c1c;
-  font-size: 0.84rem;
-  font-weight: 700;
-  padding: 4px 9px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1.3;
-}
-
-.slip-single-edit-btn {
+  line-height: 1.25;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
-  color: #475569;
-  border-radius: 8px;
-  padding: 3px 10px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  transition: all 0.18s ease;
+  color: #334155;
+  transition: all 0.15s ease;
 }
 
-.slip-single-edit-btn:hover {
-  background: #ffedd5;
-  border-color: #fdba74;
-  color: #c2410c;
+/* 1. พิเศษ / เพิ่มขนาด (Special / Size): ม่วงสดใส (Royal Violet) - เด่นเป็นเอกลักษณ์ ชัดเจน */
+.receipt-opt-badge--special {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+}
+
+/* 2. ไข่ดาว / ไข่ข้น / เมนูไข่ (Egg): เหลืองทองไข่ไก่ (Sunny Golden Amber) - สว่างชัดเจน */
+.receipt-opt-badge--egg {
+  background: #fefce8;
+  border-color: #facc15;
+  color: #854d0e;
+}
+
+/* 3. เนื้อสัตว์ / ท็อปปิ้งเสริม (Addon): เขียวมรกตสดชื่น (Fresh Emerald) - แยกจากสีอื่นชัดเจน */
+.receipt-opt-badge--addon {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+/* 4. เผ็ด / ระดับพริก (Spicy): แดงเพลิง (Chili Red) */
+.receipt-opt-badge--spicy {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+/* 5. ห่อกลับบ้าน / แยกน้ำ (Takeaway): ส้ม Terracotta อบอุ่น */
+.receipt-opt-badge--takeaway {
+  background: var(--color-primary-soft, #fff3ed);
+  border-color: var(--color-primary-tint, #ffe6dc);
+  color: var(--color-primary, #e05836);
+}
+
+/* 6. หวาน / ระดับน้ำตาล (Sweet): ฟ้าสดใส (Sky Blue) */
+.receipt-opt-badge--sweet {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+/* 7. กล่องคำกำชับ / หมายเหตุจากลูกค้า (Special Instruction Strip): แดงกุหลาบสะดุดตา (Rose Alert) */
+.receipt-note-strip {
+  background: #fff1f2;
+  border: 1.5px dashed #f43f5e;
+  border-left: 4px solid #e11d48;
+  color: #881337;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.35;
+  width: 100%;
+}
+
+.receipt-note-icon {
+  color: #e11d48;
+  flex-shrink: 0;
+}
+
+.receipt-note-text {
+  word-break: break-word;
+}
+
+/* Footer & Action Button */
+.receipt-footer {
+  padding: 10px 16px 14px 16px;
+  background: #ffffff;
+}
+
+.receipt-action-btn {
+  height: 46px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(45, 35, 30, 0.08);
+  transition: all 0.2s ease;
+}
+
+.receipt-action-btn:hover {
   transform: translateY(-1px);
 }
 
-.slip-order-count-pill {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  color: #c2410c;
-}
-
-/* Slip Footer */
-.slip-footer {
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1.5px dashed #cbd5e1;
-  margin-top: auto;
-}
-
-.slip-action-btn {
-  height: 48px;
-  font-size: 1.02rem;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slip-action-btn:hover {
-  transform: translateY(-2px);
-}
-
-.slip-action-btn--start {
-  background: linear-gradient(135deg, #e05836 0%, #c84323 100%) !important;
+.receipt-action-btn--start {
+  background: linear-gradient(135deg, var(--color-primary, #e05836) 0%, var(--color-primary-hover, #c84323) 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(224, 88, 54, 0.35);
+  box-shadow: 0 4px 12px rgba(224, 88, 54, 0.35);
 }
 
-.slip-action-btn--done {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
-}
-
-.slip-action-btn--serve {
+.receipt-action-btn--serve {
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
 }
 
-.slip-action-btn--disabled {
-  background: #cbd5e1 !important;
-  color: #64748b !important;
+/* Serrated Sawtooth Bottom Edge */
+.receipt-sawtooth-bottom {
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: 
+    linear-gradient(135deg, #ffffff 4px, transparent 0),
+    linear-gradient(-135deg, #ffffff 4px, transparent 0);
+  background-size: 12px 8px;
+  background-repeat: repeat-x;
+  filter: drop-shadow(0 2px 2px rgba(45, 35, 30, 0.06));
+  pointer-events: none;
 }
 
 /* Bottom Mini Thumbnails Strip */
@@ -4662,16 +4698,44 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
 }
 
 .serving-opt-chip {
-  font-size: 0.72rem;
-  background: #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #f1f5f9;
   color: #475569;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.serving-opt-chip--special {
+  background: #fefce8;
+  color: #854d0e;
+}
+
+.serving-opt-chip--egg {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.serving-opt-chip--spicy {
+  background: #fff1f2;
+  color: #be123c;
 }
 
 .serving-opt-chip--takeaway {
-  background: #fed7aa;
-  color: #9a3412;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.serving-opt-chip--sweet {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.serving-opt-chip--addon {
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .serving-item-notes {

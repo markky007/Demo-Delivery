@@ -182,6 +182,12 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
   const name = rawName.trim();
   const lower = name.toLowerCase();
 
+  // Strip leading emoji or symbols and leading pluses/whitespace to avoid double icons
+  const cleanName =
+    name
+      .replace(/^([^\p{L}\p{N}]|\s)+/gu, '')
+      .trim() || name;
+
   // 1. Takeaway / packaging
   if (
     isTakeawayOption(name) ||
@@ -190,7 +196,7 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
     name.includes('แยกข้าว')
   ) {
     return {
-      label: name,
+      label: cleanName,
       category: 'takeaway',
       icon: 'shopping_bag',
     };
@@ -207,7 +213,7 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
     lower.includes('special')
   ) {
     return {
-      label: name.startsWith('+') ? name : `⭐ ${name}`,
+      label: cleanName,
       category: 'special',
       icon: 'star',
     };
@@ -224,9 +230,9 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
     lower.includes('egg')
   ) {
     return {
-      label: name.startsWith('+') ? name : `🍳 + ${name}`,
+      label: cleanName,
       category: 'egg',
-      icon: 'egg',
+      icon: 'radio_button_checked',
     };
   }
 
@@ -238,7 +244,7 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
     lower.includes('chili')
   ) {
     return {
-      label: name.startsWith('+') ? name : `🌶️ ${name}`,
+      label: cleanName,
       category: 'spicy',
       icon: 'local_fire_department',
     };
@@ -247,7 +253,7 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
   // 5. Sweetness
   if (name.includes('หวาน') || lower.includes('sweet') || lower.includes('sugar')) {
     return {
-      label: name.startsWith('+') ? name : `💧 ${name}`,
+      label: cleanName,
       category: 'sweet',
       icon: 'water_drop',
     };
@@ -255,8 +261,8 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
 
   // 6. Generic add-on or customization
   return {
-    label: name.startsWith('+') ? name : `+ ${name}`,
+    label: cleanName,
     category: 'addon',
-    icon: 'add_circle',
+    icon: 'add_circle_outline',
   };
 }

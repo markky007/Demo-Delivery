@@ -22,7 +22,7 @@
       <div class="stat-content">
         <div class="stat-label">ยอดขายเฉลี่ยต่อวัน</div>
         <div class="stat-value font-mono">{{ formatPrice(kpis.avgDailySales) }}</div>
-        <div class="stat-subtext text-caption text-grey-7">ต่อ 1 วันทำการ (จ.-ส.)</div>
+        <div class="stat-subtext text-caption text-grey-7">เฉลี่ยต่อวันที่มียอดขาย</div>
       </div>
     </div>
 
@@ -80,7 +80,7 @@
         </div>
         <div class="stat-subtext text-caption text-grey-7 truncate-1">
           <span v-if="kpis.peakHour">พีค {{ kpis.peakHour.label }}</span>
-          <span v-else>ช่วงเวลาปกติ</span>
+          <span v-else>ไม่มีข้อมูลช่วงเวลา</span>
         </div>
       </div>
     </div>

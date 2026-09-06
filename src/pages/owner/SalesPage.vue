@@ -376,7 +376,26 @@ const datePresets = [
 
 const activePreset = ref<PresetId>('30d');
 
-const todayStr = new Date().toISOString().slice(0, 10);
+// ─── Date Helpers ───────────────────────────────────────────────────────────
+function formatToDateInput(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalDate(dateStr: string, isEndOfDay = false): Date {
+  const parts = dateStr.split('-').map(Number);
+  const y = parts[0] || new Date().getFullYear();
+  const m = parts[1] || new Date().getMonth() + 1;
+  const d = parts[2] || new Date().getDate();
+  if (isEndOfDay) {
+    return new Date(y, m - 1, d, 23, 59, 59, 999);
+  }
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+const todayStr = formatToDateInput(new Date());
 const dateFrom = ref(todayStr);
 const dateTo = ref(todayStr);
 
@@ -472,27 +491,27 @@ function selectPreset(preset: PresetId) {
   const now = new Date();
 
   if (preset === 'today') {
-    dateFrom.value = now.toISOString().slice(0, 10);
-    dateTo.value = now.toISOString().slice(0, 10);
+    dateFrom.value = formatToDateInput(now);
+    dateTo.value = formatToDateInput(now);
   } else if (preset === '7d') {
     const from = new Date();
     from.setDate(now.getDate() - 6);
-    dateFrom.value = from.toISOString().slice(0, 10);
-    dateTo.value = now.toISOString().slice(0, 10);
+    dateFrom.value = formatToDateInput(from);
+    dateTo.value = formatToDateInput(now);
   } else if (preset === '30d') {
     const from = new Date();
     from.setDate(now.getDate() - 29);
-    dateFrom.value = from.toISOString().slice(0, 10);
-    dateTo.value = now.toISOString().slice(0, 10);
+    dateFrom.value = formatToDateInput(from);
+    dateTo.value = formatToDateInput(now);
   } else if (preset === 'this_month') {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    dateFrom.value = firstDay.toISOString().slice(0, 10);
-    dateTo.value = now.toISOString().slice(0, 10);
+    dateFrom.value = formatToDateInput(firstDay);
+    dateTo.value = formatToDateInput(now);
   } else if (preset === 'last_month') {
     const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
-    dateFrom.value = firstDay.toISOString().slice(0, 10);
-    dateTo.value = lastDay.toISOString().slice(0, 10);
+    dateFrom.value = formatToDateInput(firstDay);
+    dateTo.value = formatToDateInput(lastDay);
   }
 
   void loadSalesData();
@@ -507,11 +526,8 @@ async function loadSalesData() {
   isLoading.value = true;
 
   try {
-    const fromDate = new Date(dateFrom.value || todayStr);
-    fromDate.setHours(0, 0, 0, 0);
-
-    const toDate = new Date(dateTo.value || todayStr);
-    toDate.setHours(23, 59, 59, 999);
+    const fromDate = parseLocalDate(dateFrom.value || todayStr, false);
+    const toDate = parseLocalDate(dateTo.value || todayStr, true);
 
     const { bills, orders, orderItems, allMenuItems } = await fetchSalesDataForPeriod(
       fromDate,
@@ -533,11 +549,8 @@ async function loadSalesData() {
 }
 
 function applyFilters() {
-  const fromDate = new Date(dateFrom.value || todayStr);
-  fromDate.setHours(0, 0, 0, 0);
-
-  const toDate = new Date(dateTo.value || todayStr);
-  toDate.setHours(23, 59, 59, 999);
+  const fromDate = parseLocalDate(dateFrom.value || todayStr, false);
+  const toDate = parseLocalDate(dateTo.value || todayStr, true);
 
   // Apply Day of Week filter
   const {

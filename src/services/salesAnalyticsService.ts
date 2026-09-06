@@ -214,10 +214,49 @@ const THAI_DAYS: { [key: number]: { name: string; short: string; order: number }
   0: { name: 'วันอาทิตย์', short: 'อาทิตย์', order: 7 },
 };
 
+// ─── Query Helpers ─────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 1000;
+
+/**
+ * Helper to fetch all rows across pages for large datasets in Supabase.
+ */
+async function fetchAllRows<T>(
+  queryBuilder: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+): Promise<T[]> {
+  let allRows: T[] = [];
+  let from = 0;
+  while (true) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await queryBuilder(from, to);
+    if (error) {
+      console.error('Error fetching paginated data:', error);
+      throw error instanceof Error ? error : new Error(JSON.stringify(error));
+    }
+    const items = (data as T[]) || [];
+    if (items.length === 0) break;
+    allRows = allRows.concat(items);
+    if (items.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return allRows;
+}
+
+/**
+ * Convert date string or Date to local date string (YYYY-MM-DD)
+ */
+export function toLocalDateString(dateInput: string | Date): string {
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // ─── Query Functions ────────────────────────────────────────────────────────
 
 /**
- * Fetch raw sales data for the given date range from Supabase.
+ * Fetch raw sales data for the given date range from Supabase with pagination.
  */
 export async function fetchSalesDataForPeriod(
   startDate: Date,
@@ -231,118 +270,125 @@ export async function fetchSalesDataForPeriod(
   const fromIso = startDate.toISOString();
   const toIso = endDate.toISOString();
 
-  // Run queries in parallel for high performance
-  const [billsRes, ordersRes, orderItemsRes, menuItemsRes] = await Promise.all([
+  // Run queries in parallel for high performance, with auto-pagination
+  const [bills, orders, orderItems, menuItemsRes] = await Promise.all([
     // 1. Paid Bills in period
-    supabase
-      .from('bills')
-      .select(
-        `
-        id,
-        table_session_id,
-        total_amount,
-        status,
-        created_at,
-        paid_at,
-        table_session:table_sessions (
-          customer_name,
-          table:tables(id, name)
+    fetchAllRows<RawBillData>((from, to) =>
+      supabase
+        .from('bills')
+        .select(
+          `
+          id,
+          table_session_id,
+          total_amount,
+          status,
+          created_at,
+          paid_at,
+          table_session:table_sessions (
+            customer_name,
+            table:tables(id, name)
+          )
+        `,
         )
-      `,
-      )
-      .eq('status', 'PAID')
-      .gte('paid_at', fromIso)
-      .lte('paid_at', toIso)
-      .order('paid_at', { ascending: false }),
+        .eq('status', 'PAID')
+        .gte('paid_at', fromIso)
+        .lte('paid_at', toIso)
+        .order('paid_at', { ascending: false })
+        .range(from, to),
+    ),
 
     // 2. Orders in period
-    supabase
-      .from('orders')
-      .select(
-        `
-        id,
-        table_session_id,
-        total_amount,
-        status,
-        created_at,
-        queued_at,
-        preparing_at,
-        prepared_at,
-        served_at,
-        table_session:table_sessions (
-          customer_name,
-          table:tables(id, name)
+    fetchAllRows<RawOrderData>((from, to) =>
+      supabase
+        .from('orders')
+        .select(
+          `
+          id,
+          table_session_id,
+          total_amount,
+          status,
+          created_at,
+          queued_at,
+          preparing_at,
+          prepared_at,
+          served_at,
+          table_session:table_sessions (
+            customer_name,
+            table:tables(id, name)
+          )
+        `,
         )
-      `,
-      )
-      .gte('created_at', fromIso)
-      .lte('created_at', toIso)
-      .order('created_at', { ascending: true }),
+        .gte('created_at', fromIso)
+        .lte('created_at', toIso)
+        .order('created_at', { ascending: true })
+        .range(from, to),
+    ),
 
     // 3. Order Items with menu items & category & options
-    supabase
-      .from('order_items')
-      .select(
-        `
-        id,
-        order_id,
-        menu_item_id,
-        snapshot_name,
-        snapshot_base_price,
-        quantity,
-        subtotal,
-        created_at,
-        menu_item:menu_items (
+    fetchAllRows<RawOrderItemData>((from, to) =>
+      supabase
+        .from('order_items')
+        .select(
+          `
+          id,
+          order_id,
+          menu_item_id,
+          snapshot_name,
+          snapshot_base_price,
+          quantity,
+          subtotal,
+          created_at,
+          menu_item:menu_items (
+            id,
+            name,
+            base_price,
+            is_active,
+            category:menu_categories (
+              id,
+              name
+            )
+          ),
+          options:order_item_options (
+            id,
+            snapshot_option_name,
+            snapshot_group_name,
+            snapshot_price_adjustment
+          )
+        `,
+        )
+        .gte('created_at', fromIso)
+        .lte('created_at', toIso)
+        .range(from, to),
+    ),
+
+    // 4. All active/available menu items for zero-sales / dead-stock detection
+    fetchAllRows<RawMenuItemData>((from, to) =>
+      supabase
+        .from('menu_items')
+        .select(
+          `
           id,
           name,
           base_price,
           is_active,
+          is_available,
           category:menu_categories (
             id,
             name
           )
-        ),
-        options:order_item_options (
-          id,
-          snapshot_option_name,
-          snapshot_group_name,
-          snapshot_price_adjustment
+        `,
         )
-      `,
-      )
-      .gte('created_at', fromIso)
-      .lte('created_at', toIso),
-
-    // 4. All active/available menu items for zero-sales / dead-stock detection
-    supabase
-      .from('menu_items')
-      .select(
-        `
-        id,
-        name,
-        base_price,
-        is_active,
-        is_available,
-        category:menu_categories (
-          id,
-          name
-        )
-      `,
-      )
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+        .range(from, to),
+    ),
   ]);
 
-  if (billsRes.error) console.error('Error fetching bills:', billsRes.error);
-  if (ordersRes.error) console.error('Error fetching orders:', ordersRes.error);
-  if (orderItemsRes.error) console.error('Error fetching order items:', orderItemsRes.error);
-  if (menuItemsRes.error) console.error('Error fetching menu items:', menuItemsRes.error);
-
   return {
-    bills: (billsRes.data as unknown as RawBillData[]) || [],
-    orders: (ordersRes.data as unknown as RawOrderData[]) || [],
-    orderItems: (orderItemsRes.data as unknown as RawOrderItemData[]) || [],
-    allMenuItems: (menuItemsRes.data as unknown as RawMenuItemData[]) || [],
+    bills,
+    orders,
+    orderItems,
+    allMenuItems: menuItemsRes,
   };
 }
 
@@ -380,17 +426,15 @@ export function filterDataByDayOfWeek(
     if (dayFilter === 'fri') return day === 5;
     if (dayFilter === 'sat') return day === 6;
     if (dayFilter === 'sun') return day === 0;
-    if (dayFilter === 'weekdays') return day >= 1 && day <= 5;
-    if (dayFilter === 'weekends') return day === 0 || day === 6;
+    if (dayFilter === 'weekdays') return day >= 1 && day <= 4; // Mon - Thu
+    if (dayFilter === 'weekends') return day === 5 || day === 6; // Fri - Sat (shop closed Sun)
     return true;
   };
 
   const filteredBills = bills.filter((b) => isMatchingDay(b.paid_at || b.created_at));
   const filteredOrders = orders.filter((o) => isMatchingDay(o.created_at));
   const orderIdSet = new Set(filteredOrders.map((o) => o.id));
-  const filteredOrderItems = orderItems.filter(
-    (it) => orderIdSet.has(it.order_id) || isMatchingDay(it.created_at),
-  );
+  const filteredOrderItems = orderItems.filter((it) => orderIdSet.has(it.order_id));
 
   return {
     filteredBills,
@@ -425,7 +469,7 @@ export function computeSalesAnalytics(
   end.setHours(23, 59, 59, 999);
 
   while (cur <= end) {
-    const dateKey = cur.toISOString().slice(0, 10);
+    const dateKey = toLocalDateString(cur);
     dayCountMap.set(dateKey, new Date(cur));
     const dayOfWeek = cur.getDay();
     dayOfWeekCountMap.set(dayOfWeek, (dayOfWeekCountMap.get(dayOfWeek) || 0) + 1);
@@ -440,10 +484,12 @@ export function computeSalesAnalytics(
   const totalDishes = orderItems.reduce((sum, it) => sum + (it.quantity || 1), 0);
 
   // Active sales days (days with at least 1 paid bill)
-  const activeDaysSet = new Set(bills.map((b) => (b.paid_at || b.created_at).slice(0, 10)));
-  const activeSalesDays = Math.max(1, activeDaysSet.size);
+  const activeDaysSet = new Set(
+    bills.map((b) => toLocalDateString(b.paid_at || b.created_at)),
+  );
+  const activeSalesDays = activeDaysSet.size;
 
-  const avgDailySales = Math.round(totalSales / activeSalesDays);
+  const avgDailySales = activeSalesDays > 0 ? Math.round(totalSales / activeSalesDays) : 0;
   const avgBillValue = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
   const avgDishesPerBill = totalBills > 0 ? Number((totalDishes / totalBills).toFixed(1)) : 0;
 
@@ -476,7 +522,7 @@ export function computeSalesAnalytics(
     if (stat) {
       stat.sales += b.total_amount || 0;
       stat.bills += 1;
-      stat.distinctDays.add(d.toISOString().slice(0, 10));
+      stat.distinctDays.add(toLocalDateString(d));
     }
   });
 
@@ -678,7 +724,7 @@ export function computeSalesAnalytics(
     const catName = it.menu_item?.category?.name || 'เมนูทั่วไป';
     const name = it.snapshot_name || it.menu_item?.name || 'เมนูไม่มีชื่อ';
     const price = it.snapshot_base_price || it.menu_item?.base_price || 0;
-    const dateStr = (it.created_at || '').slice(0, 10);
+    const dateStr = it.created_at ? toLocalDateString(it.created_at) : '';
 
     const existing = itemMap.get(key) || {
       id: it.menu_item_id || key,

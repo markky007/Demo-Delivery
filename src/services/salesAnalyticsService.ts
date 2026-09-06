@@ -542,11 +542,11 @@ export function computeSalesAnalytics(
       order: dayIdx,
     };
     const stat = dayStatsMap.get(dayIdx)!;
-    // Number of occurrences of this day in selected period (fallback to actual active days or 1)
-    const occurrences = Math.max(1, dayOfWeekCountMap.get(dayIdx) || stat.distinctDays.size || 1);
+    // Number of active sales days for this specific day of the week
+    const activeDaysForThisDay = stat.distinctDays.size;
 
-    const avgSales = Math.round(stat.sales / occurrences);
-    const avgOrders = Math.round(stat.orders / occurrences);
+    const avgSales = activeDaysForThisDay > 0 ? Math.round(stat.sales / activeDaysForThisDay) : 0;
+    const avgOrders = activeDaysForThisDay > 0 ? Math.round(stat.orders / activeDaysForThisDay) : 0;
     const salesPercentage =
       totalSales > 0 ? Number(((stat.sales / totalSales) * 100).toFixed(1)) : 0;
 
@@ -560,15 +560,16 @@ export function computeSalesAnalytics(
       avgOrders,
       billCount: stat.bills,
       salesPercentage,
-      daysCount: occurrences,
+      daysCount: activeDaysForThisDay,
     };
   });
 
-  // Best Selling Day of Week (based on average daily sales)
-  const sortedDays = [...dayOfWeekData].sort((a, b) => b.avgSales - a.avgSales);
+  // Best Selling Day of Week (based on average daily sales among days with sales)
+  const activeDaysOnly = dayOfWeekData.filter((d) => d.daysCount > 0 && d.totalSales > 0);
+  const sortedDays = [...activeDaysOnly].sort((a, b) => b.avgSales - a.avgSales);
   const topDay = sortedDays[0];
   const bestDayOfWeek =
-    topDay && topDay.totalSales > 0
+    topDay && topDay.avgSales > 0
       ? {
           dayName: topDay.dayName,
           avgSales: topDay.avgSales,
@@ -576,8 +577,8 @@ export function computeSalesAnalytics(
       : null;
 
   // Weekdays (จ.-พฤ.) vs Weekend/Peak (ศ.-ส.)
-  const weekdayDays = dayOfWeekData.filter((d) => d.dayIndex >= 1 && d.dayIndex <= 4);
-  const weekendDays = dayOfWeekData.filter((d) => d.dayIndex === 5 || d.dayIndex === 6);
+  const weekdayDays = dayOfWeekData.filter((d) => d.dayIndex >= 1 && d.dayIndex <= 4 && d.daysCount > 0);
+  const weekendDays = dayOfWeekData.filter((d) => (d.dayIndex === 5 || d.dayIndex === 6) && d.daysCount > 0);
 
   const weekdayAvgSales =
     weekdayDays.length > 0

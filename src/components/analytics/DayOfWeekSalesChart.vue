@@ -123,9 +123,14 @@
 
         <div class="day-stat-row">
           <span class="text-caption text-grey-7">เฉลี่ยต่อวัน:</span>
-          <span class="text-weight-bold font-mono text-primary">{{
-            formatPrice(day.avgSales)
-          }}</span>
+          <div class="row items-center q-gutter-xs">
+            <span class="text-weight-bold font-mono text-primary">{{
+              formatPrice(day.avgSales)
+            }}</span>
+            <span v-if="day.daysCount > 0" class="text-caption text-grey-6 text-weight-regular" style="font-size: 0.72rem">
+              ({{ day.daysCount }} วัน)
+            </span>
+          </div>
         </div>
 
         <div class="day-stat-row text-caption text-grey-7">
@@ -265,7 +270,9 @@ function initOrUpdateChart() {
               const item = items[0];
               if (!item) return '';
               const day = props.dayOfWeekData[item.dataIndex];
-              return day ? `${day.dayName} (มี ${day.daysCount} วันในช่วงนี้)` : '';
+              return day
+                ? `${day.dayName}${day.daysCount > 0 ? ` (มียอดขาย ${day.daysCount} วัน)` : ' (ยังไม่มียอดขาย)'}`
+                : '';
             },
             label: (item) => {
               const idx = item.dataIndex;

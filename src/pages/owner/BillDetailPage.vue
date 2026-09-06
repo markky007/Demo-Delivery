@@ -8,16 +8,34 @@
     <template v-else-if="session">
       <div class="bill-detail-container">
         <!-- Top Navigation & Header -->
-        <div class="row items-center justify-between q-mb-md no-print">
-          <q-btn
-            flat
-            round
-            dense
-            icon="arrow_back"
-            color="grey-8"
-            to="/owner/bills"
-            aria-label="กลับหน้ารายการบิล"
-          />
+        <div class="top-nav-bar row items-center justify-between q-mb-md no-print">
+          <div class="row items-center no-wrap">
+            <q-btn
+              flat
+              round
+              dense
+              icon="arrow_back"
+              color="grey-8"
+              to="/owner/bills"
+              aria-label="กลับหน้ารายการบิล"
+              class="q-mr-sm"
+            />
+            <div>
+              <div class="row items-center no-wrap">
+                <span class="text-h6 text-weight-bolder text-grey-9 table-title-header ellipsis">{{ tableName }}</span>
+                <StatusBadge
+                  :status="session.status"
+                  mode="raw"
+                  :custom-label="session.status === 'ACTIVE' ? 'กำลังนั่งทาน' : 'ปิดโต๊ะแล้ว'"
+                  class="q-ml-sm"
+                />
+              </div>
+              <div class="text-caption text-grey-6 font-mono">
+                บิล #{{ bill?.id ? bill.id.slice(0, 8) : '—' }} • {{ totalItemsCount }} รายการ
+              </div>
+            </div>
+          </div>
+
           <div class="row items-center q-gutter-sm">
             <q-btn
               v-if="session.status === 'ACTIVE'"
@@ -41,199 +59,251 @@
               @click="printReceipt"
               class="q-px-sm"
             />
-            <StatusBadge
-              :status="session.status"
-              mode="raw"
-              :custom-label="session.status === 'ACTIVE' ? 'กำลังนั่งทาน' : 'ปิดโต๊ะแล้ว'"
-            />
           </div>
         </div>
 
-        <!-- Quick Add Drinks Section (Only if session is ACTIVE) -->
-        <div v-if="session.status === 'ACTIVE'" class="quick-add-card q-mb-lg no-print">
-          <div class="row items-center justify-between q-mb-xs">
-            <div class="row items-center">
-              <q-icon name="local_bar" size="20px" color="primary" class="q-mr-xs" />
-              <span class="text-weight-bold text-subtitle2"
-                >เพิ่มเครื่องดื่มท้ายบิล (Quick Add)</span
-              >
+        <!-- 2-Column Responsive Layout for iPad / Tablet & Desktop -->
+        <div class="bill-detail-layout">
+          <!-- Left Column: Receipt Slip View -->
+          <div class="bill-detail-main">
+            <div class="receipt-wrapper">
+              <ReceiptSlip
+                :bill="bill"
+                :table-name="tableName"
+                :orders="orders"
+                :show-actions="true"
+                :allow-edit-price="session.status === 'ACTIVE' && bill?.status !== 'PAID'"
+                @edit-price="handleOpenEditPriceModal"
+              />
             </div>
-            <span class="text-caption text-grey-7">กดเพื่อบวกเพิ่มเข้าบิลทันที</span>
           </div>
 
-          <div class="row q-col-gutter-sm q-mt-xs">
-            <!-- Canned Soft Drink -->
-            <div class="col-4">
-              <div class="drink-item-card column justify-between q-pa-sm full-height">
-                <div class="row items-center no-wrap q-mb-xs">
-                  <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">🥤</div>
-                  <div class="col ellipsis">
-                    <div class="text-weight-bold text-body2 ellipsis">น้ำอัดลมกระป๋อง</div>
-                    <div class="text-caption text-primary text-weight-bold font-mono">
-                      {{ formatPrice(20) }}
-                    </div>
+          <!-- Right Column (Sticky on iPad/Desktop): Payment & Quick Controls -->
+          <div class="bill-detail-sidebar no-print">
+            <!-- 1. Payment Action Card -->
+            <div class="payment-action-card q-pa-md">
+              <div class="row items-center justify-between q-mb-sm">
+                <div class="row items-center">
+                  <div class="payment-card-icon-wrap q-mr-sm">
+                    <q-icon name="payments" size="20px" color="primary" />
+                  </div>
+                  <div>
+                    <div class="text-subtitle2 text-weight-bold text-grey-9">สรุปยอดชำระเงิน</div>
+                    <div class="text-caption text-grey-6">{{ tableName }}</div>
                   </div>
                 </div>
-                <q-btn
-                  unelevated
-                  rounded
-                  dense
-                  no-caps
-                  size="sm"
-                  color="primary"
-                  icon="add"
-                  label="+ เพิ่ม 1 กป."
-                  :loading="isAddingDrink === 'can'"
-                  @click="addDrinkItem('น้ำอัดลมกระป๋อง', 20, 'can')"
-                  class="full-width q-py-xs q-mt-xs"
+                <StatusBadge
+                  :status="session.status"
+                  mode="raw"
+                  :custom-label="session.status === 'ACTIVE' ? 'เปิดโต๊ะอยู่' : 'ปิดโต๊ะแล้ว'"
                 />
+              </div>
+
+              <!-- Price Box -->
+              <div class="payment-price-box q-pa-md q-mb-md text-center">
+                <div class="text-caption text-grey-7 text-weight-medium">ยอดรวมสุทธิที่ต้องชำระ</div>
+                <div class="text-h4 text-weight-bolder text-primary font-mono q-my-xs">
+                  {{ formatPrice(billTotal) }}
+                </div>
+                <div class="row items-center justify-center text-caption text-grey-6 q-gutter-x-sm">
+                  <span>{{ totalItemsCount }} รายการ</span>
+                  <span>•</span>
+                  <span>{{ orders.length }} ออเดอร์</span>
+                </div>
+              </div>
+
+              <!-- Control Actions for ACTIVE session -->
+              <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm">
+                <!-- Case 1: No orders placed -->
+                <div v-if="orders.length === 0" class="empty-orders-action-card q-pa-sm text-center">
+                  <div class="text-caption text-grey-8 q-mb-xs">
+                    ยังไม่มีรายการสั่งอาหาร สามารถยกเลิกการเปิดโต๊ะได้
+                  </div>
+                  <q-btn
+                    unelevated
+                    no-caps
+                    rounded
+                    color="negative"
+                    size="md"
+                    icon="person_remove"
+                    label="ยกเลิกการเปิดโต๊ะ"
+                    :loading="isProcessing"
+                    @click="handleCancelEmptySession"
+                    class="full-width"
+                  />
+                </div>
+
+                <!-- Case 2: Food not all served yet -->
+                <div v-else-if="!allServed" class="not-served-warning q-pa-sm">
+                  <div class="row items-center">
+                    <q-icon name="warning" size="18px" class="q-mr-xs text-amber-9" />
+                    <span class="text-weight-bold text-caption text-amber-10">ยังมีอาหารที่ยังไม่ได้เสิร์ฟ</span>
+                  </div>
+                  <p class="q-mb-none text-caption text-grey-8 q-mt-xs">
+                    ต้องเสิร์ฟอาหารให้ครบทุกรายการก่อน จึงจะสามารถรับชำระเงินและปิดโต๊ะได้
+                  </p>
+                </div>
+
+                <!-- Case 3: Orders exist and ready to pay -->
+                <q-btn
+                  v-if="orders.length > 0 && (!bill || bill.status !== 'PAID')"
+                  color="primary"
+                  unelevated
+                  no-caps
+                  size="lg"
+                  class="full-width action-button pay-btn-prominent"
+                  :disable="!allServed"
+                  @click="handleMarkPaid"
+                  :loading="isProcessing"
+                >
+                  <div class="row items-center justify-center no-wrap full-width">
+                    <q-icon name="payments" size="24px" class="q-mr-sm" />
+                    <span class="text-weight-bold text-subtitle1">รับชำระเงินเรียบร้อย</span>
+                  </div>
+                </q-btn>
+
+                <!-- Case 4: Already paid, ready to close session -->
+                <div v-if="bill?.status === 'PAID'" class="column q-gutter-y-sm">
+                  <div class="paid-status-box q-pa-sm text-center">
+                    <div class="row items-center justify-center text-positive text-weight-bold">
+                      <q-icon name="check_circle" size="18px" class="q-mr-xs" />
+                      <span>ชำระเงินเรียบร้อยแล้ว</span>
+                    </div>
+                  </div>
+                  <q-btn
+                    color="purple-8"
+                    unelevated
+                    no-caps
+                    size="lg"
+                    class="full-width action-button"
+                    @click="handleCloseSession"
+                    :loading="isProcessing"
+                  >
+                    <q-icon name="task_alt" class="q-mr-sm" />
+                    <span>ปิดโต๊ะ / จบบิลนี้</span>
+                  </q-btn>
+                </div>
+              </div>
+
+              <!-- When session is CLOSED -->
+              <div v-else-if="session.status === 'CLOSED'" class="closed-banner q-pa-sm text-center">
+                <q-icon name="task_alt" size="24px" color="positive" class="q-mb-xs" />
+                <div class="text-weight-bold text-caption">โต๊ะนี้ปิดบิลเรียบร้อยแล้ว</div>
               </div>
             </div>
 
-            <!-- Plain Water -->
-            <div class="col-4">
-              <div class="drink-item-card column justify-between q-pa-sm full-height">
-                <div class="row items-center no-wrap q-mb-xs">
-                  <div class="drink-icon-wrap drink-icon-wrap--plain q-mr-sm">🫗</div>
-                  <div class="col ellipsis">
-                    <div class="text-weight-bold text-body2 ellipsis">น้ำเปล่า</div>
-                    <div class="text-caption text-primary text-weight-bold font-mono">
-                      {{ formatPrice(10) }}
+            <!-- 2. Quick Add Drinks Section (ACTIVE session only) -->
+            <div v-if="session.status === 'ACTIVE' && (!bill || bill.status !== 'PAID')" class="quick-add-card q-pa-md">
+              <div class="row items-center justify-between q-mb-sm">
+                <div class="row items-center">
+                  <q-icon name="local_bar" size="18px" color="primary" class="q-mr-xs" />
+                  <span class="text-weight-bold text-subtitle2">เพิ่มเครื่องดื่มท้ายบิล</span>
+                </div>
+                <span class="text-caption text-grey-6 font-size-11">บวกเข้าบิลทันที</span>
+              </div>
+
+              <div class="column q-gutter-y-xs">
+                <!-- Soft drink -->
+                <div class="drink-item-row row items-center justify-between q-pa-xs">
+                  <div class="row items-center no-wrap col ellipsis q-mr-xs">
+                    <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">🥤</div>
+                    <div class="ellipsis">
+                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำอัดลมกระป๋อง</div>
+                      <div class="text-caption text-primary text-weight-bold font-mono">{{ formatPrice(20) }}</div>
                     </div>
                   </div>
+                  <q-btn
+                    unelevated
+                    rounded
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    icon="add"
+                    label="เพิ่ม 1 กป."
+                    :loading="isAddingDrink === 'can'"
+                    @click="addDrinkItem('น้ำอัดลมกระป๋อง', 20, 'can')"
+                    class="q-px-sm"
+                  />
                 </div>
-                <q-btn
-                  unelevated
-                  rounded
-                  dense
-                  no-caps
-                  size="sm"
-                  color="primary"
-                  icon="add"
-                  label="+ เพิ่ม 1 ขวด"
-                  :loading="isAddingDrink === 'plain'"
-                  @click="addDrinkItem('น้ำเปล่า', 10, 'plain')"
-                  class="full-width q-py-xs q-mt-xs"
-                />
+
+                <!-- Plain water -->
+                <div class="drink-item-row row items-center justify-between q-pa-xs">
+                  <div class="row items-center no-wrap col ellipsis q-mr-xs">
+                    <div class="drink-icon-wrap drink-icon-wrap--plain q-mr-sm">🫗</div>
+                    <div class="ellipsis">
+                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำเปล่า</div>
+                      <div class="text-caption text-primary text-weight-bold font-mono">{{ formatPrice(10) }}</div>
+                    </div>
+                  </div>
+                  <q-btn
+                    unelevated
+                    rounded
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    icon="add"
+                    label="เพิ่ม 1 ขวด"
+                    :loading="isAddingDrink === 'plain'"
+                    @click="addDrinkItem('น้ำเปล่า', 10, 'plain')"
+                    class="q-px-sm"
+                  />
+                </div>
+
+                <!-- Bottled water -->
+                <div class="drink-item-row row items-center justify-between q-pa-xs">
+                  <div class="row items-center no-wrap col ellipsis q-mr-xs">
+                    <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">💧</div>
+                    <div class="ellipsis">
+                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำขวด</div>
+                      <div class="text-caption text-primary text-weight-bold font-mono">{{ formatPrice(25) }}</div>
+                    </div>
+                  </div>
+                  <q-btn
+                    unelevated
+                    rounded
+                    dense
+                    no-caps
+                    size="sm"
+                    color="primary"
+                    icon="add"
+                    label="เพิ่ม 1 ขวด"
+                    :loading="isAddingDrink === 'water'"
+                    @click="addDrinkItem('น้ำขวด', 25, 'water')"
+                    class="q-px-sm"
+                  />
+                </div>
               </div>
             </div>
 
-            <!-- Bottled Water -->
-            <div class="col-4">
-              <div class="drink-item-card column justify-between q-pa-sm full-height">
-                <div class="row items-center no-wrap q-mb-xs">
-                  <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">💧</div>
-                  <div class="col ellipsis">
-                    <div class="text-weight-bold text-body2 ellipsis">น้ำขวด</div>
-                    <div class="text-caption text-primary text-weight-bold font-mono">
-                      {{ formatPrice(25) }}
-                    </div>
-                  </div>
-                </div>
-                <q-btn
-                  unelevated
-                  rounded
-                  dense
-                  no-caps
-                  size="sm"
-                  color="primary"
-                  icon="add"
-                  label="+ เพิ่ม 1 ขวด"
-                  :loading="isAddingDrink === 'water'"
-                  @click="addDrinkItem('น้ำขวด', 25, 'water')"
-                  class="full-width q-py-xs q-mt-xs"
-                />
-              </div>
+            <!-- 3. Table Quick Actions -->
+            <div class="quick-actions-bar row q-gutter-sm">
+              <q-btn
+                v-if="session.status === 'ACTIVE'"
+                outline
+                rounded
+                no-caps
+                size="md"
+                icon="swap_horiz"
+                label="ขอย้ายโต๊ะ"
+                color="grey-8"
+                @click="openTransferModal"
+                class="col"
+              />
+              <q-btn
+                outline
+                rounded
+                no-caps
+                size="md"
+                icon="print"
+                label="พิมพ์ใบเสร็จ"
+                color="grey-8"
+                @click="printReceipt"
+                class="col"
+              />
             </div>
           </div>
-        </div>
-
-        <!-- Receipt Slip View -->
-        <div class="receipt-wrapper q-mb-lg">
-          <ReceiptSlip
-            :bill="bill"
-            :table-name="tableName"
-            :orders="orders"
-            :show-actions="true"
-            :allow-edit-price="session.status === 'ACTIVE' && bill?.status !== 'PAID'"
-            @edit-price="handleOpenEditPriceModal"
-          />
-        </div>
-
-        <!-- Action Controls for Owner (No Print) -->
-        <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm no-print">
-          <!-- 1. If no orders placed yet in this session -->
-          <div v-if="orders.length === 0" class="empty-orders-action-card q-pa-md text-center">
-            <div class="empty-orders-icon q-mx-auto q-mb-sm">
-              <q-icon name="touch_app" size="28px" color="cyan-9" />
-            </div>
-            <div class="text-subtitle2 text-weight-bold text-grey-9">
-              โต๊ะนี้ยังไม่มีรายการสั่งอาหาร
-            </div>
-            <p class="text-caption text-grey-7 q-mb-md q-mt-xs">
-              อยู่ในสถานะเปิดโต๊ะรอลูกค้าสั่ง หากลูกค้าไม่ต้องการสั่งอาหารแล้ว
-              หรือสแกนโดยไม่ได้ตั้งใจ สามารถยกเลิกการเปิดโต๊ะเพื่อคืนสถานะเป็นโต๊ะว่างได้
-            </p>
-            <q-btn
-              unelevated
-              no-caps
-              rounded
-              color="negative"
-              size="md"
-              icon="person_remove"
-              label="ยกเลิกการเปิดโต๊ะ (คืนสถานะโต๊ะว่าง)"
-              :loading="isProcessing"
-              @click="handleCancelEmptySession"
-              class="q-px-lg"
-            />
-          </div>
-
-          <!-- 2. Orders exist: Cannot pay if not all served -->
-          <div v-else-if="!allServed" class="not-served-warning q-pa-md q-mb-xs">
-            <div class="row items-center">
-              <q-icon name="warning" size="20px" class="q-mr-xs text-amber-9" />
-              <span class="text-weight-bold text-amber-10">ยังมีอาหารที่ยังไม่ได้เสิร์ฟ</span>
-            </div>
-            <p class="q-mb-none text-caption text-grey-8 q-mt-xs">
-              ต้องเสิร์ฟอาหารให้ครบทุกรายการก่อน จึงจะสามารถรับชำระเงินและปิดโต๊ะได้
-            </p>
-          </div>
-
-          <!-- 3. Orders exist: Pay button -->
-          <q-btn
-            v-if="orders.length > 0 && (!bill || bill.status !== 'PAID')"
-            color="primary"
-            unelevated
-            no-caps
-            size="lg"
-            class="full-width action-button"
-            :disable="!allServed"
-            @click="handleMarkPaid"
-            :loading="isProcessing"
-          >
-            <q-icon name="payments" class="q-mr-sm" />
-            <span>รับชำระเงินเรียบร้อย ({{ formatPrice(billTotal) }})</span>
-          </q-btn>
-
-          <!-- 4. Paid: Close session button -->
-          <q-btn
-            v-if="bill?.status === 'PAID'"
-            color="grey-8"
-            unelevated
-            no-caps
-            size="lg"
-            class="full-width action-button"
-            @click="handleCloseSession"
-            :loading="isProcessing"
-          >
-            <q-icon name="check_circle" class="q-mr-sm" />
-            <span>ปิดโต๊ะ / จบบิลนี้</span>
-          </q-btn>
-        </div>
-
-        <div v-if="session.status === 'CLOSED'" class="closed-banner q-pa-md text-center no-print">
-          <q-icon name="task_alt" size="32px" color="positive" class="q-mb-xs" />
-          <div class="text-weight-bold">โต๊ะนี้ปิดบิลเรียบร้อยแล้ว</div>
         </div>
       </div>
 
@@ -691,6 +761,12 @@ const billTotal = computed(() => {
   return orders.value.reduce((sum, o) => sum + o.total_amount, 0);
 });
 
+const totalItemsCount = computed(() => {
+  return orders.value.reduce((sum, o) => {
+    return sum + (o.items?.reduce((s, i) => s + i.quantity, 0) || 0);
+  }, 0);
+});
+
 const allServed = computed(
   () => orders.value.length > 0 && orders.value.every((o) => o.status === OrderStatus.SERVED),
 );
@@ -887,8 +963,89 @@ async function handleConfirmUpdatePrice() {
 }
 
 .bill-detail-container {
-  max-width: 500px;
+  width: 100%;
+  max-width: 1040px;
   margin: 0 auto;
+}
+
+.table-title-header {
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+/* 2-Column Responsive Layout */
+.bill-detail-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .bill-detail-layout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 380px);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .bill-detail-sidebar {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .bill-detail-container {
+    max-width: 540px;
+  }
+
+  .bill-detail-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+.payment-action-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+}
+
+.payment-card-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--color-primary-soft, #fef2f2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-price-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md, 8px);
+}
+
+.pay-btn-prominent {
+  background: linear-gradient(135deg, var(--color-primary, #e11d48) 0%, #be123c 100%);
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+  transition: all 0.2s ease;
+}
+
+.pay-btn-prominent:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(225, 29, 72, 0.45);
+}
+
+.paid-status-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-sm, 6px);
 }
 
 .empty-orders-action-card {
@@ -898,47 +1055,35 @@ async function handleConfirmUpdatePrice() {
   box-shadow: var(--shadow-subtle);
 }
 
-.empty-orders-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #ecfeff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .quick-add-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg, 12px);
   border: 1px solid var(--color-border);
-  padding: 14px;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
 }
 
-.drink-item-card {
-  background: var(--color-surface-subtle);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  padding: 10px;
-  min-height: 95px;
+.drink-item-row {
+  background: var(--color-surface-subtle, #f9fafb);
+  border: 1px solid var(--color-border-subtle, #f3f4f6);
+  border-radius: var(--radius-md, 8px);
+  padding: 8px 10px;
   transition: all 0.15s ease;
 }
 
-.drink-item-card:hover {
-  border-color: var(--color-primary);
+.drink-item-row:hover {
   background: #ffffff;
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-subtle);
 }
 
 .drink-icon-wrap {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
 }
 
 .drink-icon-wrap--can {
@@ -951,6 +1096,10 @@ async function handleConfirmUpdatePrice() {
 
 .drink-icon-wrap--water {
   background: #e0f2fe;
+}
+
+.font-size-11 {
+  font-size: 11px;
 }
 
 .font-mono {

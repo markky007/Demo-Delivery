@@ -46,7 +46,7 @@
         <!-- Top Controls: Mode Toggle & Subtext -->
         <div class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-xs">
           <div class="text-caption text-grey-8">
-            แสดง 10 อันดับเมนูที่มียอดขายสูงสุดในช่วงเวลาที่เลือก
+            แสดง 10 อันดับเมนูอาหารยอดนิยม (ไม่รวมหมวดหมู่เครื่องดื่ม)
           </div>
           <div class="top-menu-toggle-group">
             <q-btn-toggle
@@ -265,6 +265,12 @@
     <!-- 4. TOP ADD-ONS TAB                                        -->
     <!-- ========================================================= -->
     <div v-else-if="activeTab === 'addons'">
+      <div class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-xs">
+        <div class="text-caption text-grey-8">
+          อันดับตัวเลือกเสริมยอดนิยม (เฉพาะหมวดหมู่เพิ่มเติม และเนื้อสัตว์เพิ่มเติม)
+        </div>
+      </div>
+
       <div v-if="topAddons.length === 0" class="empty-tab-box text-center q-pa-lg">
         <q-icon name="tune" size="36px" color="grey-5" />
         <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีรายการตัวเลือกเสริมในช่วงเวลานี้</div>

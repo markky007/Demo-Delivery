@@ -127,7 +127,11 @@
             <span class="text-weight-bold font-mono text-primary">{{
               formatPrice(day.avgSales)
             }}</span>
-            <span v-if="day.daysCount > 0" class="text-caption text-grey-6 text-weight-regular" style="font-size: 0.72rem">
+            <span
+              v-if="day.daysCount > 0"
+              class="text-caption text-grey-6 text-weight-regular"
+              style="font-size: 0.72rem"
+            >
               ({{ day.daysCount }} วัน)
             </span>
           </div>

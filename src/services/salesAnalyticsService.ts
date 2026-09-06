@@ -193,6 +193,7 @@ export interface FullSalesAnalytics {
   hourlyData: HourlyDataPoint[];
   mealPeriods: MealPeriodSummary[];
   topSellingItems: MenuItemPerformance[];
+  drinkItems?: MenuItemPerformance[];
   slowMovingItems: MenuItemPerformance[];
   zeroSalesItems: MenuItemPerformance[];
   categoryDistribution: CategorySalesSummary[];
@@ -444,6 +445,54 @@ export function filterDataByDayOfWeek(
 }
 
 /**
+ * Helper to identify whether an item is a beverage/drink.
+ * Drinks are excluded from "Top Selling Items" (food) and categorized under "เครื่องดื่ม".
+ */
+export function isDrinkItem(name?: string | null, categoryName?: string | null): boolean {
+  if (categoryName === 'เครื่องดื่ม') return true;
+  const n = (name || '').trim();
+  if (
+    n === 'น้ำขวด' ||
+    n === 'น้ำเปล่า' ||
+    n === 'น้ำกระป๋อง' ||
+    n === 'น้ำอัดลมกระป๋อง' ||
+    n.startsWith('น้ำอัดลม') ||
+    n.startsWith('น้ำดื่ม') ||
+    n.includes('กระป๋อง') ||
+    n.includes('เครื่องดื่ม')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Helper to identify whether an option group belongs to toppings/addons to be evaluated for Top Addons.
+ * Only 'เพิ่มเติม' and 'เนื้อสัตว์เพิ่มเติม' / 'เนื้อสัตว์ (เพิ่มเติม)' are included.
+ */
+export function isAllowedAddonGroup(groupName?: string | null): boolean {
+  if (!groupName) return false;
+  const clean = groupName.trim();
+  if (clean === 'เพิ่มเติม') return true;
+  if (
+    clean === 'เนื้อสัตว์ (เพิ่มเติม)' ||
+    clean === 'เนื้อสัตว์เพิ่มเติม' ||
+    clean === 'เนื้อสัตว์(เพิ่มเติม)'
+  ) {
+    return true;
+  }
+  if (
+    clean.includes('เพิ่มเติม') &&
+    !clean.includes('รูปแบบ') &&
+    !clean.includes('เผ็ด') &&
+    !clean.includes('ปริมาณ')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Compute full statistical analytics from raw records.
  */
 export function computeSalesAnalytics(
@@ -484,9 +533,7 @@ export function computeSalesAnalytics(
   const totalDishes = orderItems.reduce((sum, it) => sum + (it.quantity || 1), 0);
 
   // Active sales days (days with at least 1 paid bill)
-  const activeDaysSet = new Set(
-    bills.map((b) => toLocalDateString(b.paid_at || b.created_at)),
-  );
+  const activeDaysSet = new Set(bills.map((b) => toLocalDateString(b.paid_at || b.created_at)));
   const activeSalesDays = activeDaysSet.size;
 
   const avgDailySales = activeSalesDays > 0 ? Math.round(totalSales / activeSalesDays) : 0;
@@ -577,8 +624,12 @@ export function computeSalesAnalytics(
       : null;
 
   // Weekdays (จ.-พฤ.) vs Weekend/Peak (ศ.-ส.)
-  const weekdayDays = dayOfWeekData.filter((d) => d.dayIndex >= 1 && d.dayIndex <= 4 && d.daysCount > 0);
-  const weekendDays = dayOfWeekData.filter((d) => (d.dayIndex === 5 || d.dayIndex === 6) && d.daysCount > 0);
+  const weekdayDays = dayOfWeekData.filter(
+    (d) => d.dayIndex >= 1 && d.dayIndex <= 4 && d.daysCount > 0,
+  );
+  const weekendDays = dayOfWeekData.filter(
+    (d) => (d.dayIndex === 5 || d.dayIndex === 6) && d.daysCount > 0,
+  );
 
   const weekdayAvgSales =
     weekdayDays.length > 0
@@ -706,6 +757,17 @@ export function computeSalesAnalytics(
   });
 
   // ─── 6. Menu Performance Matrix (Best Sellers vs Slow Movers vs Zero) ─────
+  // Lookup maps for known menu items to properly connect order_items missing menu_item_id
+  const menuById = new Map<string, RawMenuItemData>();
+  const menuByName = new Map<string, RawMenuItemData>();
+
+  allMenuItems.forEach((m) => {
+    menuById.set(m.id, m);
+    if (m.name) {
+      menuByName.set(m.name.trim().toLowerCase(), m);
+    }
+  });
+
   const itemMap = new Map<
     string,
     {
@@ -719,16 +781,41 @@ export function computeSalesAnalytics(
     }
   >();
 
+  // Prepopulate all active menu items so their base info exists and zero-sales items start at 0
+  allMenuItems.forEach((m) => {
+    const isDrink = isDrinkItem(m.name, m.category?.name);
+    itemMap.set(m.id, {
+      id: m.id,
+      name: m.name,
+      categoryName: isDrink ? 'เครื่องดื่ม' : m.category?.name || 'เมนูทั่วไป',
+      basePrice: m.base_price,
+      quantity: 0,
+      revenue: 0,
+      dates: new Set<string>(),
+    });
+  });
+
   // Aggregate ordered items
   orderItems.forEach((it) => {
-    const key = it.menu_item_id || it.snapshot_name;
-    const catName = it.menu_item?.category?.name || 'เมนูทั่วไป';
-    const name = it.snapshot_name || it.menu_item?.name || 'เมนูไม่มีชื่อ';
-    const price = it.snapshot_base_price || it.menu_item?.base_price || 0;
+    let matchedMenu: RawMenuItemData | undefined;
+    if (it.menu_item_id && menuById.has(it.menu_item_id)) {
+      matchedMenu = menuById.get(it.menu_item_id);
+    } else if (it.snapshot_name && menuByName.has(it.snapshot_name.trim().toLowerCase())) {
+      matchedMenu = menuByName.get(it.snapshot_name.trim().toLowerCase());
+    }
+
+    const key = matchedMenu ? matchedMenu.id : it.menu_item_id || it.snapshot_name || 'unknown';
+    const name = it.snapshot_name || matchedMenu?.name || it.menu_item?.name || 'เมนูไม่มีชื่อ';
+    let catName = matchedMenu?.category?.name || it.menu_item?.category?.name || 'เมนูทั่วไป';
+    if (isDrinkItem(name, catName)) {
+      catName = 'เครื่องดื่ม';
+    }
+    const price =
+      it.snapshot_base_price || matchedMenu?.base_price || it.menu_item?.base_price || 0;
     const dateStr = it.created_at ? toLocalDateString(it.created_at) : '';
 
     const existing = itemMap.get(key) || {
-      id: it.menu_item_id || key,
+      id: key,
       name,
       categoryName: catName,
       basePrice: price,
@@ -742,21 +829,6 @@ export function computeSalesAnalytics(
     if (dateStr) existing.dates.add(dateStr);
 
     itemMap.set(key, existing);
-  });
-
-  // Include active menu items with 0 sales
-  allMenuItems.forEach((m) => {
-    if (!itemMap.has(m.id)) {
-      itemMap.set(m.id, {
-        id: m.id,
-        name: m.name,
-        categoryName: m.category?.name || 'เมนูทั่วไป',
-        basePrice: m.base_price,
-        quantity: 0,
-        revenue: 0,
-        dates: new Set<string>(),
-      });
-    }
   });
 
   const allItemsList: MenuItemPerformance[] = Array.from(itemMap.values()).map((it) => {
@@ -784,15 +856,35 @@ export function computeSalesAnalytics(
     };
   });
 
-  // Top Selling Items (sorted by quantity and revenue)
+  // Top Selling Food Items (exclude drinks! Water, canned drinks, soda go to drinks category)
   const topSellingItems = allItemsList
-    .filter((it) => it.quantitySold > 0)
+    .filter(
+      (it) =>
+        it.quantitySold > 0 &&
+        it.categoryName !== 'เครื่องดื่ม' &&
+        !isDrinkItem(it.name, it.categoryName),
+    )
     .sort((a, b) => b.quantitySold - a.quantitySold || b.totalRevenue - a.totalRevenue)
     .slice(0, 10);
 
-  // Slow Moving Items (1 - 3 sold)
+  // Drink items tracked separately
+  const drinkItems = allItemsList
+    .filter(
+      (it) =>
+        it.quantitySold > 0 &&
+        (it.categoryName === 'เครื่องดื่ม' || isDrinkItem(it.name, it.categoryName)),
+    )
+    .sort((a, b) => b.quantitySold - a.quantitySold || b.totalRevenue - a.totalRevenue);
+
+  // Slow Moving Items (1 - 3 sold) - only food items
   const slowMovingItems = allItemsList
-    .filter((it) => it.quantitySold > 0 && it.quantitySold <= 3)
+    .filter(
+      (it) =>
+        it.quantitySold > 0 &&
+        it.quantitySold <= 3 &&
+        it.categoryName !== 'เครื่องดื่ม' &&
+        !isDrinkItem(it.name, it.categoryName),
+    )
     .sort((a, b) => a.quantitySold - b.quantitySold);
 
   // Zero Sales Items (0 sold in period)
@@ -807,8 +899,24 @@ export function computeSalesAnalytics(
   >();
 
   orderItems.forEach((it) => {
-    const catName = it.menu_item?.category?.name || 'เมนูทั่วไป';
-    const catId = it.menu_item?.category?.id || catName;
+    const name = it.snapshot_name || it.menu_item?.name || '';
+    let matchedMenu: RawMenuItemData | undefined;
+    if (it.menu_item_id && menuById.has(it.menu_item_id)) {
+      matchedMenu = menuById.get(it.menu_item_id);
+    } else if (name && menuByName.has(name.trim().toLowerCase())) {
+      matchedMenu = menuByName.get(name.trim().toLowerCase());
+    }
+
+    let catName = matchedMenu?.category?.name || it.menu_item?.category?.name;
+    let catId = matchedMenu?.category?.id || it.menu_item?.category?.id;
+
+    if (isDrinkItem(name, catName)) {
+      catName = 'เครื่องดื่ม';
+      catId = 'drink_category';
+    } else {
+      catName = catName || 'เมนูทั่วไป';
+      catId = catId || catName;
+    }
 
     const existing = categoryMap.get(catId) || {
       id: catId,
@@ -834,7 +942,7 @@ export function computeSalesAnalytics(
     }))
     .sort((a, b) => b.totalSales - a.totalSales);
 
-  // ─── 8. Top Add-on Options ───────────────────────────────────────────────
+  // ─── 8. Top Add-on Options (เฉพาะ 'เพิ่มเติม' และ 'เนื้อสัตว์เพิ่มเติม') ─────────
   const addonMap = new Map<
     string,
     { name: string; groupName: string; count: number; revenue: number }
@@ -843,8 +951,13 @@ export function computeSalesAnalytics(
   orderItems.forEach((it) => {
     if (it.options && Array.isArray(it.options)) {
       it.options.forEach((opt) => {
+        // Only include options from 'เพิ่มเติม' and 'เนื้อสัตว์เพิ่มเติม' / 'เนื้อสัตว์ (เพิ่มเติม)'
+        if (!isAllowedAddonGroup(opt.snapshot_group_name)) {
+          return;
+        }
+
         const name = opt.snapshot_option_name;
-        // Exclude generic/default options
+        // Exclude generic/default options if any
         if (
           name &&
           name !== 'ธรรมดา' &&
@@ -1005,6 +1118,7 @@ export function computeSalesAnalytics(
     hourlyData,
     mealPeriods,
     topSellingItems,
+    drinkItems,
     slowMovingItems,
     zeroSalesItems,
     categoryDistribution,

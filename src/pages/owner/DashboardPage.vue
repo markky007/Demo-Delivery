@@ -373,7 +373,8 @@ async function loadDashboardData() {
       stats.totalOrders = orders.length;
       // Include all orders of today (both those in the kitchen and served) to keep sales consistent across all dashboard cards & charts
       stats.totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-      stats.avgOrderValue = stats.totalOrders > 0 ? Math.round(stats.totalSales / stats.totalOrders) : 0;
+      stats.avgOrderValue =
+        stats.totalOrders > 0 ? Math.round(stats.totalSales / stats.totalOrders) : 0;
 
       queueCounts.queued = orders.filter((o) => o.status === OrderStatus.QUEUED).length;
       queueCounts.preparing = orders.filter((o) => o.status === OrderStatus.PREPARING).length;

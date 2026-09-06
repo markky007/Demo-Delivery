@@ -371,12 +371,9 @@ async function loadDashboardData() {
     // Process Orders Data
     if (orders) {
       stats.totalOrders = orders.length;
-      stats.totalSales = orders
-        .filter((o) => o.status === OrderStatus.SERVED)
-        .reduce((sum, o) => sum + o.total_amount, 0);
-
-      const servedCount = orders.filter((o) => o.status === OrderStatus.SERVED).length;
-      stats.avgOrderValue = servedCount > 0 ? Math.round(stats.totalSales / servedCount) : 0;
+      // Include all orders of today (both those in the kitchen and served) to keep sales consistent across all dashboard cards & charts
+      stats.totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      stats.avgOrderValue = stats.totalOrders > 0 ? Math.round(stats.totalSales / stats.totalOrders) : 0;
 
       queueCounts.queued = orders.filter((o) => o.status === OrderStatus.QUEUED).length;
       queueCounts.preparing = orders.filter((o) => o.status === OrderStatus.PREPARING).length;
@@ -479,15 +476,27 @@ async function loadDashboardData() {
       velocityStats.avgWaitMins = waitCount > 0 ? totalWaitMins / waitCount : 0;
       velocityStats.avgCookMins = cookCount > 0 ? totalCookMins / cookCount : 0;
       velocityStats.avgTotalMins = servedSpeedCount > 0 ? totalServedMins / servedSpeedCount : 0;
+    } else {
+      stats.totalOrders = 0;
+      stats.totalSales = 0;
+      stats.avgOrderValue = 0;
+      queueCounts.queued = 0;
+      queueCounts.preparing = 0;
+      queueCounts.prepared = 0;
+      queueCounts.served = 0;
     }
 
     // Process Order Items Data (Best Sellers & Categories)
     if (orderItems) {
-      stats.itemsSold = orderItems.reduce((sum, it) => sum + (it.quantity || 1), 0);
+      // Synchronize order items to only include items belonging to today's active orders
+      const todayOrderIds = orders ? new Set(orders.map((o) => o.id)) : new Set<string>();
+      const todayOrderItems = orderItems.filter((it) => todayOrderIds.has(it.order_id));
+
+      stats.itemsSold = todayOrderItems.reduce((sum, it) => sum + (it.quantity || 1), 0);
 
       // 1. Top Selling Items
       const itemAggMap = new Map<string, { name: string; quantity: number; subtotal: number }>();
-      orderItems.forEach((it) => {
+      todayOrderItems.forEach((it) => {
         const name = it.snapshot_name || it.menu_item?.name || 'เมนูไม่มีชื่อ';
         const existing = itemAggMap.get(name) || { name, quantity: 0, subtotal: 0 };
         existing.quantity += it.quantity || 1;
@@ -501,7 +510,7 @@ async function loadDashboardData() {
 
       // 2. Categories Distribution
       const catAggMap = new Map<string, { name: string; sales: number; itemsCount: number }>();
-      orderItems.forEach((it) => {
+      todayOrderItems.forEach((it) => {
         const catName = it.menu_item?.category?.name || 'เมนูทั่วไป';
         const existing = catAggMap.get(catName) || { name: catName, sales: 0, itemsCount: 0 };
         existing.sales += it.subtotal || 0;
@@ -510,6 +519,10 @@ async function loadDashboardData() {
       });
 
       categoryDistribution.value = Array.from(catAggMap.values()).sort((a, b) => b.sales - a.sales);
+    } else {
+      stats.itemsSold = 0;
+      topSellingItems.value = [];
+      categoryDistribution.value = [];
     }
 
     lastRefreshedText.value = formatTime(new Date().toISOString());

@@ -377,6 +377,22 @@
                   {{ pendingRiceCount }}
                 </q-badge>
               </q-btn>
+
+              <q-btn
+                no-caps
+                :unelevated="viewMode === 'serving'"
+                :flat="viewMode !== 'serving'"
+                :color="viewMode === 'serving' ? 'teal-8' : 'grey-3'"
+                :text-color="viewMode === 'serving' ? 'white' : 'grey-8'"
+                class="view-toggle-btn"
+                @click="viewMode = 'serving'"
+              >
+                <q-icon name="room_service" size="18px" class="q-mr-xs" />
+                <span class="text-weight-bold">คิวเสิร์ฟอาหาร</span>
+                <q-badge v-if="pendingServeCount > 0" color="teal-9" floating rounded>
+                  {{ pendingServeCount }}
+                </q-badge>
+              </q-btn>
             </q-btn-group>
           </div>
         </div>
@@ -420,6 +436,12 @@
               >พร้อมส่ง: <strong>{{ queueStore.preparedOrders.length }}</strong></span
             >
           </div>
+          <div class="stat-chip stat-chip--serving" @click="viewMode = 'serving'">
+            <q-icon name="room_service" size="16px" class="q-mr-xs text-teal-8" />
+            <span
+              >รอเสิร์ฟ: <strong>{{ pendingServeCount }}</strong> ออเดอร์</span
+            >
+          </div>
           <div class="stat-chip stat-chip--fry" @click="viewMode = 'fry'">
             <q-icon name="local_fire_department" size="16px" class="q-mr-xs text-deep-orange-8" />
             <span
@@ -440,6 +462,64 @@
           </div>
         </div>
       </div>
+
+      <!-- Instant Last-Served Reminder Banner (เตือนหมายเลขโต๊ะทันทีหลังกดส่ง ป้องกันการลืมโต๊ะ 0 คลิกเพิ่ม) -->
+      <transition name="q-transition--slide-down">
+        <div v-if="lastServedInfo" class="last-served-banner shadow-4 q-mb-md">
+          <div class="row items-center justify-between no-wrap q-gutter-x-md">
+            <div class="row items-center q-gutter-x-md col">
+              <div class="last-served-icon-box">
+                <q-icon name="room_service" size="26px" color="white" />
+              </div>
+              <div class="col">
+                <div class="row items-center q-gutter-x-sm wrap">
+                  <span class="text-caption text-weight-medium text-teal-1"
+                    >เสิร์ฟแล้ว! นำไปส่งที่:</span
+                  >
+                  <span class="text-weight-bolder text-subtitle1 last-served-table-badge">
+                    📍 {{ lastServedInfo.tableName }}
+                  </span>
+                  <q-badge color="teal-9" text-color="white" class="text-weight-bold q-px-sm">
+                    คิว #{{ lastServedInfo.queueNumber }}
+                  </q-badge>
+                  <span class="text-caption text-teal-1">({{ lastServedInfo.servedAt }})</span>
+                </div>
+                <div
+                  v-if="lastServedInfo.itemsSummary"
+                  class="text-caption text-teal-1 ellipsis q-mt-xs"
+                  style="max-width: 650px"
+                >
+                  {{ lastServedInfo.itemsSummary }}
+                </div>
+              </div>
+            </div>
+            <div class="row items-center q-gutter-x-xs no-wrap">
+              <q-btn
+                flat
+                dense
+                no-caps
+                size="sm"
+                color="amber-3"
+                icon="undo"
+                label="ยกเลิก/ดึงกลับ"
+                class="text-weight-bold q-px-xs"
+                @click="undoLastServed"
+              >
+                <q-tooltip>ดึงออเดอร์นี้กลับมาสถานะกำลังปรุง (หากเผลอกดส่งผิด)</q-tooltip>
+              </q-btn>
+              <q-btn
+                flat
+                round
+                dense
+                size="sm"
+                icon="close"
+                color="white"
+                @click="lastServedInfo = null"
+              />
+            </div>
+          </div>
+        </div>
+      </transition>
 
       <!-- ========================================================================= -->
       <!-- VIEW 1: FOCUS COOK SLIP MODE (มุมมองโฟกัสทำอาหาร แสดงครั้งละสูงสุด 3 ออเดอร์ เลื่อนทีละ 1 ออเดอร์ สไตล์สลิป) -->
@@ -841,7 +921,9 @@
                       @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
                     >
                       <q-icon name="done_all" size="20px" class="q-mr-xs" />
-                      <span class="text-weight-bold">🍽️ กดส่งออเดอร์ (เสิร์ฟแล้ว)</span>
+                      <span class="text-weight-bold">
+                        🍽️ กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)
+                      </span>
                     </q-btn>
                   </div>
 
@@ -858,7 +940,9 @@
               <div class="text-caption text-grey-7 text-weight-medium">
                 รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
               </div>
-              <div class="text-caption text-grey-6">แสดงผลหน้าละสูงสุด 3 ออเดอร์ (เลื่อนทีละ 1 ออเดอร์)</div>
+              <div class="text-caption text-grey-6">
+                แสดงผลหน้าละสูงสุด 3 ออเดอร์ (เลื่อนทีละ 1 ออเดอร์)
+              </div>
             </div>
             <div class="thumbnails-scroll-row">
               <div
@@ -1978,6 +2062,296 @@
         </div>
       </div>
 
+      <!-- ========================================================================= -->
+      <!-- VIEW 5: SERVING QUEUE MODE (มุมมองคิวเสิร์ฟอาหารตามลำดับคิว) -->
+      <!-- ========================================================================= -->
+      <div v-else-if="viewMode === 'serving'" class="serving-mode-container animate-fade-in">
+        <!-- Station Banner / Top Controls -->
+        <div class="serving-top-card q-pa-md q-mb-md">
+          <div class="row items-center justify-between wrap q-gutter-md">
+            <div class="row items-center">
+              <div class="serving-hero-icon-box q-mr-md">
+                <q-icon name="room_service" size="32px" color="white" />
+              </div>
+              <div>
+                <div class="row items-center q-gutter-xs">
+                  <h6 class="q-my-none text-weight-bold serving-page-title">
+                    คิวเสิร์ฟอาหารตามลำดับ (Serving Station)
+                  </h6>
+                  <q-badge color="teal-9" rounded class="q-px-sm text-weight-bold">
+                    <span>รอเสิร์ฟ {{ pendingServeCount }} ออเดอร์</span>
+                  </q-badge>
+                </div>
+                <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
+                  รายการอาหารที่ต้องยกไปเสิร์ฟ เรียงตามลำดับคิว แสดงหมายเลขโต๊ะชัดเจน
+                  คลิกเดียวเสิร์ฟทันที
+                </p>
+              </div>
+            </div>
+
+            <div class="row items-center q-gutter-sm">
+              <q-btn
+                unelevated
+                no-caps
+                color="primary"
+                icon="view_carousel"
+                label="สลับไปโหมดโฟกัสทำอาหาร"
+                class="text-weight-bold"
+                @click="viewMode = 'focus'"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="row items-center justify-between wrap q-gutter-y-sm q-mb-md">
+          <div class="row q-gutter-xs">
+            <q-btn
+              size="sm"
+              rounded
+              :unelevated="servingFilter === 'all'"
+              :flat="servingFilter !== 'all'"
+              :color="servingFilter === 'all' ? 'teal-8' : 'grey-3'"
+              :text-color="servingFilter === 'all' ? 'white' : 'grey-8'"
+              class="text-weight-bold"
+              @click="servingFilter = 'all'"
+            >
+              <span>ทั้งหมดที่ต้องเสิร์ฟ ({{ pendingServeCount }})</span>
+            </q-btn>
+            <q-btn
+              size="sm"
+              rounded
+              :unelevated="servingFilter === 'prepared'"
+              :flat="servingFilter !== 'prepared'"
+              :color="servingFilter === 'prepared' ? 'green-8' : 'grey-3'"
+              :text-color="servingFilter === 'prepared' ? 'white' : 'grey-8'"
+              class="text-weight-bold"
+              @click="servingFilter = 'prepared'"
+            >
+              <span>พร้อมเสิร์ฟแล้ว ({{ queueStore.preparedOrders.length }})</span>
+            </q-btn>
+            <q-btn
+              size="sm"
+              rounded
+              :unelevated="servingFilter === 'preparing'"
+              :flat="servingFilter !== 'preparing'"
+              :color="servingFilter === 'preparing' ? 'amber-9' : 'grey-3'"
+              :text-color="servingFilter === 'preparing' ? 'white' : 'grey-8'"
+              class="text-weight-bold"
+              @click="servingFilter = 'preparing'"
+            >
+              <span>กำลังปรุง ({{ queueStore.preparingOrders.length }})</span>
+            </q-btn>
+            <q-btn
+              size="sm"
+              rounded
+              :unelevated="servingFilter === 'recent'"
+              :flat="servingFilter !== 'recent'"
+              :color="servingFilter === 'recent' ? 'grey-8' : 'grey-3'"
+              :text-color="servingFilter === 'recent' ? 'white' : 'grey-8'"
+              class="text-weight-bold"
+              @click="servingFilter = 'recent'"
+            >
+              <span>เสิร์ฟแล้วล่าสุด ({{ recentlyServedOrders.length }})</span>
+            </q-btn>
+          </div>
+          <div class="text-caption text-grey-6">
+            {{
+              servingFilter === 'recent'
+                ? 'แสดงประวัติที่เสิร์ฟแล้ว 15 ออเดอร์ล่าสุด'
+                : 'เรียงลำดับตามคิวก่อน-หลังอัตโนมัติ'
+            }}
+          </div>
+        </div>
+
+        <!-- Orders Grid -->
+        <div v-if="filteredServingOrders.length > 0" class="serving-orders-grid">
+          <div
+            v-for="order in filteredServingOrders"
+            :key="order.id"
+            class="serving-order-card"
+            :class="{
+              'serving-order-card--prepared': order.status === OrderStatus.PREPARED,
+              'serving-order-card--preparing': order.status === OrderStatus.PREPARING,
+              'serving-order-card--served': order.status === OrderStatus.SERVED,
+            }"
+          >
+            <!-- Card Header: Table Badge & Queue Info -->
+            <div class="serving-card-header q-pa-md">
+              <div class="row items-center justify-between no-wrap q-mb-sm">
+                <!-- Large, High-Contrast Table Badge -->
+                <div
+                  class="serving-table-badge"
+                  :class="{ 'serving-table-badge--takeaway': isTakeawayName(getTableName(order)) }"
+                >
+                  <q-icon
+                    :name="
+                      isTakeawayName(getTableName(order)) ? 'shopping_bag' : 'table_restaurant'
+                    "
+                    size="22px"
+                    class="q-mr-xs"
+                  />
+                  <span class="serving-table-title">{{ getTableName(order) }}</span>
+                </div>
+
+                <!-- Status Chip -->
+                <q-badge
+                  rounded
+                  class="q-px-sm q-py-xs text-weight-bold"
+                  :color="
+                    order.status === OrderStatus.PREPARED
+                      ? 'green-7'
+                      : order.status === OrderStatus.PREPARING
+                        ? 'amber-9'
+                        : 'grey-6'
+                  "
+                >
+                  <q-icon :name="getStatusIcon(order.status)" size="14px" class="q-mr-xs" />
+                  <span>{{ getStatusLabel(order.status) }}</span>
+                </q-badge>
+              </div>
+
+              <div class="row items-center justify-between text-caption text-grey-7">
+                <div class="row items-center q-gutter-x-xs">
+                  <span class="serving-queue-num">คิวที่ #{{ order.queue_number }}</span>
+                  <span>•</span>
+                  <span>รวม {{ getTotalDishesCount(order) }} จาน</span>
+                </div>
+                <div class="row items-center q-gutter-x-xs">
+                  <q-icon name="schedule" size="14px" />
+                  <span>{{ formatElapsed(order.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <q-separator />
+
+            <!-- Dishes List with Tappable Checkboxes -->
+            <div class="serving-card-body q-pa-md">
+              <div class="text-caption text-grey-7 q-mb-xs text-weight-medium">
+                รายการอาหารที่ต้องยกไปเสิร์ฟ:
+              </div>
+              <div class="column q-gutter-y-xs">
+                <div
+                  v-for="item in order.items"
+                  :key="item.id"
+                  class="serving-item-row"
+                  :class="{ 'serving-item-row--checked': checkedServingItemIds.has(item.id) }"
+                  @click="toggleServingItemCheck(item.id)"
+                >
+                  <q-checkbox
+                    :model-value="checkedServingItemIds.has(item.id)"
+                    dense
+                    size="xs"
+                    color="teal-8"
+                    class="q-mr-xs"
+                    @update:model-value="toggleServingItemCheck(item.id)"
+                  />
+                  <span class="serving-item-qty text-weight-bolder text-teal-9 q-mr-sm">
+                    {{ item.quantity }}x
+                  </span>
+                  <div class="col">
+                    <span class="serving-item-name text-weight-bold">
+                      {{ item.snapshot_name }}
+                    </span>
+                    <!-- Options / Modifiers -->
+                    <div
+                      v-if="item.options && getVisibleOptions(item.options).length > 0"
+                      class="row q-gutter-xs q-mt-xs"
+                    >
+                      <span
+                        v-for="opt in getVisibleOptions(item.options)"
+                        :key="opt.id"
+                        class="serving-opt-chip"
+                        :class="{
+                          'serving-opt-chip--takeaway': isTakeawayOption(opt.snapshot_option_name),
+                        }"
+                      >
+                        {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
+                      </span>
+                    </div>
+                    <!-- Notes -->
+                    <div v-if="item.special_instruction" class="serving-item-notes q-mt-xs">
+                      💬 "{{ item.special_instruction }}"
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <q-separator />
+
+            <!-- Card Footer: Direct 1-Click Action -->
+            <div class="serving-card-footer q-pa-md">
+              <template v-if="order.status !== OrderStatus.SERVED">
+                <q-btn
+                  unelevated
+                  no-caps
+                  class="full-width text-weight-bold serving-action-btn"
+                  color="teal-8"
+                  size="md"
+                  @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
+                >
+                  <q-icon name="done_all" size="20px" class="q-mr-xs" />
+                  <span>🍽️ กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)</span>
+                </q-btn>
+              </template>
+              <template v-else>
+                <div class="row items-center justify-between full-width">
+                  <div class="row items-center text-positive text-weight-bold">
+                    <q-icon name="check_circle" size="18px" class="q-mr-xs" />
+                    <span>เสิร์ฟที่ {{ getTableName(order) }} แล้ว</span>
+                  </div>
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    size="sm"
+                    color="orange-9"
+                    icon="undo"
+                    label="ดึงกลับ"
+                    @click="advanceStatus(order.id, OrderStatus.PREPARING)"
+                  >
+                    <q-tooltip>ดึงออเดอร์กลับมาสถานะกำลังปรุง</q-tooltip>
+                  </q-btn>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State for Serving Queue -->
+        <div v-else class="serving-empty-card text-center q-pa-xl">
+          <div class="serving-empty-icon-wrap q-mx-auto q-mb-md">
+            <q-icon name="check_circle" size="48px" color="teal-6" />
+          </div>
+          <div class="text-weight-bold text-h6 text-grey-8">
+            {{
+              servingFilter === 'recent'
+                ? 'ยังไม่มีประวัติการเสิร์ฟอาหารวันนี้'
+                : 'ไม่มีรายการอาหารรอเสิร์ฟในขณะนี้'
+            }}
+          </div>
+          <div class="text-caption text-grey-6 q-mt-xs">
+            {{
+              servingFilter === 'recent'
+                ? 'เมื่อกดเสิร์ฟออเดอร์ รายการจะปรากฏที่นี่เพื่อให้ตรวจสอบโต๊ะย้อนหลังได้'
+                : 'ยอดเยี่ยมมาก! รายการอาหารทั้งหมดถูกเสิร์ฟเรียบร้อย หรือยังไม่มีออเดอร์ใหม่ที่เริ่มปรุง'
+            }}
+          </div>
+          <div class="q-mt-md">
+            <q-btn
+              unelevated
+              no-caps
+              color="primary"
+              icon="view_carousel"
+              label="กลับไปที่โหมดโฟกัสทำอาหาร"
+              @click="viewMode = 'focus'"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- Kitchen Order Edit Dialog (Focus Mode & Overview) -->
       <EditOrderModal
         v-if="editingOrder"
@@ -2058,10 +2432,22 @@ const menuStore = useMenuStore();
 const { notifySuccess, notifyError, notifyWarning } = useNotify();
 
 const isLoading = ref(true);
-const viewMode = ref<'focus' | 'overview' | 'fry' | 'rice'>('focus');
+const viewMode = ref<'focus' | 'overview' | 'fry' | 'rice' | 'serving'>('focus');
 const focusFilter = ref<'all' | 'queued' | 'preparing' | 'prepared'>('all');
 const fryFilter = ref<'all' | 'pending' | 'completed'>('all');
 const riceFilter = ref<'all' | 'pending' | 'completed'>('all');
+const servingFilter = ref<'all' | 'prepared' | 'preparing' | 'recent'>('all');
+const checkedServingItemIds = ref<Set<string>>(new Set());
+
+interface LastServedInfo {
+  orderId: string;
+  queueNumber: number;
+  tableName: string;
+  itemsSummary: string;
+  servedAt: string;
+}
+const lastServedInfo = ref<LastServedInfo | null>(null);
+let lastServedTimer: ReturnType<typeof setTimeout> | null = null;
 const FOCUS_PAGE_SIZE = 3;
 const focusPage = ref<number>(0);
 const soundEnabled = ref<boolean>(isSoundEnabled());
@@ -2586,6 +2972,62 @@ function clearCompletedRiceItems() {
   notifySuccess('ล้างรายการตักข้าวที่ติ๊กเสร็จแล้วเรียบร้อย');
 }
 
+// ─── Serving Station Computed & Helpers ────────────────────────────────
+const pendingServeOrders = computed(() => {
+  return queueStore.orders
+    .filter((o) => o.status === OrderStatus.PREPARING || o.status === OrderStatus.PREPARED)
+    .sort((a, b) => a.queue_number - b.queue_number);
+});
+
+const pendingServeCount = computed(() => pendingServeOrders.value.length);
+
+const recentlyServedOrders = computed(() => {
+  return queueStore.orders
+    .filter((o) => o.status === OrderStatus.SERVED)
+    .slice()
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 15);
+});
+
+const filteredServingOrders = computed(() => {
+  if (servingFilter.value === 'prepared') {
+    return pendingServeOrders.value.filter((o) => o.status === OrderStatus.PREPARED);
+  }
+  if (servingFilter.value === 'preparing') {
+    return pendingServeOrders.value.filter((o) => o.status === OrderStatus.PREPARING);
+  }
+  if (servingFilter.value === 'recent') {
+    return recentlyServedOrders.value;
+  }
+  return pendingServeOrders.value;
+});
+
+function toggleServingItemCheck(itemId: string) {
+  if (checkedServingItemIds.value.has(itemId)) {
+    checkedServingItemIds.value.delete(itemId);
+  } else {
+    checkedServingItemIds.value.add(itemId);
+  }
+  checkedServingItemIds.value = new Set(checkedServingItemIds.value);
+}
+
+async function undoLastServed() {
+  if (!lastServedInfo.value) return;
+  const id = lastServedInfo.value.orderId;
+  const tbl = lastServedInfo.value.tableName;
+  lastServedInfo.value = null;
+  if (lastServedTimer) {
+    clearTimeout(lastServedTimer);
+    lastServedTimer = null;
+  }
+  try {
+    await advanceOrderStatus(id, OrderStatus.PREPARING);
+    notifySuccess(`ดึงออเดอร์ (${tbl}) กลับมาสถานะกำลังปรุงแล้ว`);
+  } catch {
+    notifyError('ไม่สามารถดึงออเดอร์กลับได้');
+  }
+}
+
 // Keyboard shortcuts for kitchen navigation (Left/Right to slide pages)
 function handleKeydown(e: KeyboardEvent) {
   if (viewMode.value !== 'focus') return;
@@ -2686,13 +3128,38 @@ onUnmounted(() => {
 
 async function advanceStatus(orderId: string, newStatus: OrderStatus) {
   try {
+    const targetOrder = queueStore.orders.find((o) => o.id === orderId);
+    const tableName = targetOrder ? getTableName(targetOrder) : '';
+    const qNum = targetOrder ? targetOrder.queue_number : 0;
+
     await advanceOrderStatus(orderId, newStatus);
     const labelMap: Record<string, string> = {
       [OrderStatus.PREPARING]: 'รับออเดอร์แล้ว กำลังปรุงอาหาร 🔥',
       [OrderStatus.PREPARED]: 'เตรียมอาหารเสร็จเรียบร้อย ✅',
-      [OrderStatus.SERVED]: 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
+      [OrderStatus.SERVED]: tableName
+        ? `ส่งออเดอร์ คิว #${qNum} (${tableName}) เรียบร้อยแล้ว 🍽️`
+        : 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
     };
     notifySuccess(labelMap[newStatus] || 'อัปเดตสถานะสำเร็จ');
+
+    if (newStatus === OrderStatus.SERVED && targetOrder) {
+      if (lastServedTimer) {
+        clearTimeout(lastServedTimer);
+      }
+      const itemsSummary =
+        targetOrder.items?.map((i) => `${i.snapshot_name} x${i.quantity || 1}`).join(', ') || '';
+      lastServedInfo.value = {
+        orderId: targetOrder.id,
+        queueNumber: targetOrder.queue_number,
+        tableName,
+        itemsSummary,
+        servedAt: formatTime(new Date().toISOString()),
+      };
+      lastServedTimer = setTimeout(() => {
+        lastServedInfo.value = null;
+        lastServedTimer = null;
+      }, 45000);
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'ไม่สามารถอัปเดตสถานะได้';
     notifyError(msg);
@@ -4031,6 +4498,213 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   height: 72px;
   border-radius: 50%;
   background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================================================= */
+/* Serving Station & Last-Served Reminder Banner Styles */
+/* ========================================================================= */
+.stat-chip--serving {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+
+.stat-chip--serving:hover {
+  background: #ccfbf1;
+}
+
+.last-served-banner {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.25);
+  border: 1px solid #14b8a6;
+}
+
+.last-served-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.last-served-table-badge {
+  background: #ffffff;
+  color: #0f766e;
+  padding: 3px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  letter-spacing: 0.2px;
+}
+
+.serving-mode-container {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.serving-top-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.serving-hero-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+.serving-page-title {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.serving-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.serving-order-card {
+  background: #ffffff;
+  border: 2px solid #99f6e4;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.serving-order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.serving-order-card--prepared {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.serving-order-card--preparing {
+  border-color: #fde68a;
+  background: #fffdf5;
+}
+
+.serving-order-card--served {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  opacity: 0.78;
+}
+
+.serving-table-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #ccfbf1;
+  color: #0f766e;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.serving-table-badge--takeaway {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.serving-table-title {
+  letter-spacing: 0.2px;
+}
+
+.serving-queue-num {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.serving-card-body {
+  flex: 1;
+  background: #ffffff;
+}
+
+.serving-item-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.serving-item-row:hover {
+  background: #f1f5f9;
+}
+
+.serving-item-row--checked {
+  background: #ecfdf5;
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+
+.serving-opt-chip {
+  font-size: 0.72rem;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+}
+
+.serving-opt-chip--takeaway {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.serving-item-notes {
+  font-size: 0.75rem;
+  color: #e11d48;
+  font-weight: 600;
+}
+
+.serving-action-btn {
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.25);
+  transition: all 0.15s ease;
+}
+
+.serving-action-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.serving-empty-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--color-border);
+  box-shadow: var(--shadow-subtle);
+}
+
+.serving-empty-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ccfbf1;
   display: flex;
   align-items: center;
   justify-content: center;

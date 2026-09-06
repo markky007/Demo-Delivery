@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { GUEST_TOKEN_KEY } from 'src/utils/constants';
 import { SessionStatus } from 'src/types/enums';
 import type { TableSession, GuestSession } from 'src/types/database';
+import { isTakeawayName } from './tableService';
 
 /**
  * Get or create a guest session token from localStorage.
@@ -214,17 +215,33 @@ export async function closeTableSession(sessionId: string): Promise<void> {
 }
 
 /**
- * Transfer an active table session to another empty table.
+ * Transfer an active table session to another empty table or takeaway.
  * Source table becomes available, and target table receives all session orders/bills.
  */
 export async function transferTableSession(
   sessionId: string,
   targetTableId: string,
+  customerName?: string,
 ): Promise<{ sourceTableName?: string | undefined; targetTableName: string }> {
-  // 1. Try DB RPC first
+  // Check target table exists and is active
+  const { data: targetTable, error: tErr } = await supabase
+    .from('tables')
+    .select('id, name, is_active')
+    .eq('id', targetTableId)
+    .eq('is_active', true)
+    .single();
+
+  if (tErr || !targetTable) {
+    throw new Error('ไม่พบโต๊ะปลายทาง หรือโต๊ะปลายทางถูกปิดใช้งาน');
+  }
+
+  const isTargetTakeaway = isTakeawayName(targetTable.name);
+
+  // 1. Try DB RPC first (with optional customer name if supported)
   const { data: rpcData, error: rpcError } = await supabase.rpc('transfer_table_session', {
     p_session_id: sessionId,
     p_target_table_id: targetTableId,
+    p_customer_name: customerName?.trim() || null,
   });
 
   if (!rpcError && rpcData) {
@@ -234,8 +251,30 @@ export async function transferTableSession(
     };
     return {
       sourceTableName: result.source_table_name,
-      targetTableName: result.target_table_name || '',
+      targetTableName: result.target_table_name || targetTable.name,
     };
+  }
+
+  // 1b. If RPC errored and target is NOT takeaway, try legacy 2-parameter RPC call
+  if (rpcError && !isTargetTakeaway) {
+    const { data: rpcDataLegacy, error: rpcErrorLegacy } = await supabase.rpc(
+      'transfer_table_session',
+      {
+        p_session_id: sessionId,
+        p_target_table_id: targetTableId,
+      },
+    );
+
+    if (!rpcErrorLegacy && rpcDataLegacy) {
+      const result = rpcDataLegacy as {
+        source_table_name?: string;
+        target_table_name?: string;
+      };
+      return {
+        sourceTableName: result.source_table_name,
+        targetTableName: result.target_table_name || targetTable.name,
+      };
+    }
   }
 
   // 2. Fallback client-side logic with robust validations
@@ -255,34 +294,42 @@ export async function transferTableSession(
     throw new Error('ไม่สามารถย้ายไปยังโต๊ะเดิมได้');
   }
 
-  // Check target table exists and is active
-  const { data: targetTable, error: tErr } = await supabase
-    .from('tables')
-    .select('id, name, is_active')
-    .eq('id', targetTableId)
-    .eq('is_active', true)
-    .single();
+  // Check target table availability:
+  // If target is NOT takeaway, target table must have no active sessions.
+  // If target IS takeaway, multiple active sessions are allowed!
+  if (!isTargetTakeaway) {
+    const { data: activeOnTarget } = await supabase
+      .from('table_sessions')
+      .select('id')
+      .eq('table_id', targetTableId)
+      .eq('status', SessionStatus.ACTIVE)
+      .limit(1);
 
-  if (tErr || !targetTable) {
-    throw new Error('ไม่พบโต๊ะปลายทาง หรือโต๊ะปลายทางถูกปิดใช้งาน');
+    if (activeOnTarget && activeOnTarget.length > 0) {
+      throw new Error(`โต๊ะ "${targetTable.name}" มีลูกค้านั่งอยู่แล้ว ไม่สามารถย้ายไปได้`);
+    }
   }
 
-  // Check target table has no active sessions
-  const { data: activeOnTarget } = await supabase
-    .from('table_sessions')
-    .select('id')
-    .eq('table_id', targetTableId)
-    .eq('status', SessionStatus.ACTIVE)
-    .limit(1);
+  // Prepare updated customer name if moving to takeaway or explicitly specified
+  const srcName = (session as unknown as { table?: { name?: string } }).table?.name;
+  const updatePayload: { table_id: string; customer_name?: string | null } = {
+    table_id: targetTableId,
+  };
 
-  if (activeOnTarget && activeOnTarget.length > 0) {
-    throw new Error(`โต๊ะ "${targetTable.name}" มีลูกค้านั่งอยู่แล้ว ไม่สามารถย้ายไปได้`);
+  if (isTargetTakeaway) {
+    if (customerName && customerName.trim()) {
+      updatePayload.customer_name = customerName.trim();
+    } else if (!session.customer_name) {
+      updatePayload.customer_name = srcName ? `ลูกค้าจาก ${srcName}` : 'ลูกค้าสั่งกลับบ้าน';
+    }
+  } else if (customerName !== undefined) {
+    updatePayload.customer_name = customerName.trim() || null;
   }
 
-  // Update session table_id
+  // Update session table_id and customer_name
   const { error: updateErr } = await supabase
     .from('table_sessions')
-    .update({ table_id: targetTableId })
+    .update(updatePayload)
     .eq('id', sessionId);
 
   if (updateErr) {
@@ -290,7 +337,7 @@ export async function transferTableSession(
   }
 
   return {
-    sourceTableName: (session as unknown as { table?: { name?: string } }).table?.name,
+    sourceTableName: srcName,
     targetTableName: targetTable.name,
   };
 }

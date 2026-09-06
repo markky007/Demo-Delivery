@@ -342,7 +342,7 @@
             <!-- Target Table Selection -->
             <div class="q-mt-md">
               <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
-                เลือกโต๊ะว่างปลายทางที่ต้องการย้ายไป:
+                เลือกโต๊ะว่าง หรือ สั่งกลับบ้าน ที่ต้องการย้ายไป:
               </div>
 
               <!-- When No Empty Tables Available -->
@@ -364,15 +364,19 @@
                   v-for="targetTbl in availableTablesForTransfer"
                   :key="targetTbl.id"
                   class="target-table-item"
-                  :class="{ 'target-table-item--selected': selectedTargetTableId === targetTbl.id }"
+                  :class="{
+                    'target-table-item--selected': selectedTargetTableId === targetTbl.id,
+                    'target-table-item--takeaway': isTakeawayName(targetTbl.name),
+                  }"
                   @click="selectedTargetTableId = targetTbl.id"
                 >
                   <div class="row items-center justify-between">
                     <div class="row items-center">
                       <q-icon
-                        name="table_restaurant"
+                        :name="isTakeawayName(targetTbl.name) ? 'shopping_bag' : 'table_restaurant'"
                         size="18px"
                         class="target-table-icon q-mr-xs"
+                        :class="{ 'text-orange-9': isTakeawayName(targetTbl.name) }"
                       />
                       <span class="target-table-name text-weight-bold">{{ targetTbl.name }}</span>
                     </div>
@@ -382,9 +386,35 @@
                       size="18px"
                       color="primary"
                     />
+                    <span
+                      v-else-if="isTakeawayName(targetTbl.name)"
+                      class="target-table-takeaway-badge"
+                    >
+                      สั่งกลับบ้าน
+                    </span>
                     <span v-else class="target-table-free-badge">ว่าง</span>
                   </div>
                 </div>
+              </div>
+
+              <!-- Customer Name Input when Target is Takeaway -->
+              <div
+                v-if="selectedTargetIsTakeaway"
+                class="q-mt-sm bg-orange-1 q-pa-sm border-radius-md"
+                style="border: 1px dashed #fdba74;"
+              >
+                <div class="text-caption text-weight-bold text-orange-10 q-mb-xs row items-center">
+                  <q-icon name="person" size="16px" class="q-mr-xs" />
+                  <span>ชื่อลูกค้าสำหรับสั่งกลับบ้าน (ระบุหรือไม่ก็ได้):</span>
+                </div>
+                <q-input
+                  v-model="transferCustomerName"
+                  outlined
+                  dense
+                  :placeholder="`เช่น คุณสมชาย (ถ้าไม่ระบุ ระบบจะใช้ 'ลูกค้าจาก ${tableName || 'โต๊ะเดิม'}')`"
+                  bg-color="white"
+                  class="text-caption"
+                />
               </div>
             </div>
 
@@ -412,7 +442,7 @@
               :label="
                 selectedTargetTableId
                   ? `ยืนยันย้ายไป ${allTables.find((t) => t.id === selectedTargetTableId)?.name || 'โต๊ะใหม่'}`
-                  : 'กรุณาเลือกโต๊ะว่าง'
+                  : 'กรุณาเลือกโต๊ะปลายทาง'
               "
               :disabled="!selectedTargetTableId || availableTablesForTransfer.length === 0"
               :loading="isTransferring"
@@ -736,22 +766,31 @@ const showTransferModal = ref(false);
 const allTables = ref<TableWithQR[]>([]);
 const activeSessionsList = ref<{ table_id: string; status: string }[]>([]);
 const selectedTargetTableId = ref<string | null>(null);
+const transferCustomerName = ref('');
 const isTransferring = ref(false);
 
 const availableTablesForTransfer = computed(() => {
   if (!session.value) return [];
   const currentTableId = session.value.table_id;
+  const isCurrentTakeaway = isTakeawayName(tableName.value);
   const occupiedTableIds = new Set(
     activeSessionsList.value.filter((s) => s.status === 'ACTIVE').map((s) => s.table_id),
   );
 
-  return allTables.value.filter(
-    (t) =>
-      t.is_active &&
-      t.id !== currentTableId &&
-      !isTakeawayName(t.name) &&
-      !occupiedTableIds.has(t.id),
-  );
+  return allTables.value.filter((t) => {
+    if (!t.is_active || t.id === currentTableId) return false;
+    const isTargetTakeaway = isTakeawayName(t.name);
+    if (isTargetTakeaway) {
+      return !isCurrentTakeaway;
+    }
+    return !occupiedTableIds.has(t.id);
+  });
+});
+
+const selectedTargetIsTakeaway = computed(() => {
+  if (!selectedTargetTableId.value) return false;
+  const target = allTables.value.find((t) => t.id === selectedTargetTableId.value);
+  return target ? isTakeawayName(target.name) : false;
 });
 
 const billTotal = computed(() => {
@@ -836,6 +875,7 @@ async function addDrinkItem(name: string, price: number, type: string) {
 
 async function openTransferModal() {
   selectedTargetTableId.value = null;
+  transferCustomerName.value = session.value?.customer_name || '';
   showTransferModal.value = true;
   try {
     const [tablesData, sessionsRes] = await Promise.all([
@@ -854,10 +894,16 @@ async function handleConfirmTransfer() {
 
   isTransferring.value = true;
   try {
-    const res = await transferTableSession(session.value.id, selectedTargetTableId.value);
+    const isTargetTakeaway = Boolean(selectedTargetIsTakeaway.value);
+    const res = await transferTableSession(
+      session.value.id,
+      selectedTargetTableId.value,
+      isTargetTakeaway ? transferCustomerName.value : undefined,
+    );
     notifySuccess(`ย้ายไปยัง ${res.targetTableName} เรียบร้อยแล้ว`);
     showTransferModal.value = false;
     selectedTargetTableId.value = null;
+    transferCustomerName.value = '';
     await loadData();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการย้ายโต๊ะ';
@@ -1208,6 +1254,30 @@ async function handleConfirmUpdatePrice() {
   background: #dcfce7;
   padding: 2px 6px;
   border-radius: 999px;
+}
+
+.target-table-takeaway-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #c2410c;
+  background: #ffedd5;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.target-table-item--takeaway {
+  border-color: #fed7aa;
+}
+
+.target-table-item--takeaway:hover {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
+.target-table-item--takeaway.target-table-item--selected {
+  border-color: #ea580c;
+  background: #ffedd5;
+  box-shadow: 0 0 0 1px #ea580c;
 }
 
 .transfer-hint-box {

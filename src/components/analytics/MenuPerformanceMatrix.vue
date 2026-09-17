@@ -933,7 +933,8 @@ onBeforeUnmount(() => {
 }
 
 .font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Mobile Responsive Optimizations (< 600px) */

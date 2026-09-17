@@ -361,7 +361,7 @@
             <!-- Time and Item Count Row -->
             <div class="row items-center justify-between text-caption text-grey-6 q-mb-sm q-px-xs">
               <div class="row items-center q-gutter-xs">
-                <q-icon name="schedule" size="13px" />
+                <q-icon name="schedule" size="15px" />
                 <span>{{ formatTime(order.created_at) }}</span>
                 <span class="text-grey-4">•</span>
                 <span>{{ formatElapsed(order.created_at) }}</span>
@@ -402,7 +402,7 @@
 
                     <!-- Special Cooking Note -->
                     <div v-if="item.special_instruction" class="note-box q-mt-xs">
-                      <q-icon name="edit_note" size="13px" color="orange-8" class="q-mr-xs" />
+                      <q-icon name="edit_note" size="16px" color="orange-8" class="q-mr-xs" />
                       <span class="text-orange-9 text-caption">{{ item.special_instruction }}</span>
                     </div>
                   </div>
@@ -495,7 +495,7 @@
                   </span>
                 </div>
                 <div class="text-caption text-grey-6 row items-center q-gutter-xs q-mt-xs">
-                  <q-icon name="schedule" size="12px" />
+                  <q-icon name="schedule" size="15px" />
                   <span>{{ formatTime(props.row.created_at) }}</span>
                   <span class="text-grey-5">•</span>
                   <span>{{ formatElapsed(props.row.created_at) }}</span>
@@ -527,8 +527,8 @@
                     }})
                   </div>
                   <!-- Special note if any -->
-                  <div v-if="item.special_instruction" class="item-note-inline">
-                    <q-icon name="edit_note" size="13px" color="orange-8" class="q-mr-xs" />
+                  <div v-if="item.special_instruction" class="detail-item-note">
+                    <q-icon name="edit_note" size="16px" class="q-mr-xs" />
                     <span class="text-orange-9 text-caption">{{ item.special_instruction }}</span>
                   </div>
                 </div>
@@ -668,7 +668,7 @@
                     v-if="item.special_instruction"
                     class="q-mt-xs text-orange-9 text-caption bg-orange-1 q-pa-xs rounded-borders"
                   >
-                    <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                    <q-icon name="edit_note" size="16px" class="q-mr-xs" />
                     โน้ต: {{ item.special_instruction }}
                   </div>
                 </div>
@@ -1534,7 +1534,8 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   padding: 4px 8px;
   font-weight: 800;
-  font-family: monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .queue-hash {
@@ -1655,7 +1656,8 @@ onUnmounted(() => {
 .queue-badge-num {
   font-size: 1rem;
   color: var(--color-primary);
-  font-family: monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .items-cell {
@@ -1724,7 +1726,8 @@ onUnmounted(() => {
   font-size: 1.1rem;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
-  font-family: monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-body {

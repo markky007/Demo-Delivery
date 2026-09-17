@@ -1,12 +1,65 @@
 /* ─── Leaflet Map CSS ────────────────────────────────────────── */
 @import 'leaflet/dist/leaflet.css';
 
+/* ─── Local & CDN Web Fonts: LINE Seed Sans TH ───────────────── */
+@font-face {
+  font-family: 'LINE Seed Sans TH';
+  src:
+    local('LINE Seed Sans TH Regular'),
+    local('LINESeedSansTH-Regular'),
+    url('/fonts/LINESeedSansTH_A_Rg.otf') format('opentype'),
+    url('https://cdn.jsdelivr.net/npm/@fontpkg/line-seed-sans-th-app@1.0.1/LINESeedSansTH_A_Rg.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LINE Seed Sans TH';
+  src:
+    local('LINE Seed Sans TH Bold'),
+    local('LINESeedSansTH-Bold'),
+    url('/fonts/LINESeedSansTH_A_Bd.otf') format('opentype'),
+    url('https://cdn.jsdelivr.net/npm/@fontpkg/line-seed-sans-th-app@1.0.1/LINESeedSansTH_A_Bd.otf') format('opentype');
+  font-weight: 600 700 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ─── Thai-First Design System Tokens ─────────────────────────────── */
 
 :root {
-  /* Typography */
+  /* Typography Families */
   --app-font-family:
-    'Prompt', 'LINE Seed Sans TH', -apple-system, BlinkMacSystemFont, 'Sukhumvit Set', sans-serif;
+    'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Sukhumvit Set', sans-serif;
+  --app-font-mono:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --app-font-code:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Typography Scale Tokens (Tailored for Thai & Latin harmony) */
+  --type-display: 2.25rem;
+  --type-display-lh: 1.2;
+  --type-h1: 1.75rem;
+  --type-h1-lh: 1.25;
+  --type-h2: 1.375rem;
+  --type-h2-lh: 1.3;
+  --type-h3: 1.125rem;
+  --type-h3-lh: 1.35;
+  --type-body-lg: 1.0625rem;
+  --type-body-lg-lh: 1.45;
+  --type-body: 0.9375rem;
+  --type-body-lh: 1.5;
+  --type-body-sm: 0.8125rem;
+  --type-body-sm-lh: 1.45;
+  --type-caption: 0.75rem;
+  --type-caption-lh: 1.4;
+
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   /* Primary Brand - Warm Terracotta */
   --color-primary: #e05836;
@@ -75,8 +128,8 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-  letter-spacing: 0.01em;
+  line-height: var(--type-body-lh);
+  letter-spacing: 0;
 }
 
 /* Safe area insets */
@@ -231,6 +284,190 @@ body {
 .q-item {
   font-family: var(--app-font-family);
   border-radius: var(--radius-sm);
+}
+
+/* ─── Quasar Typography Overrides & Thai Harmonization ───── */
+.text-h1,
+.text-h2,
+.text-h3,
+.text-h4,
+.text-h5,
+.text-h6,
+.text-subtitle1,
+.text-subtitle2,
+.text-body1,
+.text-body2,
+.text-caption,
+.text-overline {
+  font-family: var(--app-font-family);
+  letter-spacing: normal;
+}
+
+.text-h1 {
+  font-size: var(--type-display);
+  line-height: var(--type-display-lh);
+  font-weight: var(--font-weight-bold);
+}
+
+.text-h2 {
+  font-size: 2rem;
+  line-height: 1.25;
+  font-weight: var(--font-weight-bold);
+}
+
+.text-h3 {
+  font-size: var(--type-h1);
+  line-height: var(--type-h1-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-h4 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-h5 {
+  font-size: var(--type-h2);
+  line-height: var(--type-h2-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-h6 {
+  font-size: var(--type-h3);
+  line-height: var(--type-h3-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-subtitle1 {
+  font-size: var(--type-body-lg);
+  line-height: var(--type-body-lg-lh);
+  font-weight: var(--font-weight-medium);
+}
+
+.text-subtitle2 {
+  font-size: var(--type-body);
+  line-height: var(--type-body-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-body1 {
+  font-size: var(--type-body-lg);
+  line-height: var(--type-body-lg-lh);
+}
+
+.text-body2 {
+  font-size: var(--type-body);
+  line-height: var(--type-body-lh);
+}
+
+.text-caption {
+  font-size: var(--type-caption);
+  line-height: var(--type-caption-lh);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Global Icon Sizing & Clarity ──────────────────────────────── */
+.q-icon,
+.material-icons,
+.material-icons-outlined,
+.mdi,
+.fa,
+[class*='q-icon'] {
+  font-size-adjust: none !important;
+  font-style: normal;
+  letter-spacing: normal;
+  line-height: 1;
+  text-transform: none;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure button icons have comfortable, visible scaling */
+.q-btn .q-icon {
+  font-size: 1.25em;
+  font-size-adjust: none !important;
+}
+
+.q-btn--dense .q-icon {
+  font-size: 1.15em;
+  font-size-adjust: none !important;
+}
+
+/* ─── Typography Utility Classes ────────────────────────── */
+.font-mono {
+  font-family: var(--app-font-mono) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: 'tnum' 1, 'cv05' 1 !important;
+  letter-spacing: -0.01em;
+}
+
+.font-sans {
+  font-family: var(--app-font-family) !important;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: 'tnum' 1, 'cv05' 1 !important;
+}
+
+/* Clean Unified Numeric Typography across tables, stats, receipts */
+.q-table td,
+.q-table th,
+.receipt-queue-number,
+.receipt-item-price,
+.receipt-total-value,
+.queue-badge-num,
+.detail-queue-badge,
+.stat-number,
+.receipt-timer-chip {
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'cv05' 1;
+}
+
+.type-display {
+  font-size: var(--type-display);
+  line-height: var(--type-display-lh);
+  font-weight: var(--font-weight-bold);
+}
+
+.type-h1 {
+  font-size: var(--type-h1);
+  line-height: var(--type-h1-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.type-h2 {
+  font-size: var(--type-h2);
+  line-height: var(--type-h2-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.type-h3 {
+  font-size: var(--type-h3);
+  line-height: var(--type-h3-lh);
+  font-weight: var(--font-weight-semibold);
+}
+
+.type-body-lg {
+  font-size: var(--type-body-lg);
+  line-height: var(--type-body-lg-lh);
+}
+
+.type-body {
+  font-size: var(--type-body);
+  line-height: var(--type-body-lh);
+}
+
+.type-body-sm {
+  font-size: var(--type-body-sm);
+  line-height: var(--type-body-sm-lh);
+}
+
+.type-caption {
+  font-size: var(--type-caption);
+  line-height: var(--type-caption-lh);
 }
 
 /* Utility Animations */

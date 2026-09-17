@@ -11,7 +11,7 @@
             <div class="row items-center q-gutter-x-sm">
               <h5 class="q-my-none text-weight-bold page-title">คิวออเดอร์ในครัว</h5>
               <q-badge color="primary" rounded class="q-px-sm q-py-xs">
-                <q-icon name="sync" size="14px" class="q-mr-xs animate-spin-slow" />
+                <q-icon name="sync" size="16px" class="q-mr-xs animate-spin-slow" />
                 <span>เรียลไทม์</span>
               </q-badge>
             </div>
@@ -326,7 +326,7 @@
                 class="view-toggle-btn"
                 @click="viewMode = 'focus'"
               >
-                <q-icon name="view_carousel" size="18px" class="q-mr-xs" />
+                <q-icon name="view_carousel" size="20px" class="q-mr-xs" />
                 <span class="text-weight-bold">โหมดโฟกัสทำอาหาร</span>
                 <q-badge v-if="activeKitchenOrders.length > 0" color="amber-9" floating rounded>
                   {{ activeKitchenOrders.length }}
@@ -342,7 +342,7 @@
                 class="view-toggle-btn"
                 @click="viewMode = 'overview'"
               >
-                <q-icon name="view_kanban" size="18px" class="q-mr-xs" />
+                <q-icon name="view_kanban" size="20px" class="q-mr-xs" />
                 <span class="text-weight-bold">ดูภาพรวม</span>
               </q-btn>
 
@@ -355,7 +355,7 @@
                 class="view-toggle-btn"
                 @click="viewMode = 'fry'"
               >
-                <q-icon name="local_fire_department" size="18px" class="q-mr-xs" />
+                <q-icon name="local_fire_department" size="20px" class="q-mr-xs" />
                 <span class="text-weight-bold">คิวของทอด</span>
                 <q-badge v-if="pendingFryCount > 0" color="deep-orange-9" floating rounded>
                   {{ pendingFryCount }}
@@ -371,7 +371,7 @@
                 class="view-toggle-btn"
                 @click="viewMode = 'rice'"
               >
-                <q-icon name="rice_bowl" size="18px" class="q-mr-xs" />
+                <q-icon name="rice_bowl" size="20px" class="q-mr-xs" />
                 <span class="text-weight-bold">คิวตักข้าว</span>
                 <q-badge v-if="pendingRiceCount > 0" color="amber-9" floating rounded>
                   {{ pendingRiceCount }}
@@ -387,7 +387,7 @@
                 class="view-toggle-btn"
                 @click="viewMode = 'serving'"
               >
-                <q-icon name="room_service" size="18px" class="q-mr-xs" />
+                <q-icon name="room_service" size="20px" class="q-mr-xs" />
                 <span class="text-weight-bold">คิวเสิร์ฟอาหาร</span>
                 <q-badge v-if="pendingServeCount > 0" color="teal-9" floating rounded>
                   {{ pendingServeCount }}
@@ -406,7 +406,7 @@
               viewMode = 'focus';
             "
           >
-            <q-icon name="schedule" size="16px" class="q-mr-xs text-light-blue-8" />
+            <q-icon name="schedule" size="18px" class="q-mr-xs text-light-blue-8" />
             <span
               >รอรับ: <strong>{{ queueStore.queuedOrders.length }}</strong></span
             >
@@ -418,7 +418,7 @@
               viewMode = 'focus';
             "
           >
-            <q-icon name="soup_kitchen" size="16px" class="q-mr-xs text-amber-9" />
+            <q-icon name="soup_kitchen" size="18px" class="q-mr-xs text-amber-9" />
             <span
               >กำลังทำ: <strong>{{ queueStore.preparingOrders.length }}</strong></span
             >
@@ -431,31 +431,31 @@
               viewMode = 'focus';
             "
           >
-            <q-icon name="check_circle" size="16px" class="q-mr-xs text-green-7" />
+            <q-icon name="check_circle" size="18px" class="q-mr-xs text-green-7" />
             <span
               >พร้อมส่ง: <strong>{{ queueStore.preparedOrders.length }}</strong></span
             >
           </div>
           <div class="stat-chip stat-chip--serving" @click="viewMode = 'serving'">
-            <q-icon name="room_service" size="16px" class="q-mr-xs text-teal-8" />
+            <q-icon name="room_service" size="18px" class="q-mr-xs text-teal-8" />
             <span
               >รอเสิร์ฟ: <strong>{{ pendingServeCount }}</strong> ออเดอร์</span
             >
           </div>
           <div class="stat-chip stat-chip--fry" @click="viewMode = 'fry'">
-            <q-icon name="local_fire_department" size="16px" class="q-mr-xs text-deep-orange-8" />
+            <q-icon name="local_fire_department" size="18px" class="q-mr-xs text-deep-orange-8" />
             <span
               >ของทอดรอทำ: <strong>{{ pendingFryCount }}</strong> ออเดอร์</span
             >
           </div>
           <div class="stat-chip stat-chip--rice" @click="viewMode = 'rice'">
-            <q-icon name="rice_bowl" size="16px" class="q-mr-xs text-amber-9" />
+            <q-icon name="rice_bowl" size="18px" class="q-mr-xs text-amber-9" />
             <span
               >ข้าวรอตัก: <strong>{{ pendingRiceCount }}</strong> จาน</span
             >
           </div>
           <div class="stat-chip stat-chip--served" @click="viewMode = 'overview'">
-            <q-icon name="done_all" size="16px" class="q-mr-xs text-grey-7" />
+            <q-icon name="done_all" size="18px" class="q-mr-xs text-grey-7" />
             <span
               >เสิร์ฟแล้ววันนี้: <strong>{{ queueStore.servedOrders.length }}</strong></span
             >
@@ -702,7 +702,7 @@
                     <!-- Slip Title Tag & Edit Button -->
                     <div class="row items-center justify-between no-wrap q-mb-xs">
                       <div class="receipt-type-tag">
-                        <q-icon name="receipt_long" size="14px" class="q-mr-xs text-primary" />
+                        <q-icon name="receipt_long" size="16px" class="q-mr-xs text-primary" />
                         <span>ใบสั่งอาหาร (ครัว)</span>
                       </div>
 
@@ -715,7 +715,7 @@
                         class="receipt-edit-btn"
                         @click.stop="openEditOrderDialog(order)"
                       >
-                        <q-icon name="edit_note" size="16px" class="q-mr-xs" />
+                        <q-icon name="edit_note" size="18px" class="q-mr-xs" />
                         <span>แก้ไข</span>
                         <q-tooltip>แก้ไขรายการอาหาร</q-tooltip>
                       </q-btn>
@@ -726,7 +726,9 @@
                       <div class="row items-baseline no-wrap q-gutter-x-sm">
                         <div class="receipt-queue-block">
                           <span class="receipt-queue-prefix">คิวที่</span>
-                          <span class="receipt-queue-number font-mono">{{ formatQueueNumber(order.queue_number) }}</span>
+                          <span class="receipt-queue-number font-mono">{{
+                            formatQueueNumber(order.queue_number)
+                          }}</span>
                         </div>
 
                         <div
@@ -736,8 +738,12 @@
                           }"
                         >
                           <q-icon
-                            :name="isTakeawayName(getTableName(order)) ? 'shopping_bag' : 'table_restaurant'"
-                            size="16px"
+                            :name="
+                              isTakeawayName(getTableName(order))
+                                ? 'shopping_bag'
+                                : 'table_restaurant'
+                            "
+                            size="18px"
                             class="q-mr-xs"
                           />
                           <span>{{ getTableName(order) }}</span>
@@ -753,7 +759,7 @@
                           'receipt-status-stamp--prepared': order.status === OrderStatus.PREPARED,
                         }"
                       >
-                        <q-icon :name="getStatusIcon(order.status)" size="13px" class="q-mr-xs" />
+                        <q-icon :name="getStatusIcon(order.status)" size="15px" class="q-mr-xs" />
                         <span>{{ getStatusLabel(order.status) }}</span>
                       </div>
                     </div>
@@ -761,12 +767,12 @@
                     <!-- Receipt Meta Grid: Time & Timer -->
                     <div class="receipt-meta-box row items-center justify-between no-wrap">
                       <div class="row items-center text-caption text-grey-7">
-                        <q-icon name="schedule" size="13px" class="q-mr-xs" />
+                        <q-icon name="schedule" size="15px" class="q-mr-xs" />
                         <span>สั่ง: {{ formatTime(order.created_at) }} น.</span>
                       </div>
 
                       <div class="receipt-timer-chip" :class="getTimerColorClass(order.created_at)">
-                        <q-icon name="timer" size="13px" class="q-mr-xs" />
+                        <q-icon name="timer" size="15px" class="q-mr-xs" />
                         <span class="font-mono">รอ {{ formatElapsed(order.created_at) }}</span>
                       </div>
                     </div>
@@ -777,7 +783,11 @@
                       class="receipt-revision-banner q-mt-xs row items-center justify-between no-wrap"
                     >
                       <div class="row items-center no-wrap text-weight-medium text-caption">
-                        <q-icon name="notifications_active" size="14px" class="q-mr-xs text-amber-9" />
+                        <q-icon
+                          name="notifications_active"
+                          size="16px"
+                          class="q-mr-xs text-amber-9"
+                        />
                         <span>แก้ไขรายการ: เวอร์ชัน {{ order.revision }}</span>
                       </div>
                       <q-btn
@@ -803,13 +813,13 @@
                   <!-- 3. Receipt Items Body -->
                   <div class="receipt-body">
                     <!-- Columns Header -->
-                    <div class="receipt-table-header row items-center justify-between no-wrap q-mb-xs">
+                    <div
+                      class="receipt-table-header row items-center justify-between no-wrap q-mb-xs"
+                    >
                       <span class="text-caption text-weight-bold text-grey-7">
                         รายการ ({{ consolidateOrderItems(order.items).length }})
                       </span>
-                      <span class="text-caption text-weight-bold text-grey-7">
-                        จำนวน
-                      </span>
+                      <span class="text-caption text-weight-bold text-grey-7"> จำนวน </span>
                     </div>
 
                     <!-- Items List (Grouped by Kitchen Category: อาหาร, ยำ/ต้ม) -->
@@ -825,7 +835,7 @@
                             class="receipt-category-pill"
                             :class="`receipt-category-pill--${group.key}`"
                           >
-                            <q-icon :name="group.icon" size="13px" class="q-mr-xs" />
+                            <q-icon :name="group.icon" size="16px" class="q-mr-xs" />
                             <span>{{ group.label }}</span>
                           </div>
                           <div class="receipt-category-rule"></div>
@@ -859,7 +869,7 @@
                                   >
                                     <q-icon
                                       :name="getOptionDisplayInfo(opt.snapshot_option_name).icon"
-                                      size="11px"
+                                      size="13px"
                                       class="q-mr-xs"
                                     />
                                     {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
@@ -867,9 +877,18 @@
                                 </div>
 
                                 <!-- Special Instruction / Customer Comment (No 'หมายเหตุ:', chat_bubble_outline icon) -->
-                                <div v-if="item.special_instruction" class="receipt-note-strip q-mt-xs">
-                                  <q-icon name="chat_bubble_outline" size="13px" class="q-mr-xs receipt-note-icon" />
-                                  <span class="receipt-note-text">{{ item.special_instruction }}</span>
+                                <div
+                                  v-if="item.special_instruction"
+                                  class="receipt-note-strip q-mt-xs"
+                                >
+                                  <q-icon
+                                    name="chat_bubble_outline"
+                                    size="15px"
+                                    class="q-mr-xs receipt-note-icon"
+                                  />
+                                  <span class="receipt-note-text">{{
+                                    item.special_instruction
+                                  }}</span>
                                 </div>
                               </div>
 
@@ -904,7 +923,7 @@
                       class="full-width receipt-action-btn receipt-action-btn--start"
                       @click="advanceStatusAndProceed(order.id, OrderStatus.PREPARING)"
                     >
-                      <q-icon name="soup_kitchen" size="19px" class="q-mr-xs" />
+                      <q-icon name="soup_kitchen" size="22px" class="q-mr-sm" />
                       <span>กดรับออเดอร์ (เริ่มปรุง)</span>
                     </q-btn>
 
@@ -919,8 +938,8 @@
                       class="full-width receipt-action-btn receipt-action-btn--serve"
                       @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
                     >
-                      <q-icon name="check_circle" size="19px" class="q-mr-xs" />
-                      <span>กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)</span>
+                      <q-icon name="check_circle" size="22px" class="q-mr-sm" />
+                      <span>กดส่งออเดอร์ไป {{ getTableName(order) }}</span>
                     </q-btn>
                   </div>
 
@@ -956,7 +975,9 @@
               >
                 <div class="mini-chip-seq">{{ formatQueueNumber(ord.queue_number) }}</div>
                 <div class="mini-chip-table">{{ getTableName(ord) }}</div>
-                <div class="mini-chip-count">{{ consolidateOrderItems(ord.items).length }} รายการ</div>
+                <div class="mini-chip-count">
+                  {{ consolidateOrderItems(ord.items).length }} รายการ
+                </div>
               </div>
             </div>
           </div>
@@ -1028,7 +1049,7 @@
                       <q-icon
                         v-if="isTakeawayName(getTableName(order))"
                         name="shopping_bag"
-                        size="12px"
+                        size="15px"
                         class="q-mr-xs"
                       />
                       {{ getTableName(order) }}
@@ -1036,7 +1057,7 @@
                   </div>
                   <div class="row items-center q-gutter-x-xs">
                     <div class="elapsed-badge">
-                      <q-icon name="timer" size="13px" class="q-mr-xs" />
+                      <q-icon name="timer" size="15px" class="q-mr-xs" />
                       <span>{{ formatElapsed(order.created_at) }}</span>
                     </div>
                     <q-btn
@@ -1077,7 +1098,7 @@
                         <q-icon
                           v-if="isTakeawayOption(opt.snapshot_option_name)"
                           name="shopping_bag"
-                          size="11px"
+                          size="13px"
                           class="q-mr-xs"
                         />
                         {{
@@ -1089,7 +1110,7 @@
                     </div>
                     <!-- Special note -->
                     <div v-if="item.special_instruction" class="dish-special-note">
-                      <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                      <q-icon name="edit_note" size="16px" class="q-mr-xs" />
                       <span>{{ item.special_instruction }}</span>
                     </div>
                   </div>
@@ -1103,7 +1124,7 @@
                     class="full-width action-btn action-btn--preparing"
                     @click="advanceStatus(order.id, OrderStatus.PREPARING)"
                   >
-                    <q-icon name="soup_kitchen" size="16px" class="q-mr-xs" />
+                    <q-icon name="soup_kitchen" size="19px" class="q-mr-xs" />
                     <span>เริ่มเตรียมอาหาร</span>
                   </q-btn>
                 </div>
@@ -1150,7 +1171,7 @@
                       <q-icon
                         v-if="isTakeawayName(getTableName(order))"
                         name="shopping_bag"
-                        size="12px"
+                        size="15px"
                         class="q-mr-xs"
                       />
                       {{ getTableName(order) }}
@@ -1158,7 +1179,7 @@
                   </div>
                   <div class="row items-center q-gutter-x-xs">
                     <div class="elapsed-badge elapsed-badge--amber">
-                      <q-icon name="timer" size="13px" class="q-mr-xs" />
+                      <q-icon name="timer" size="15px" class="q-mr-xs" />
                       <span>{{ formatElapsed(order.preparing_at || order.created_at) }}</span>
                     </div>
                     <q-btn
@@ -1182,7 +1203,7 @@
                   class="revision-banner q-mb-xs row items-center justify-between"
                 >
                   <div class="row items-center col-auto">
-                    <q-icon name="notification_important" size="14px" class="q-mr-xs" />
+                    <q-icon name="notification_important" size="16px" class="q-mr-xs" />
                     <span>ลูกค้ารายการนี้มีการแก้ไข</span>
                   </div>
                   <q-btn
@@ -1223,7 +1244,7 @@
                         <q-icon
                           v-if="isTakeawayOption(opt.snapshot_option_name)"
                           name="shopping_bag"
-                          size="11px"
+                          size="13px"
                           class="q-mr-xs"
                         />
                         {{
@@ -1234,7 +1255,7 @@
                       </span>
                     </div>
                     <div v-if="item.special_instruction" class="dish-special-note">
-                      <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                      <q-icon name="edit_note" size="16px" class="q-mr-xs" />
                       <span>{{ item.special_instruction }}</span>
                     </div>
                   </div>
@@ -1248,7 +1269,7 @@
                     class="full-width action-btn action-btn--prepared"
                     @click="advanceStatus(order.id, OrderStatus.PREPARED)"
                   >
-                    <q-icon name="check_circle" size="16px" class="q-mr-xs" />
+                    <q-icon name="check_circle" size="19px" class="q-mr-xs" />
                     <span>เตรียมเสร็จแล้ว</span>
                   </q-btn>
                 </div>
@@ -1298,14 +1319,14 @@
                       <q-icon
                         v-if="isTakeawayName(getTableName(order))"
                         name="shopping_bag"
-                        size="12px"
+                        size="15px"
                         class="q-mr-xs"
                       />
                       {{ getTableName(order) }}
                     </span>
                   </div>
                   <div class="elapsed-badge elapsed-badge--green">
-                    <q-icon name="timer" size="13px" class="q-mr-xs" />
+                    <q-icon name="timer" size="15px" class="q-mr-xs" />
                     <span>{{ formatElapsed(order.prepared_at || order.created_at) }}</span>
                   </div>
                 </div>
@@ -1333,7 +1354,7 @@
                         <q-icon
                           v-if="isTakeawayOption(opt.snapshot_option_name)"
                           name="shopping_bag"
-                          size="11px"
+                          size="13px"
                           class="q-mr-xs"
                         />
                         {{
@@ -1344,7 +1365,7 @@
                       </span>
                     </div>
                     <div v-if="item.special_instruction" class="dish-special-note">
-                      <q-icon name="edit_note" size="14px" class="q-mr-xs" />
+                      <q-icon name="edit_note" size="16px" class="q-mr-xs" />
                       <span>{{ item.special_instruction }}</span>
                     </div>
                   </div>
@@ -1352,7 +1373,7 @@
 
                 <!-- FIFO Block Notice if earlier order is not served yet -->
                 <div v-if="!queueStore.canServe(order)" class="fifo-block-banner q-mb-sm">
-                  <q-icon name="hourglass_top" size="14px" class="q-mr-xs" />
+                  <q-icon name="hourglass_top" size="16px" class="q-mr-xs" />
                   <span>รอเสิร์ฟตามลำดับคิวก่อนหน้า</span>
                 </div>
 
@@ -1370,7 +1391,7 @@
                     :disable="!queueStore.canServe(order)"
                     @click="advanceStatus(order.id, OrderStatus.SERVED)"
                   >
-                    <q-icon name="done_all" size="16px" class="q-mr-xs" />
+                    <q-icon name="done_all" size="19px" class="q-mr-xs" />
                     <span>{{
                       queueStore.canServe(order) ? 'ยืนยันว่าเสิร์ฟครบแล้ว' : 'รอคิวก่อนหน้า'
                     }}</span>
@@ -2293,7 +2314,7 @@
                   @click="advanceStatusAndProceed(order.id, OrderStatus.SERVED)"
                 >
                   <q-icon name="check_circle" size="20px" class="q-mr-xs" />
-                  <span>กดส่งออเดอร์ไป {{ getTableName(order) }} (เสิร์ฟแล้ว)</span>
+                  <span>กดส่งออเดอร์ไป {{ getTableName(order) }}</span>
                 </q-btn>
               </template>
               <template v-else>
@@ -3345,7 +3366,8 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
    ========================================================== */
 
 .font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .kds-receipt-card {
@@ -3353,18 +3375,24 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   border-radius: 12px 12px 0 0;
   border: 1px solid var(--color-border, #ede5dc);
   border-bottom: none;
-  box-shadow: 0 4px 18px -2px rgba(45, 35, 30, 0.07), 0 2px 6px -1px rgba(45, 35, 30, 0.03);
+  box-shadow:
+    0 4px 18px -2px rgba(45, 35, 30, 0.07),
+    0 2px 6px -1px rgba(45, 35, 30, 0.03);
   display: flex;
   flex-direction: column;
   position: relative;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 480px;
   margin-bottom: 12px;
 }
 
 .kds-receipt-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px -4px rgba(45, 35, 30, 0.1), 0 4px 10px -2px rgba(45, 35, 30, 0.04);
+  box-shadow:
+    0 10px 24px -4px rgba(45, 35, 30, 0.1),
+    0 4px 10px -2px rgba(45, 35, 30, 0.04);
 }
 
 .kds-receipt-card--queued {
@@ -3814,7 +3842,11 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
 }
 
 .receipt-action-btn--start {
-  background: linear-gradient(135deg, var(--color-primary, #e05836) 0%, var(--color-primary-hover, #c84323) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary, #e05836) 0%,
+    var(--color-primary-hover, #c84323) 100%
+  ) !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(224, 88, 54, 0.35);
 }
@@ -3832,7 +3864,7 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   left: 0;
   right: 0;
   height: 8px;
-  background: 
+  background:
     linear-gradient(135deg, #ffffff 4px, transparent 0),
     linear-gradient(-135deg, #ffffff 4px, transparent 0);
   background-size: 12px 8px;

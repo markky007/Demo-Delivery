@@ -494,7 +494,7 @@ function printQR(table: TableWithQR) {
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            font-family: 'Prompt', sans-serif;
+            font-family: 'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0;
             background: #fff;
           }
@@ -618,7 +618,7 @@ async function printAllQRs() {
             }
 
             body {
-              font-family: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+              font-family: 'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
               margin: 0;
               padding: 0;
               background: #ffffff;

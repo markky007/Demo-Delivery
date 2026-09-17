@@ -1149,7 +1149,8 @@ async function handleConfirmUpdatePrice() {
 }
 
 .font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .not-served-warning {

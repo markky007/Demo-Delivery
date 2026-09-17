@@ -2,14 +2,14 @@
   <defs>
     <style>
       .demo-text {
-        font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-weight: 800;
         font-size: 38px;
         letter-spacing: 2px;
         fill: #111827;
       }
       .sub-text {
-        font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-weight: 600;
         font-size: 13px;
         letter-spacing: 0.5px;

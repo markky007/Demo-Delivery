@@ -355,7 +355,7 @@ async function copyReceiptSummary() {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   position: relative;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
+  font-family: var(--app-font-family);
   color: #1f2937;
 }
 
@@ -474,7 +474,8 @@ async function copyReceiptSummary() {
 }
 
 .font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .receipt-total-row {

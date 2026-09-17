@@ -335,7 +335,11 @@ async function copyReceiptSummary() {
 
   try {
     await navigator.clipboard.writeText(summary);
-    notifySuccess('คัดลอกสรุปรายการบิลเรียบร้อยแล้ว');
+    notifySuccess({
+      title: 'คัดลอกสรุปบิลสำเร็จ 📋',
+      message: 'คัดลอกข้อความสรุปรายการบิลลงคลิปบอร์ดแล้ว',
+      caption: 'สามารถนำไปวางในแชทหรือส่งต่อให้ลูกค้าได้ทันที',
+    });
   } catch {
     // fallback
   }

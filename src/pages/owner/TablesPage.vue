@@ -437,9 +437,14 @@ async function handleCreateTable() {
     newTableName.value = '';
     showCreateDialog.value = false;
     await loadTables();
-    notifySuccess('สร้างโต๊ะใหม่เรียบร้อยแล้ว');
+    notifySuccess('สร้างโต๊ะใหม่เรียบร้อยแล้ว', {
+      title: 'สร้างโต๊ะสำเร็จ 🪑',
+      caption: 'โต๊ะใหม่พร้อมใช้งานในระบบแล้ว',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถสร้างโต๊ะได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถสร้างโต๊ะได้', {
+      title: 'สร้างโต๊ะไม่สำเร็จ',
+    });
   } finally {
     isCreating.value = false;
   }
@@ -449,9 +454,14 @@ async function generateQR(table: TableWithQR) {
   try {
     await generateQRToken(table.id);
     await loadTables();
-    notifySuccess('สร้าง QR Code สำเร็จ');
+    notifySuccess('สร้าง QR Code สำเร็จ', {
+      title: 'สร้าง QR Code 📱',
+      caption: 'พร้อมสำหรับพิมพ์หรือสแกนสั่งอาหาร',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'สร้าง QR ไม่สำเร็จ');
+    notifyError(err instanceof Error ? err.message : 'สร้าง QR ไม่สำเร็จ', {
+      title: 'สร้าง QR Code ไม่สำเร็จ',
+    });
   }
 }
 
@@ -459,9 +469,14 @@ async function regenerateQR(table: TableWithQR) {
   try {
     await generateQRToken(table.id);
     await loadTables();
-    notifySuccess('สร้าง QR Code ใหม่แล้ว');
+    notifySuccess('สร้าง QR Code ใหม่แล้ว', {
+      title: 'สร้าง QR Code ใหม่ 📱',
+      caption: 'QR Code ชุดใหม่พร้อมใช้งานแล้ว',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'สร้าง QR ใหม่ไม่สำเร็จ');
+    notifyError(err instanceof Error ? err.message : 'สร้าง QR ใหม่ไม่สำเร็จ', {
+      title: 'สร้าง QR Code ไม่สำเร็จ',
+    });
   }
 }
 
@@ -549,7 +564,10 @@ function printQR(table: TableWithQR) {
 async function printAllQRs() {
   const activeTables = tablesWithQR.value;
   if (activeTables.length === 0) {
-    notifyWarning('ไม่มีโต๊ะที่มี QR Code สำหรับพิมพ์');
+    notifyWarning('ไม่มีโต๊ะที่มี QR Code สำหรับพิมพ์', {
+      title: 'ไม่พบข้อมูล QR Code',
+      caption: 'กรุณาสร้าง QR Code ให้โต๊ะก่อนดำเนินการพิมพ์',
+    });
     return;
   }
 
@@ -594,7 +612,10 @@ async function printAllQRs() {
 
     const win = window.open('', '_blank');
     if (!win) {
-      notifyError('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาตป๊อปอัปในเบราว์เซอร์');
+      notifyError('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาตป๊อปอัปในเบราว์เซอร์', {
+        title: 'เปิดหน้าพิมพ์ไม่สำเร็จ',
+        caption: 'ตรวจสอบการตั้งค่า Pop-up ของเบราว์เซอร์',
+      });
       return;
     }
 
@@ -766,7 +787,9 @@ async function printAllQRs() {
     );
     win.document.close();
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้างเอกสารพิมพ์');
+    notifyError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้างเอกสารพิมพ์', {
+      title: 'สร้างเอกสารพิมพ์ไม่สำเร็จ',
+    });
   } finally {
     isBatchProcessing.value = false;
   }
@@ -778,7 +801,10 @@ async function printAllQRs() {
 async function downloadAllQRs() {
   const activeTables = tablesWithQR.value;
   if (activeTables.length === 0) {
-    notifyWarning('ไม่มีโต๊ะที่มี QR Code สำหรับดาวน์โหลด');
+    notifyWarning('ไม่มีโต๊ะที่มี QR Code สำหรับดาวน์โหลด', {
+      title: 'ไม่พบข้อมูล QR Code',
+      caption: 'กรุณาสร้าง QR Code ให้โต๊ะก่อนดำเนินการดาวน์โหลด',
+    });
     return;
   }
 
@@ -818,9 +844,14 @@ async function downloadAllQRs() {
     downloadLink.click();
     URL.revokeObjectURL(downloadLink.href);
 
-    notifySuccess(`ดาวน์โหลด QR Code รวม ${activeTables.length} โต๊ะเรียบร้อยแล้ว`);
+    notifySuccess(`ดาวน์โหลด QR Code รวม ${activeTables.length} โต๊ะเรียบร้อยแล้ว`, {
+      title: 'ดาวน์โหลดสำเร็จ 📦',
+      caption: 'ไฟล์ ZIP บรรจุรูป QR Code ของทุกโต๊ะ',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถดาวน์โหลดไฟล์ ZIP ได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถดาวน์โหลดไฟล์ ZIP ได้', {
+      title: 'ดาวน์โหลดไฟล์ไม่สำเร็จ',
+    });
   } finally {
     isDownloadingZip.value = false;
   }
@@ -830,9 +861,16 @@ async function toggleTableStatus(table: TableWithQR) {
   try {
     await updateTable(table.id, { is_active: !table.is_active });
     await loadTables();
-    notifySuccess(`อัปเดตสถานะ ${table.name} แล้ว`);
+    notifySuccess(
+      `ปรับสถานะ ${table.name} เป็น ${!table.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} แล้ว`,
+      {
+        title: 'อัปเดตสถานะโต๊ะสำเร็จ',
+      },
+    );
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถอัปเดตสถานะได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถอัปเดตสถานะได้', {
+      title: 'อัปเดตสถานะไม่สำเร็จ',
+    });
   }
 }
 </script>

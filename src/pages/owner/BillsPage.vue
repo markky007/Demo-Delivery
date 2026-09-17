@@ -1139,7 +1139,9 @@ async function refreshData() {
   isRefreshing.value = true;
   try {
     await loadAllData();
-    notifyInfo('อัปเดตข้อมูลล่าสุดเรียบร้อย');
+    notifyInfo('ข้อมูลบิลและสถานะโต๊ะเป็นปัจจุบันแล้ว', {
+      title: 'รีเฟรชข้อมูลสำเร็จ',
+    });
   } finally {
     isRefreshing.value = false;
   }
@@ -1487,10 +1489,15 @@ async function handleConfirmClearTable() {
     await closeTableSession(sessionId);
     showConfirmClearModal.value = false;
     tableToClear.value = null;
-    notifySuccess(`เคลียร์ ${tableName} สำเร็จ พร้อมรับลูกค้าใหม่แล้ว`);
+    notifySuccess(`เคลียร์ ${tableName} สำเร็จ`, {
+      title: 'เคลียร์โต๊ะสำเร็จ ✨',
+      caption: 'โต๊ะกลับเป็นสถานะว่าง พร้อมรับลูกค้ากลุ่มใหม่ทันที',
+    });
     await loadAllData();
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถเคลียร์โต๊ะได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถเคลียร์โต๊ะได้', {
+      title: 'เคลียร์โต๊ะไม่สำเร็จ',
+    });
   } finally {
     isClearingDirect.value = false;
     clearingSessionId.value = null;
@@ -1514,10 +1521,15 @@ async function handleConfirmCancelSession() {
     await closeTableSession(sessionId);
     showConfirmCancelModal.value = false;
     tableToCancel.value = null;
-    notifySuccess(`ยกเลิกการเปิด ${tableName} สำเร็จ โต๊ะกลับเป็นสถานะว่างแล้ว`);
+    notifySuccess(`ยกเลิกการเปิด ${tableName} เรียบร้อย`, {
+      title: 'ยกเลิกเซสชันโต๊ะสำเร็จ',
+      caption: 'โต๊ะกลับคืนสู่สถานะว่าง',
+    });
     await loadAllData();
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกเซสชันได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกเซสชันได้', {
+      title: 'ยกเลิกเซสชันไม่สำเร็จ',
+    });
   } finally {
     isCancellingDirect.value = false;
     cancellingSessionId.value = null;
@@ -1544,7 +1556,11 @@ async function handleConfirmTransferTable() {
       isTargetTakeaway ? transferCustomerName.value : undefined,
     );
     notifySuccess(
-      `ย้ายจาก ${res.sourceTableName || tableToTransfer.value.table.name} ไปยัง ${res.targetTableName} เรียบร้อยแล้ว`,
+      `ย้ายจาก ${res.sourceTableName || tableToTransfer.value.table.name} ไปยัง ${res.targetTableName}`,
+      {
+        title: 'ย้ายโต๊ะสำเร็จ 🔄',
+        caption: 'โอนย้ายออเดอร์และยอดบิลทั้งหมดเรียบร้อยแล้ว',
+      },
     );
     showTransferModal.value = false;
     tableToTransfer.value = null;
@@ -1553,7 +1569,9 @@ async function handleConfirmTransferTable() {
     await loadAllData();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการย้ายโต๊ะ';
-    notifyError(msg);
+    notifyError(msg, {
+      title: 'ย้ายโต๊ะไม่สำเร็จ',
+    });
   } finally {
     isTransferring.value = false;
   }
@@ -1577,7 +1595,10 @@ async function showTableQR(table: TableWithQR) {
 function copyTableLink() {
   if (!selectedTableUrl.value) return;
   void navigator.clipboard.writeText(selectedTableUrl.value);
-  notifySuccess('คัดลอกลิงก์โต๊ะแล้ว');
+  notifySuccess('คัดลอกลิงก์โต๊ะแล้ว', {
+    title: 'คัดลอกสำเร็จ 📋',
+    caption: 'พร้อมสำหรับส่งต่อให้ลูกค้าเปิดดูเมนูอาหาร',
+  });
 }
 
 function openSelectedTableLink() {
@@ -1597,9 +1618,14 @@ async function handleRegenerateQRFromModal() {
       void QRCode.toCanvas(qrCanvasRef.value, selectedTableUrl.value, { width: 180, margin: 2 });
     }
     await loadAllData();
-    notifySuccess('สร้าง QR Code ใหม่เรียบร้อยแล้ว');
+    notifySuccess('สร้าง QR Code ใหม่เรียบร้อยแล้ว', {
+      title: 'สร้าง QR Code สำเร็จ 📱',
+      caption: 'QR Code สำหรับโต๊ะพร้อมใช้งานทันที',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'สร้าง QR ใหม่ไม่สำเร็จ');
+    notifyError(err instanceof Error ? err.message : 'สร้าง QR ใหม่ไม่สำเร็จ', {
+      title: 'สร้าง QR Code ไม่สำเร็จ',
+    });
   }
 }
 

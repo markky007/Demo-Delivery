@@ -1464,9 +1464,16 @@ function onSoundToggle(val: boolean) {
   setSoundEnabled(val);
   if (val) {
     testSound();
-    notifySuccess('เปิดเสียงแจ้งเตือนออเดอร์แล้ว');
+    notifySuccess({
+      title: 'เปิดเสียงแจ้งเตือน 🔊',
+      message: 'ระบบจะส่งเสียงเตือนเมื่อมีออเดอร์ใหม่เข้ามา',
+    });
   } else {
-    notifyWarning('ปิดเสียงแจ้งเตือนแล้ว');
+    notifyWarning({
+      title: 'ปิดเสียงแจ้งเตือน 🔇',
+      message: 'ระบบจะไม่ส่งเสียงเตือนเมื่อมีออเดอร์ใหม่',
+      caption: 'โปรดสังเกตการแจ้งเตือนบนหน้าจออย่างสม่ำเสมอ',
+    });
   }
 }
 
@@ -1668,7 +1675,10 @@ function toggleOrderAllFryItems(orderId: string) {
 function clearCompletedFryItems() {
   completedFryItemIds.value = new Set();
   persistFryCompletedIds();
-  notifySuccess('ล้างรายการที่ติ๊กเสร็จแล้วเรียบร้อย');
+  notifySuccess({
+    title: 'ล้างรายการทอดที่เสร็จแล้ว ✨',
+    message: 'รีเซ็ตสถานะรายการทอดที่ทำเสร็จแล้วออกจากมุมมอง',
+  });
 }
 
 // Rice Station Computeds & Handlers
@@ -1775,7 +1785,10 @@ function toggleOrderAllRiceItems(orderId: string) {
 function clearCompletedRiceItems() {
   completedRiceItemIds.value = new Set();
   persistRiceCompletedIds();
-  notifySuccess('ล้างรายการตักข้าวที่ติ๊กเสร็จแล้วเรียบร้อย');
+  notifySuccess({
+    title: 'ล้างรายการตักข้าวที่เสร็จแล้ว ✨',
+    message: 'รีเซ็ตสถานะรายการตักข้าวที่เสร็จแล้วออกจากมุมมอง',
+  });
 }
 
 // Keyboard shortcuts for kitchen navigation (Left/Right to slide pages)

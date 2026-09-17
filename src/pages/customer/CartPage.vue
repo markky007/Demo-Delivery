@@ -200,7 +200,10 @@ const isSubmitting = ref(false);
 
 async function confirmOrder() {
   if (!sessionStore.tableSession || !sessionStore.guestSession) {
-    notifyError('ไม่พบข้อมูลเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง');
+    notifyError('ไม่พบข้อมูลเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง', {
+      title: 'ไม่พบเซสชันโต๊ะ',
+      caption: 'กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้งเพื่อเริ่มสั่งอาหาร',
+    });
     return;
   }
 
@@ -219,7 +222,9 @@ async function confirmOrder() {
       const posResult = await getCurrentPosition();
 
       if (!posResult.success) {
-        notifyWarning(posResult.message);
+        notifyWarning(posResult.message, {
+          title: 'แจ้งเตือนพิกัดตำแหน่ง',
+        });
         isSubmitting.value = false;
         return;
       }
@@ -234,9 +239,11 @@ async function confirmOrder() {
       const maxAllowed = rest.geofence_radius_meters ?? 100;
 
       if (distance > maxAllowed) {
-        notifyError(
-          `คุณอยู่นอกพื้นที่ร้านอาหาร (ห่างออกไป ${formatDistance(distance)}) จึงไม่สามารถสั่งอาหารได้ กรุณาสั่งอาหารขณะอยู่ที่ร้านเท่านั้น`,
-        );
+        notifyError(`คุณอยู่ห่างจากร้าน ${formatDistance(distance)}`, {
+          title: 'อยู่นอกพื้นที่ร้านอาหาร 📍',
+          caption: 'ระบบอนุญาตให้สั่งอาหารขณะอยู่ที่ร้านเท่านั้น',
+          timeout: 5000,
+        });
         isSubmitting.value = false;
         return;
       }
@@ -282,10 +289,16 @@ async function confirmOrder() {
   } catch (err) {
     const rawMsg = err instanceof Error ? err.message : '';
     if (rawMsg.includes('session is not active') || rawMsg.includes('closed')) {
-      notifyError('รอบโต๊ะนี้ได้ทำการเช็คบิล/ปิดรอบไปแล้ว กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้ง');
+      notifyError('รอบโต๊ะนี้ได้ทำการเช็คบิล/ปิดรอบไปแล้ว', {
+        title: 'เซสชันโต๊ะปิดแล้ว',
+        caption: 'กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้งเพื่อเปิดรอบใหม่',
+        timeout: 5000,
+      });
       void router.push(`/t/${publicToken.value}`);
     } else {
-      notifyError(rawMsg || 'ไม่สามารถส่งออเดอร์ได้ กรุณาลองใหม่อีกครั้ง');
+      notifyError(rawMsg || 'ไม่สามารถส่งออเดอร์ได้ กรุณาลองใหม่อีกครั้ง', {
+        title: 'ส่งออเดอร์ไม่สำเร็จ',
+      });
     }
   } finally {
     isSubmitting.value = false;

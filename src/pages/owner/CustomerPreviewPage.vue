@@ -1112,7 +1112,10 @@ async function reloadMenuData() {
   isReloading.value = true;
   try {
     await menuStore.loadMenu(true);
-    notifySuccess('รีเฟรชข้อมูลเมนูจากฐานข้อมูลเรียบร้อย');
+    notifySuccess({
+      title: 'รีเฟรชเมนูสำเร็จ 🔄',
+      message: 'อัปเดตข้อมูลเมนูและตัวเลือกจากฐานข้อมูลเรียบร้อยแล้ว',
+    });
   } finally {
     isReloading.value = false;
   }
@@ -1122,7 +1125,10 @@ function resetPreview() {
   previewCartItems.value = [];
   lastMockOrder.value = null;
   currentScreen.value = 'welcome';
-  notifySuccess('รีเซ็ตหน้าจอจำลองเรียบร้อย');
+  notifySuccess({
+    title: 'รีเซ็ตหน้าจอจำลอง ✨',
+    message: 'ล้างตะกร้าและข้อมูลจำลอง กลับสู่หน้าต้อนรับ',
+  });
 }
 
 function resetToMenuScreen() {
@@ -1355,7 +1361,10 @@ function addDetailToPreviewCart() {
   const validation = validateDetailOptions();
   if (!validation.isValid) {
     if (validation.unavailableOptionName) {
-      notifyWarning(`ตัวเลือก "${validation.unavailableOptionName}" หมดชั่วคราว ไม่สามารถสั่งได้`);
+      notifyWarning({
+        title: 'ตัวเลือกนี้หมดชั่วคราว',
+        message: `ตัวเลือก "${validation.unavailableOptionName}" หมดชั่วคราว ไม่สามารถสั่งได้`,
+      });
       return;
     }
 
@@ -1364,10 +1373,16 @@ function addDetailToPreviewCart() {
     detailMissingGroupIds.value = newMissingSet;
 
     if (validation.missingGroups.length === 1) {
-      notifyWarning(`กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`);
+      notifyWarning({
+        title: 'โปรดเลือกตัวเลือกจำเป็น',
+        message: `กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`,
+      });
     } else {
       const names = validation.missingGroups.map((g) => g.name).join(', ');
-      notifyWarning(`กรุณาเลือกตัวเลือกที่จำเป็น: ${names}`);
+      notifyWarning({
+        title: 'โปรดเลือกตัวเลือกจำเป็น',
+        message: `กรุณาเลือกตัวเลือกที่จำเป็น: ${names}`,
+      });
     }
 
     const firstMissing = validation.missingGroups[0];
@@ -1423,7 +1438,11 @@ function addDetailToPreviewCart() {
     subtotal,
   });
 
-  notifySuccess('เพิ่มลงในตะกร้าจำลองเรียบร้อยแล้ว');
+  notifySuccess({
+    title: 'เพิ่มลงในตะกร้าจำลองแล้ว 🛒',
+    message: `${activeDetailItem.value.name} x${detailQuantity.value}`,
+    caption: `รวม ฿${subtotal.toLocaleString()}`,
+  });
   currentScreen.value = 'menu';
 }
 

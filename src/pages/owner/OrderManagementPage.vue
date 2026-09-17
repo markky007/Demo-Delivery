@@ -1180,7 +1180,11 @@ async function loadOrders() {
     });
     dateScopedOrders.value = fetched;
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดรายการออเดอร์ได้');
+    notifyError({
+      title: 'โหลดออเดอร์ไม่สำเร็จ',
+      message:
+        err instanceof Error ? err.message : 'ไม่สามารถโหลดรายการออเดอร์ได้ โปรดลองใหม่อีกครั้ง',
+    });
   } finally {
     isLoading.value = false;
   }
@@ -1266,13 +1270,20 @@ async function handleConfirmDeleteOrder() {
   try {
     const res = await deleteOrderAndSession(targetOrder.id);
     if (res.success) {
-      notifySuccess(`ลบออเดอร์คิว #${qNum} (${targetName}) และเคลียร์ข้อมูลเรียบร้อยแล้ว`);
+      notifySuccess({
+        title: 'ลบออเดอร์สำเร็จ 🗑️',
+        message: `ลบออเดอร์คิว #${qNum} (${targetName}) เรียบร้อยแล้ว`,
+        caption: 'ข้อมูลออเดอร์และเซสชันที่เกี่ยวข้องถูกเคลียร์จากระบบแล้ว',
+      });
       showDeleteDialog.value = false;
       orderToDelete.value = null;
       await loadOrders();
     }
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบออเดอร์');
+    notifyError({
+      title: 'ลบออเดอร์ไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบออเดอร์',
+    });
   } finally {
     isDeleting.value = false;
   }

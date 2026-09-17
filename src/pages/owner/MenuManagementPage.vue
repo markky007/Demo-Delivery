@@ -1393,9 +1393,13 @@ async function toggleIngredientStock(
   });
 
   notifySuccess(
-    `ปรับสต็อกวัตถุดิบ "${grp.name}" (${itemIds.length} เมนู${
-      matchingOptionIds.length > 0 ? `, ${matchingOptionIds.length} ตัวเลือก` : ''
-    }) เป็น ${targetAvailable ? 'เปิดขาย' : 'หมดชั่วคราว'} แล้ว`,
+    `ปรับสต็อกวัตถุดิบ "${grp.name}" เป็น ${targetAvailable ? 'เปิดขาย' : 'หมดชั่วคราว'} แล้ว`,
+    {
+      title: 'อัปเดตสต็อกวัตถุดิบ 🥩',
+      caption: `มีผลกับ ${itemIds.length} เมนู${
+        matchingOptionIds.length > 0 ? `, ${matchingOptionIds.length} ตัวเลือก` : ''
+      }`,
+    },
   );
 
   try {
@@ -1437,7 +1441,9 @@ async function toggleIngredientStock(
   } catch (err) {
     await menuStore.loadMenu(true);
     await loadOptionGroups();
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะวัตถุดิบได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะวัตถุดิบได้', {
+      title: 'อัปเดตสต็อกวัตถุดิบไม่สำเร็จ',
+    });
   } finally {
     isIngredientUpdating.value = null;
   }
@@ -1472,7 +1478,9 @@ function handleFileSelected(event: Event) {
 
   // Validate size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
-    notifyError('ขนาดไฟล์เกิน 5MB กรุณาเลือกรูปภาพที่มีขนาดเล็กลง');
+    notifyError('กรุณาเลือกรูปภาพที่มีขนาดไม่เกิน 5MB', {
+      title: 'ไฟล์รูปภาพมีขนาดใหญ่เกินไป',
+    });
     return;
   }
 
@@ -1534,9 +1542,14 @@ async function saveCategory() {
     }
     showCatDialog.value = false;
     await menuStore.loadMenu(true);
-    notifySuccess('บันทึกหมวดหมู่เรียบร้อยแล้ว');
+    notifySuccess('บันทึกหมวดหมู่เรียบร้อยแล้ว', {
+      title: 'บันทึกหมวดหมู่สำเร็จ 📂',
+      caption: `หมวดหมู่ "${catForm.name.trim()}" พร้อมแสดงผลในเมนู`,
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกหมวดหมู่ได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกหมวดหมู่ได้', {
+      title: 'บันทึกหมวดหมู่ไม่สำเร็จ',
+    });
   } finally {
     isSaving.value = false;
   }
@@ -1614,7 +1627,9 @@ async function saveItem() {
         itemForm.image_url = uploadedUrl;
       } catch (uploadErr) {
         console.error('Image upload failed, continuing with other data:', uploadErr);
-        notifyError('อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        notifyError('อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', {
+          title: 'อัปโหลดรูปภาพไม่สำเร็จ',
+        });
         isSaving.value = false;
         isUploading.value = false;
         return;
@@ -1690,9 +1705,14 @@ async function saveItem() {
 
     showItemDialog.value = false;
     await Promise.all([menuStore.loadMenu(true), loadItemOptionGroups()]);
-    notifySuccess('บันทึกรายการอาหารเรียบร้อยแล้ว');
+    notifySuccess(`บันทึกเมนู "${itemForm.name.trim()}" เรียบร้อยแล้ว`, {
+      title: 'บันทึกเมนูสำเร็จ 🍲',
+      caption: 'ข้อมูลเมนูอาหารถูกอัปเดตในระบบเรียบร้อย',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกรายการอาหารได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกรายการอาหารได้', {
+      title: 'บันทึกรายการอาหารไม่สำเร็จ',
+    });
   } finally {
     isSaving.value = false;
     isUploading.value = false;
@@ -1725,7 +1745,9 @@ async function toggleAvailability(item: MenuItem) {
 
   // Optimistic UI update
   menuStore.updateItemLocally(item.id, { is_available: newState });
-  notifySuccess(`ปรับสถานะ "${item.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`);
+  notifySuccess(`ปรับสถานะ "${item.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`, {
+    title: 'ปรับสถานะเมนูสำเร็จ',
+  });
 
   try {
     const { error } = await supabase
@@ -1739,7 +1761,9 @@ async function toggleAvailability(item: MenuItem) {
     if (error) throw error;
   } catch (err) {
     menuStore.updateItemLocally(item.id, { is_available: previousState });
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะได้', {
+      title: 'ปรับสถานะเมนูไม่สำเร็จ',
+    });
   }
 }
 </script>

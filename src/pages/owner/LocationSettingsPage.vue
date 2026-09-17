@@ -253,7 +253,10 @@ onMounted(async () => {
       }
     }
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลร้านค้าได้');
+    notifyError({
+      title: 'โหลดข้อมูลร้านค้าไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการโหลดข้อมูลพิกัดร้านค้า',
+    });
   } finally {
     isLoading.value = false;
     await nextTick();
@@ -356,9 +359,17 @@ async function locateMe() {
         circle.setLatLng([result.latitude, result.longitude]);
         map.setView([result.latitude, result.longitude], 17);
       }
-      notifySuccess('ดึงพิกัดปัจจุบันของคุณสำเร็จแล้ว');
+      notifySuccess({
+        title: 'ตรวจพบตำแหน่งปัจจุบัน 📍',
+        message: 'อัปเดตหมุดพิกัดตามตำแหน่งอุปกรณ์ของคุณเรียบร้อยแล้ว',
+        caption: `พิกัด: ${latInput.value}, ${lngInput.value}`,
+      });
     } else {
-      notifyWarning(result.message);
+      notifyWarning({
+        title: 'ไม่สามารถระบุตำแหน่งได้',
+        message: result.message,
+        caption: 'โปรดตรวจสอบการอนุญาตเข้าถึง GPS หรือ Location Services บนเบราว์เซอร์',
+      });
     }
   } finally {
     isLocating.value = false;
@@ -375,9 +386,16 @@ async function handleSave() {
       geofence_radius_meters: radiusMeters.value,
       is_geofence_enabled: isGeofenceEnabled.value,
     });
-    notifySuccess('บันทึกพิกัดร้านและการตั้งค่า Geofencing เรียบร้อยแล้ว');
+    notifySuccess({
+      title: 'บันทึกตำแหน่งร้านสำเร็จ 📍',
+      message: 'อัปเดตพิกัดร้านและการตั้งค่า Geofencing เรียบร้อยแล้ว',
+      caption: `รัศมี ${radiusMeters.value} เมตร (${isGeofenceEnabled.value ? 'เปิดใช้งาน' : 'ปิดใช้งาน'})`,
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'บันทึกข้อมูลไม่สำเร็จ');
+    notifyError({
+      title: 'บันทึกพิกัดร้านไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูลพิกัด',
+    });
   } finally {
     isSaving.value = false;
   }

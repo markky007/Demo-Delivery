@@ -677,7 +677,10 @@ async function openAddMenuDialog() {
 async function openEditItemOptions(index: number) {
   const item = items.value[index];
   if (!item || !item.menu_item_id) {
-    notifyWarning('ไม่สามารถแก้ไขตัวเลือกของรายการนี้ได้');
+    notifyWarning({
+      title: 'ไม่สามารถแก้ไขได้',
+      message: 'ไม่พบข้อมูลเมนูหลักของรายการนี้',
+    });
     return;
   }
 
@@ -685,7 +688,10 @@ async function openEditItemOptions(index: number) {
   try {
     const fullItem = await menuStore.fetchItemWithOptions(item.menu_item_id);
     if (!fullItem) {
-      notifyError('ไม่สามารถโหลดข้อมูลตัวเลือกของเมนูนี้ได้');
+      notifyError({
+        title: 'โหลดตัวเลือกไม่สำเร็จ',
+        message: 'ไม่สามารถโหลดข้อมูลกลุ่มตัวเลือกของเมนูนี้ได้',
+      });
       return;
     }
 
@@ -722,7 +728,10 @@ async function openEditItemOptions(index: number) {
 
     showAddItemDialog.value = true;
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดตัวเลือกได้');
+    notifyError({
+      title: 'โหลดตัวเลือกไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการโหลดตัวเลือก',
+    });
   } finally {
     isLoadingItemOptions.value = false;
   }
@@ -909,7 +918,11 @@ function confirmAddDishToOrder() {
     targetItem.quantity = newDishQuantity.value;
     targetItem.special_instruction = newDishInstruction.value;
     targetItem.selected_options = chosenOptions;
-    notifySuccess(`แก้ไขตัวเลือก "${targetItem.name}" เรียบร้อยแล้ว`);
+    notifySuccess({
+      title: 'แก้ไขตัวเลือกสำเร็จ ✏️',
+      message: `อัปเดตตัวเลือก "${targetItem.name}" เรียบร้อยแล้ว`,
+      caption: `จำนวน: ${newDishQuantity.value} จาน`,
+    });
   } else {
     items.value.push({
       temp_id: crypto.randomUUID(),
@@ -920,7 +933,11 @@ function confirmAddDishToOrder() {
       special_instruction: newDishInstruction.value,
       selected_options: chosenOptions,
     });
-    notifySuccess('เพิ่มรายการลงในออเดอร์แล้ว');
+    notifySuccess({
+      title: 'เพิ่มเมนูสำเร็จ 🍲',
+      message: `เพิ่ม "${selectedMenuItem.value.name}" ลงในออเดอร์แล้ว`,
+      caption: `จำนวน: ${newDishQuantity.value} จาน`,
+    });
   }
 
   showAddItemDialog.value = false;
@@ -931,12 +948,19 @@ function confirmAddDishToOrder() {
 // ─── Save Changes via RPC ─────────────────────────────────
 async function saveOrderChanges() {
   if (items.value.length === 0) {
-    notifyWarning('ต้องมีรายการอาหารอย่างน้อย 1 รายการ');
+    notifyWarning({
+      title: 'รายการอาหารว่างเปล่า',
+      message: 'ต้องมีรายการอาหารอย่างน้อย 1 รายการในออเดอร์',
+      caption: 'หากต้องการยกเลิกทั้งออเดอร์ กรุณาติดต่อพนักงาน',
+    });
     return;
   }
 
   if (!props.isKitchen && !sessionStore.guestSession?.session_token) {
-    notifyError('ไม่พบเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง');
+    notifyError({
+      title: 'เซสชันหมดอายุ',
+      message: 'ไม่พบเซสชันโต๊ะ กรุณาสแกน QR Code ใหม่อีกครั้งเพื่อสั่งอาหาร',
+    });
     return;
   }
 
@@ -986,11 +1010,18 @@ async function saveOrderChanges() {
       !props.isKitchen &&
       (rawMsg.includes('เริ่มเตรียมอาหาร') || rawMsg.includes('Cannot edit order'))
     ) {
-      notifyError('ไม่สามารถแก้ไขได้ เนื่องจากร้านเริ่มทำอาหารแล้ว');
+      notifyError({
+        title: 'ไม่สามารถแก้ไขได้',
+        message: 'ครัวเริ่มทำอาหารรายการนี้แล้ว จึงไม่สามารถแก้ไขได้',
+        caption: 'หากต้องการเปลี่ยนแปลง โปรดติดต่อพนักงานที่ร้านโดยตรง',
+      });
       emit('saved'); // Refresh status
       emit('update:modelValue', false);
     } else {
-      notifyError(rawMsg || 'เกิดข้อผิดพลาดในการบันทึกการแก้ไข');
+      notifyError({
+        title: 'บันทึกการแก้ไขไม่สำเร็จ',
+        message: rawMsg || 'เกิดข้อผิดพลาดในการบันทึกการแก้ไขออเดอร์',
+      });
     }
   } finally {
     isSaving.value = false;

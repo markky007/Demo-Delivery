@@ -864,10 +864,15 @@ async function addDrinkItem(name: string, price: number, type: string) {
   isAddingDrink.value = type;
   try {
     await ownerAddQuickItem(session.value.id, name, price, 1);
-    notifySuccess(`เพิ่ม "${name}" (฿${price}) เข้าบิลเรียบร้อยแล้ว`);
+    notifySuccess(`เพิ่ม "${name}" (฿${price}) เข้าบิลเรียบร้อยแล้ว`, {
+      title: 'เพิ่มรายการสำเร็จ ➕',
+      caption: 'บันทึกรายการด่วนลงในบิลเรียบร้อย',
+    });
     await loadData();
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถเพิ่มรายการได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถเพิ่มรายการได้', {
+      title: 'เพิ่มรายการไม่สำเร็จ',
+    });
   } finally {
     isAddingDrink.value = null;
   }
@@ -885,7 +890,9 @@ async function openTransferModal() {
     allTables.value = tablesData.filter((t) => t.is_active);
     activeSessionsList.value = sessionsRes.data ?? [];
   } catch {
-    notifyError('ไม่สามารถโหลดรายชื่อโต๊ะว่างได้');
+    notifyError('ไม่สามารถโหลดรายชื่อโต๊ะว่างได้', {
+      title: 'โหลดรายชื่อโต๊ะไม่สำเร็จ',
+    });
   }
 }
 
@@ -900,14 +907,19 @@ async function handleConfirmTransfer() {
       selectedTargetTableId.value,
       isTargetTakeaway ? transferCustomerName.value : undefined,
     );
-    notifySuccess(`ย้ายไปยัง ${res.targetTableName} เรียบร้อยแล้ว`);
+    notifySuccess(`ย้ายไปยัง ${res.targetTableName} เรียบร้อยแล้ว`, {
+      title: 'ย้ายโต๊ะสำเร็จ 🔄',
+      caption: 'โอนย้ายออเดอร์และยอดบิลไปยังโต๊ะใหม่เรียบร้อย',
+    });
     showTransferModal.value = false;
     selectedTargetTableId.value = null;
     transferCustomerName.value = '';
     await loadData();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการย้ายโต๊ะ';
-    notifyError(msg);
+    notifyError(msg, {
+      title: 'ย้ายโต๊ะไม่สำเร็จ',
+    });
   } finally {
     isTransferring.value = false;
   }
@@ -922,9 +934,14 @@ async function handleMarkPaid() {
   isProcessing.value = true;
   try {
     bill.value = await markBillPaid(bill.value.id);
-    notifySuccess('บันทึกการรับชำระเงินเรียบร้อยแล้ว');
+    notifySuccess('บันทึกการรับชำระเงินเรียบร้อยแล้ว', {
+      title: 'ชำระเงินสำเร็จ 💰',
+      caption: 'ยอดเงินถูกบันทึกเข้าระบบเรียบร้อยแล้ว',
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกการชำระเงินได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกการชำระเงินได้', {
+      title: 'บันทึกชำระเงินไม่สำเร็จ',
+    });
   } finally {
     isProcessing.value = false;
   }
@@ -935,10 +952,15 @@ async function handleCloseSession() {
   isProcessing.value = true;
   try {
     await closeTableSession(session.value.id);
-    notifySuccess('ปิดโต๊ะเรียบร้อยแล้ว โต๊ะพร้อมรับลูกค้าท่านถัดไป');
+    notifySuccess('ปิดโต๊ะเรียบร้อยแล้ว โต๊ะพร้อมรับลูกค้าท่านถัดไป', {
+      title: 'ปิดโต๊ะเรียบร้อย ✨',
+      caption: 'เซสชันเสร็จสิ้นและคืนสถานะเป็นโต๊ะว่าง',
+    });
     void router.push('/owner/bills');
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปิดโต๊ะได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปิดโต๊ะได้', {
+      title: 'ปิดโต๊ะไม่สำเร็จ',
+    });
   } finally {
     isProcessing.value = false;
   }
@@ -949,10 +971,15 @@ async function handleCancelEmptySession() {
   isProcessing.value = true;
   try {
     await closeTableSession(session.value.id);
-    notifySuccess('ยกเลิกการเปิดโต๊ะเรียบร้อยแล้ว คืนสถานะเป็นโต๊ะว่าง');
+    notifySuccess('ยกเลิกการเปิดโต๊ะเรียบร้อยแล้ว คืนสถานะเป็นโต๊ะว่าง', {
+      title: 'ยกเลิกเซสชันสำเร็จ',
+      caption: 'โต๊ะกลับคืนสู่สถานะว่าง',
+    });
     void router.push('/owner/bills');
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกการเปิดโต๊ะได้');
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถยกเลิกการเปิดโต๊ะได้', {
+      title: 'ยกเลิกเปิดโต๊ะไม่สำเร็จ',
+    });
   } finally {
     isProcessing.value = false;
   }
@@ -988,6 +1015,10 @@ async function handleConfirmUpdatePrice() {
     );
     notifySuccess(
       `ปรับราคา "${editingItem.value.snapshot_name}" เป็น ${formatPrice(previewSubtotal.value)} เรียบร้อยแล้ว`,
+      {
+        title: 'ปรับราคาสำเร็จ 🏷️',
+        caption: 'ยอดรวมของรายการและบิลถูกคำนวณใหม่แล้ว',
+      },
     );
     showEditPriceModal.value = false;
     editingItem.value = null;
@@ -995,7 +1026,9 @@ async function handleConfirmUpdatePrice() {
     await loadData();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'ไม่สามารถปรับราคาอาหารได้';
-    notifyError(msg);
+    notifyError(msg, {
+      title: 'ปรับราคาอาหารไม่สำเร็จ',
+    });
   } finally {
     isSavingPrice.value = false;
   }

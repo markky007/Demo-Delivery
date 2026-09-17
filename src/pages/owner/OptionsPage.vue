@@ -410,9 +410,15 @@ async function saveGroup() {
     }
     showGroupDialog.value = false;
     await loadData();
-    notifySuccess('บันทึกกลุ่มตัวเลือกแล้ว');
+    notifySuccess({
+      title: 'บันทึกกลุ่มตัวเลือกสำเร็จ ⚙️',
+      message: `กลุ่มตัวเลือก "${groupForm.name.trim()}" ได้รับการบันทึกแล้ว`,
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกได้');
+    notifyError({
+      title: 'บันทึกกลุ่มตัวเลือกไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+    });
   } finally {
     isSaving.value = false;
   }
@@ -454,9 +460,18 @@ async function saveOption() {
     showOptionDialog.value = false;
     await loadData();
     menuStore.invalidateItemCache();
-    notifySuccess('บันทึกตัวเลือกเรียบร้อยแล้ว');
+    notifySuccess({
+      title: 'บันทึกตัวเลือกสำเร็จ 🔘',
+      message: `ตัวเลือก "${optionForm.name.trim()}" ได้รับการบันทึกแล้ว`,
+      caption: optionForm.price_adjustment
+        ? `ปรับราคา ${optionForm.price_adjustment > 0 ? '+' : ''}${optionForm.price_adjustment}฿`
+        : undefined,
+    });
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถบันทึกตัวเลือกได้');
+    notifyError({
+      title: 'บันทึกตัวเลือกไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกตัวเลือก',
+    });
   } finally {
     isSaving.value = false;
   }
@@ -469,7 +484,13 @@ async function toggleOptionAvailability(opt: Option) {
   // Optimistic update
   opt.is_available = newState;
   menuStore.invalidateItemCache();
-  notifySuccess(`ปรับสถานะ "${opt.name}" เป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'} แล้ว`);
+  notifySuccess({
+    title: 'ปรับสถานะตัวเลือกสำเร็จ',
+    message: `"${opt.name}" เปลี่ยนเป็น ${newState ? 'พร้อมขาย' : 'หมดชั่วคราว'}`,
+    caption: newState
+      ? 'ลูกค้าสามารถเลือกสั่งรายการนี้ได้ตามปกติ'
+      : 'ระบบจะระงับการเลือกรายการนี้ชั่วคราว',
+  });
 
   try {
     const { error } = await supabase
@@ -484,7 +505,10 @@ async function toggleOptionAvailability(opt: Option) {
   } catch (err) {
     opt.is_available = previousState;
     menuStore.invalidateItemCache();
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถปรับสถานะได้');
+    notifyError({
+      title: 'ปรับสถานะตัวเลือกไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล',
+    });
   }
 }
 </script>

@@ -542,7 +542,10 @@ async function loadSalesData() {
     applyFilters();
   } catch (err) {
     console.error('Error loading sales data:', err);
-    notifyError('ไม่สามารถโหลดข้อมูลประวัติยอดขายได้');
+    notifyError({
+      title: 'โหลดประวัติยอดขายไม่สำเร็จ',
+      message: 'ไม่สามารถดึงข้อมูลสรุปยอดขายจากเซิร์ฟเวอร์ได้ โปรดลองใหม่อีกครั้ง',
+    });
   } finally {
     isLoading.value = false;
   }
@@ -610,11 +613,17 @@ async function openReceiptDialog(billId: string) {
     if (data) {
       selectedReceiptData.value = data;
     } else {
-      notifyError('ไม่พบข้อมูลใบเสร็จนี้');
+      notifyError({
+        title: 'ไม่พบข้อมูลใบเสร็จ',
+        message: 'ไม่พบรายละเอียดบิลหรือบิลอาจถูกลบไปแล้ว',
+      });
       showReceiptModal.value = false;
     }
   } catch (err) {
-    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดใบเสร็จได้');
+    notifyError({
+      title: 'โหลดใบเสร็จไม่สำเร็จ',
+      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการโหลดรายละเอียดบิล',
+    });
     showReceiptModal.value = false;
   } finally {
     isReceiptLoading.value = false;
@@ -624,7 +633,10 @@ async function openReceiptDialog(billId: string) {
 // ─── CSV Export Function ────────────────────────────────────────────────────
 function exportBillsToCsv() {
   if (filteredBills.value.length === 0) {
-    notifyError('ไม่มีรายการบิลสำหรับส่งออก');
+    notifyError({
+      title: 'ไม่มีข้อมูลสำหรับส่งออก',
+      message: 'ไม่มีรายการบิลในช่วงเวลาหรือตัวกรองที่เลือกในขณะนี้',
+    });
     return;
   }
 
@@ -651,7 +663,11 @@ function exportBillsToCsv() {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
-  notifySuccess('ส่งออกไฟล์ CSV เรียบร้อยแล้ว');
+  notifySuccess({
+    title: 'ส่งออกไฟล์สำเร็จ 📊',
+    message: `ดาวน์โหลดไฟล์ sales_history_${dateFrom.value}_to_${dateTo.value}.csv เรียบร้อยแล้ว`,
+    caption: `จำนวนทั้งหมด ${filteredBills.value.length} บิล`,
+  });
 }
 
 onMounted(() => {

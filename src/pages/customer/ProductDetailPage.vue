@@ -545,7 +545,10 @@ function addToCart() {
   const validation = validateOptions();
   if (!validation.isValid) {
     if (validation.unavailableOptionName) {
-      notifyWarning(`ตัวเลือก "${validation.unavailableOptionName}" หมดชั่วคราว ไม่สามารถสั่งได้`);
+      notifyWarning(`ตัวเลือก "${validation.unavailableOptionName}" หมดชั่วคราว`, {
+        title: 'ตัวเลือกหมดชั่วคราว',
+        caption: 'กรุณาเลือกตัวเลือกอื่นที่พร้อมให้บริการ',
+      });
       return;
     }
 
@@ -554,10 +557,15 @@ function addToCart() {
     missingGroupIds.value = newMissingSet;
 
     if (validation.missingGroups.length === 1) {
-      notifyWarning(`กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`);
+      notifyWarning(`กรุณาเลือก "${validation.missingGroups[0]?.name}" ก่อนเพิ่มลงในตะกร้า`, {
+        title: 'กรุณาเลือกตัวเลือกที่จำเป็น',
+      });
     } else {
       const names = validation.missingGroups.map((g) => g.name).join(', ');
-      notifyWarning(`กรุณาเลือกตัวเลือกที่จำเป็น: ${names}`);
+      notifyWarning(`กรุณาเลือก: ${names}`, {
+        title: 'กรุณาเลือกตัวเลือกที่จำเป็น',
+        caption: 'เลือกตัวเลือกที่มีเครื่องหมายดอกจัน (*) ให้ครบถ้วน',
+      });
     }
 
     const firstMissing = validation.missingGroups[0];

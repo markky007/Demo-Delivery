@@ -1225,6 +1225,7 @@ import { fetchTodayOrders, advanceOrderStatus } from 'src/services/orderService'
 import { supabase } from 'src/services/supabase';
 import {
   formatQueueNumber,
+  formatPrice,
   formatElapsed,
   formatTime,
   getVisibleOptions,
@@ -1823,8 +1824,19 @@ onMounted(async () => {
             if (newOrder && newOrder.status !== OrderStatus.SERVED) {
               const tableName = getTableName(newOrder);
               const queueNumber = newOrder.queue_number;
+              const qNumStr = formatQueueNumber(queueNumber);
+              const itemCount =
+                newOrder.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) ||
+                newOrder.items?.length ||
+                1;
+              const priceText = newOrder.total_amount ? ` • ยอดรวม ${formatPrice(newOrder.total_amount)}` : '';
+
               playNewOrderChime(undefined, { tableName, queueNumber });
-              notifyWarning('🔔 มีออเดอร์ใหม่เข้ามา!');
+              notifySuccess(`คิว ${qNumStr} • ${tableName}`, {
+                title: '🔔 มีออเดอร์ใหม่เข้ามา!',
+                caption: `${itemCount} รายการอาหาร${priceText}`,
+                timeout: 6000,
+              });
             }
           }
           if (payload.eventType === 'UPDATE') {
@@ -1832,8 +1844,16 @@ onMounted(async () => {
             // Compare against our in-memory snapshot to detect actual revision changes
             const prevRevision = newData.id ? (prevRevisions.get(newData.id) ?? 1) : 1;
             if (newData.revision && newData.revision > 1 && newData.revision > prevRevision) {
+              const updatedOrder = orders.find((o) => o.id === newData.id);
+              const tableName = updatedOrder ? getTableName(updatedOrder) : 'ออเดอร์';
+              const qNumStr = updatedOrder ? formatQueueNumber(updatedOrder.queue_number) : '';
+
               playNewOrderChime(undefined, 'ลูกค้ามีการแก้ไขรายการอาหาร');
-              notifyWarning('⚠️ ลูกค้ามีการแก้ไขรายการอาหาร');
+              notifyWarning(`คิว ${qNumStr} (${tableName}) มีการปรับเปลี่ยนรายการ`, {
+                title: '⚠️ ลูกค้าแก้ไขออเดอร์',
+                caption: 'กรุณาตรวจสอบจำนวนหรือตัวเลือกที่มีการเปลี่ยนแปลงในครัว',
+                timeout: 6000,
+              });
             }
             if (newData.status === OrderStatus.PREPARED) {
               playStatusDoneChime();
@@ -1875,21 +1895,38 @@ async function advanceStatus(orderId: string, newStatus: OrderStatus) {
   try {
     const targetOrder = queueStore.orders.find((o) => o.id === orderId);
     const tableName = targetOrder ? getTableName(targetOrder) : '';
-    const qNum = targetOrder ? targetOrder.queue_number : 0;
+    const qNumStr = targetOrder ? formatQueueNumber(targetOrder.queue_number) : '';
 
     await advanceOrderStatus(orderId, newStatus);
-    const labelMap: Record<string, string> = {
-      [OrderStatus.PREPARING]: 'รับออเดอร์แล้ว กำลังปรุงอาหาร 🔥',
-      [OrderStatus.PREPARED]: 'เตรียมอาหารเสร็จเรียบร้อย ✅',
-      [OrderStatus.SERVED]: tableName
-        ? `ส่งออเดอร์ คิว #${qNum} (${tableName}) เรียบร้อยแล้ว 🍽️`
-        : 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
-    };
-    notifySuccess(labelMap[newStatus] || 'อัปเดตสถานะสำเร็จ');
 
+    if (newStatus === OrderStatus.PREPARING) {
+      notifySuccess(`โต๊ะ: ${tableName || 'สั่งกลับบ้าน'}`, {
+        title: `รับออเดอร์แล้ว 🔥 • คิว ${qNumStr}`,
+        caption: 'เริ่มขั้นตอนเตรียมและปรุงอาหารตามลำดับ',
+        timeout: 4000,
+      });
+    } else if (newStatus === OrderStatus.PREPARED) {
+      notifySuccess(`พร้อมเสิร์ฟที่ ${tableName || 'จุดรับอาหารกลับบ้าน'}`, {
+        title: `เตรียมอาหารเสร็จแล้ว ✅ • คิว ${qNumStr}`,
+        caption: 'กรุณานำอาหารไปเสิร์ฟให้ลูกค้า',
+        timeout: 4500,
+      });
+    } else if (newStatus === OrderStatus.SERVED) {
+      notifySuccess(`คิว ${qNumStr} (${tableName || 'สั่งกลับบ้าน'})`, {
+        title: 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
+        caption: 'เสร็จสิ้นขั้นตอนและปิดงานในครัวของออเดอร์นี้',
+        timeout: 4000,
+      });
+    } else {
+      notifySuccess('อัปเดตสถานะสำเร็จ', {
+        title: `คิว ${qNumStr}`,
+      });
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'ไม่สามารถอัปเดตสถานะได้';
-    notifyError(msg);
+    notifyError(msg, {
+      title: 'อัปเดตสถานะไม่สำเร็จ',
+    });
   }
 }
 

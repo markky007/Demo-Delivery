@@ -578,7 +578,11 @@ function addToCart() {
     collectSelectedOptions(),
   );
 
-  notifySuccess('เพิ่มลงในตะกร้าเรียบร้อยแล้ว');
+  notifySuccess(`${item.value.name} x${quantity.value}`, {
+    title: 'เพิ่มลงในตะกร้าแล้ว 🛒',
+    caption: 'สามารถกดดูรายการในตะกร้าเพื่อตรวจสอบก่อนสั่งอาหาร',
+    timeout: 3000,
+  });
   router.back();
 }
 </script>

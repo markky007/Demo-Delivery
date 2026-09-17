@@ -183,7 +183,7 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
 import { isTakeawayName } from 'src/services/tableService';
-import { formatPrice, getVisibleOptions, isTakeawayOption } from 'src/utils/formatters';
+import { formatPrice, formatQueueNumber, getVisibleOptions, isTakeawayOption } from 'src/utils/formatters';
 import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
@@ -254,6 +254,9 @@ async function confirmOrder() {
       };
     });
 
+    const itemCount = cartStore.itemCount;
+    const orderTotal = cartStore.totalAmount;
+
     // 3. Submit order
     const createdOrder = await createOrder({
       table_session_id: sessionStore.tableSession.id,
@@ -261,8 +264,16 @@ async function confirmOrder() {
       items,
     });
 
+    const qNum = createdOrder?.queue_number
+      ? formatQueueNumber(createdOrder.queue_number)
+      : '';
+
     cartStore.clearCart();
-    notifySuccess('ส่งออเดอร์เรียบร้อยแล้ว!');
+    notifySuccess(`${itemCount} รายการอาหาร • ยอดรวม ${formatPrice(orderTotal)}`, {
+      title: qNum ? `🎉 ส่งออเดอร์สำเร็จ • คิว ${qNum}` : '🎉 ส่งออเดอร์สำเร็จ',
+      caption: 'ระบบได้ส่งรายการไปยังครัวเรียบร้อยแล้ว สามารถติดตามสถานะได้แบบเรียลไทม์',
+      timeout: 5000,
+    });
     if (createdOrder?.id) {
       void router.push(`/t/${publicToken.value}/orders/${createdOrder.id}`);
     } else {

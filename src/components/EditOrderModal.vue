@@ -966,7 +966,15 @@ async function saveOrderChanges() {
       });
     }
 
-    notifySuccess('บันทึกการแก้ไขออเดอร์เรียบร้อยแล้ว');
+    notifySuccess(
+      props.isKitchen
+        ? `อัปเดตรายการอาหารคิว #${props.order.queue_number} ในครัวเรียบร้อย`
+        : `อัปเดตรายการอาหารคิว #${props.order.queue_number} เรียบร้อยแล้ว`,
+      {
+        title: 'บันทึกการแก้ไขสำเร็จ ✏️',
+        caption: `ปรับเปลี่ยนข้อมูล ${payloadItems.length} รายการ`,
+      },
+    );
     // Small delay to ensure RPC transaction has fully committed
     // before parent refetches data (prevents stale reads / duplicate queues)
     await new Promise((resolve) => setTimeout(resolve, 300));

@@ -83,7 +83,10 @@
       <div v-if="toast.title" class="app-toast-title">
         {{ toast.title }}
       </div>
-      <div class="app-toast-message">
+      <div
+        class="app-toast-message"
+        :class="{ 'app-toast-message--standalone': !toast.title }"
+      >
         {{ toast.message }}
       </div>
       <div v-if="toast.caption" class="app-toast-caption">
@@ -385,6 +388,13 @@ onBeforeUnmount(() => {
   line-height: 1.45;
   color: var(--color-text-secondary, #60534b);
   word-break: break-word;
+}
+
+.app-toast-message--standalone {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2d231e);
+  line-height: 1.4;
 }
 
 .app-toast-caption {

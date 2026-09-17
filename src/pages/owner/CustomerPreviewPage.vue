@@ -1466,7 +1466,11 @@ async function submitMockOrder() {
   previewCartItems.value = [];
   isSubmittingMock.value = false;
   currentScreen.value = 'orders';
-  notifySuccess('ทดสอบส่งออเดอร์จำลองสำเร็จ! (ไม่มีผลกับระบบจริง)');
+  notifySuccess('ระบบจำลองส่งรายการอาหารเรียบร้อยแล้ว', {
+    title: 'ทดสอบส่งออเดอร์จำลองสำเร็จ 🎉',
+    caption: 'โหมดพรีวิว: จำลองการทำงานเพื่อการทดสอบ ไม่มีผลกับฐานข้อมูลจริง',
+    timeout: 4500,
+  });
 }
 </script>
 

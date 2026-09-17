@@ -307,21 +307,34 @@
         </div>
       </div>
 
-      <!-- Transfer Table Modal Dialog -->
+      <!-- Transfer & Merge Table Modal Dialog -->
       <q-dialog v-model="showTransferModal">
         <q-card
-          style="min-width: 360px; max-width: 480px"
+          style="min-width: 380px; max-width: 520px; width: 100%"
           class="q-pa-md border-radius-lg transfer-dialog-card no-print"
         >
           <q-card-section class="q-pb-xs">
             <div class="row items-center no-wrap q-mb-sm">
-              <div class="transfer-modal-icon-wrap q-mr-sm">
-                <q-icon name="swap_horiz" size="24px" color="primary" />
+              <div
+                class="transfer-modal-icon-wrap q-mr-sm"
+                :class="{ 'bg-amber-1 text-amber-9': selectedTargetIsOccupied }"
+              >
+                <q-icon
+                  :name="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'"
+                  size="24px"
+                  :color="selectedTargetIsOccupied ? 'amber-9' : 'primary'"
+                />
               </div>
               <div>
-                <div class="text-h6 text-weight-bold">ขอย้ายโต๊ะอาหาร</div>
+                <div class="text-h6 text-weight-bold">
+                  {{ selectedTargetIsOccupied ? 'รวมโต๊ะอาหาร (Table Merge)' : 'ขอย้ายโต๊ะอาหาร' }}
+                </div>
                 <div class="text-caption text-grey-7">
-                  โอนย้ายออเดอร์และบิลทั้งหมดไปยังโต๊ะใหม่ที่ว่างอยู่
+                  {{
+                    selectedTargetIsOccupied
+                      ? 'รวมออเดอร์และยอดบิลเข้ากับโต๊ะที่มีลูกค้านั่งอยู่แล้ว'
+                      : 'โอนย้ายออเดอร์และบิลทั้งหมดไปยังโต๊ะใหม่ หรือสั่งกลับบ้าน'
+                  }}
                 </div>
               </div>
             </div>
@@ -341,58 +354,120 @@
 
             <!-- Target Table Selection -->
             <div class="q-mt-md">
-              <div class="text-caption text-weight-bold text-grey-8 q-mb-xs">
-                เลือกโต๊ะว่าง หรือ สั่งกลับบ้าน ที่ต้องการย้ายไป:
+              <div class="row items-center justify-between q-mb-xs">
+                <div class="text-caption text-weight-bold text-grey-8">
+                  เลือกโต๊ะปลายทางที่ต้องการย้ายหรือรวม:
+                </div>
+                <div class="row q-gutter-xs">
+                  <q-chip
+                    clickable
+                    dense
+                    size="sm"
+                    :color="transferFilter === 'all' ? 'primary' : 'grey-3'"
+                    :text-color="transferFilter === 'all' ? 'white' : 'grey-8'"
+                    @click="transferFilter = 'all'"
+                  >
+                    ทั้งหมด ({{ allTargetTables.length }})
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    size="sm"
+                    :color="transferFilter === 'empty' ? 'positive' : 'grey-3'"
+                    :text-color="transferFilter === 'empty' ? 'white' : 'grey-8'"
+                    @click="transferFilter = 'empty'"
+                  >
+                    โต๊ะว่าง ({{ allTargetTables.filter((t) => !t.isOccupied).length }})
+                  </q-chip>
+                  <q-chip
+                    clickable
+                    dense
+                    size="sm"
+                    :color="transferFilter === 'occupied' ? 'amber-9' : 'grey-3'"
+                    :text-color="transferFilter === 'occupied' ? 'white' : 'grey-8'"
+                    @click="transferFilter = 'occupied'"
+                  >
+                    มีลูกค้า/รวมโต๊ะ ({{ allTargetTables.filter((t) => t.isOccupied).length }})
+                  </q-chip>
+                </div>
               </div>
 
               <!-- When No Empty Tables Available -->
               <div
-                v-if="availableTablesForTransfer.length === 0"
-                class="no-available-tables-box q-pa-md text-center"
+                v-if="filteredTargetTables.length === 0"
+                class="no-available-tables-box q-pa-md text-center q-my-sm"
               >
-                <q-icon name="do_not_disturb_on" size="32px" color="amber-9" class="q-mb-xs" />
-                <div class="text-weight-bold text-amber-10">ไม่มีโต๊ะว่างในขณะนี้</div>
-                <div class="text-caption text-grey-7 q-mt-xs">
-                  โต๊ะอื่นในร้านมีลูกค้านั่งเต็มทั้งหมดแล้ว กรุณาเคลียร์โต๊ะที่ชำระเงินแล้ว
-                  หรือรอให้มีโต๊ะว่างก่อน
+                <q-icon name="info" size="28px" color="grey-6" class="q-mb-xs" />
+                <div class="text-weight-bold text-grey-8">ไม่พบโต๊ะในหมวดหมู่นี้</div>
+                <div class="text-caption text-grey-6 q-mt-xs">
+                  ลองเลือกตัวกรอง "ทั้งหมด" เพื่อดูโต๊ะทั้งหมดในร้าน
                 </div>
               </div>
 
               <!-- Available Tables Grid -->
               <div v-else class="available-tables-grid q-mt-xs">
                 <div
-                  v-for="targetTbl in availableTablesForTransfer"
-                  :key="targetTbl.id"
+                  v-for="targetTbl in filteredTargetTables"
+                  :key="targetTbl.table.id"
                   class="target-table-item"
                   :class="{
-                    'target-table-item--selected': selectedTargetTableId === targetTbl.id,
-                    'target-table-item--takeaway': isTakeawayName(targetTbl.name),
+                    'target-table-item--selected': selectedTargetTableId === targetTbl.table.id,
+                    'target-table-item--takeaway': targetTbl.isTakeaway,
+                    'target-table-item--occupied': targetTbl.isOccupied,
                   }"
-                  @click="selectedTargetTableId = targetTbl.id"
+                  @click="handleSelectTargetTable(targetTbl)"
                 >
-                  <div class="row items-center justify-between">
-                    <div class="row items-center">
+                  <div class="row items-center justify-between no-wrap">
+                    <div class="row items-center ellipsis q-mr-xs">
                       <q-icon
-                        :name="isTakeawayName(targetTbl.name) ? 'shopping_bag' : 'table_restaurant'"
+                        :name="
+                          targetTbl.isTakeaway
+                            ? 'shopping_bag'
+                            : targetTbl.isOccupied
+                              ? 'group'
+                              : 'table_restaurant'
+                        "
                         size="18px"
                         class="target-table-icon q-mr-xs"
-                        :class="{ 'text-orange-9': isTakeawayName(targetTbl.name) }"
+                        :class="{
+                          'text-orange-9': targetTbl.isTakeaway,
+                          'text-amber-9': targetTbl.isOccupied,
+                        }"
                       />
-                      <span class="target-table-name text-weight-bold">{{ targetTbl.name }}</span>
+                      <span class="target-table-name text-weight-bold ellipsis">{{
+                        targetTbl.table.name
+                      }}</span>
                     </div>
-                    <q-icon
-                      v-if="selectedTargetTableId === targetTbl.id"
-                      name="check_circle"
-                      size="18px"
-                      color="primary"
-                    />
-                    <span
-                      v-else-if="isTakeawayName(targetTbl.name)"
-                      class="target-table-takeaway-badge"
-                    >
-                      สั่งกลับบ้าน
-                    </span>
-                    <span v-else class="target-table-free-badge">ว่าง</span>
+
+                    <div>
+                      <q-icon
+                        v-if="selectedTargetTableId === targetTbl.table.id"
+                        name="check_circle"
+                        size="18px"
+                        :color="targetTbl.isOccupied ? 'amber-9' : 'primary'"
+                      />
+                      <span
+                        v-else-if="targetTbl.isTakeaway"
+                        class="target-table-takeaway-badge"
+                      >
+                        สั่งกลับบ้าน
+                      </span>
+                      <span
+                        v-else-if="targetTbl.isOccupied"
+                        class="target-table-occupied-badge"
+                      >
+                        รวมโต๊ะ
+                      </span>
+                      <span v-else class="target-table-free-badge">ว่าง</span>
+                    </div>
+                  </div>
+
+                  <!-- Details under table name if occupied -->
+                  <div
+                    v-if="targetTbl.isOccupied"
+                    class="text-caption font-size-10 text-amber-10 q-mt-xs ellipsis"
+                  >
+                    {{ targetTbl.orderCount }} ออเดอร์ • {{ formatPrice(targetTbl.totalAmount) }}
                   </div>
                 </div>
               </div>
@@ -416,18 +491,62 @@
                   class="text-caption"
                 />
               </div>
-            </div>
 
-            <!-- Notice Info Box -->
-            <div v-if="selectedTargetTableId" class="transfer-hint-box q-pa-sm q-mt-md">
-              <div class="row items-start no-wrap">
-                <q-icon name="info" size="16px" color="primary" class="q-mr-xs q-mt-xs" />
-                <div class="text-caption text-grey-8 font-size-11">
-                  เมื่อกดยืนยัน รายการอาหารและยอดเงินจะย้ายไปที่
-                  <strong class="text-primary">{{
-                    allTables.find((t) => t.id === selectedTargetTableId)?.name
-                  }}</strong>
-                  ทันที และโต๊ะเดิมจะกลับไปเป็นสถานะ <strong>"โต๊ะว่าง"</strong>
+              <!-- Occupied Merge Preview Box -->
+              <div
+                v-if="selectedTargetIsOccupied && selectedTargetTable && session"
+                class="merge-preview-card q-pa-sm q-mt-md"
+              >
+                <div class="row items-center text-amber-10 text-weight-bold text-caption q-mb-xs">
+                  <q-icon name="merge_type" size="16px" class="q-mr-xs" />
+                  <span>สรุปข้อมูลการรวมโต๊ะ (Merge Preview)</span>
+                </div>
+
+                <div class="merge-summary-table q-my-xs">
+                  <div class="row items-center justify-between text-caption text-grey-8">
+                    <span>{{ tableName }} (โต๊ะต้นทาง):</span>
+                    <span class="text-weight-bold">
+                      {{ orders.length }} ออเดอร์ • {{ formatPrice(billTotal) }}
+                    </span>
+                  </div>
+                  <div class="row items-center justify-between text-caption text-grey-8 q-mt-xs">
+                    <span>{{ selectedTargetTable.table.name }} (โต๊ะปลายทาง):</span>
+                    <span class="text-weight-bold">
+                      {{ selectedTargetTable.orderCount }} ออเดอร์ • {{ formatPrice(selectedTargetTable.totalAmount) }}
+                    </span>
+                  </div>
+                  <q-separator class="q-my-xs" />
+                  <div class="row items-center justify-between text-caption text-weight-bolder text-amber-10">
+                    <span>รวมทั้งหมดที่ {{ selectedTargetTable.table.name }}:</span>
+                    <span>
+                      {{ orders.length + selectedTargetTable.orderCount }} ออเดอร์ •
+                      {{ formatPrice(billTotal + selectedTargetTable.totalAmount) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="text-caption font-size-11 text-grey-7 q-mt-xs">
+                  💡 เมื่อรวมโต๊ะ ออเดอร์ทั้งหมดจะถูกโอนไปที่
+                  <strong>{{ selectedTargetTable.table.name }}</strong> และ
+                  <strong>{{ tableName }}</strong> จะถูกเคลียร์กลับเป็น
+                  <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที
+                </div>
+              </div>
+
+              <!-- Notice Info Box -->
+              <div
+                v-else-if="selectedTargetTableId && !selectedTargetIsTakeaway && !selectedTargetIsOccupied"
+                class="transfer-hint-box q-pa-sm q-mt-md"
+              >
+                <div class="row items-start no-wrap">
+                  <q-icon name="info" size="16px" color="primary" class="q-mr-xs q-mt-xs" />
+                  <div class="text-caption text-grey-8 font-size-11">
+                    เมื่อกดยืนยัน รายการอาหารและยอดเงินจะย้ายไปที่
+                    <strong class="text-primary">{{
+                      allTables.find((t) => t.id === selectedTargetTableId)?.name
+                    }}</strong>
+                    ทันที และโต๊ะเดิมจะกลับไปเป็นสถานะ <strong>"โต๊ะว่าง"</strong>
+                  </div>
                 </div>
               </div>
             </div>
@@ -438,15 +557,18 @@
               unelevated
               no-caps
               rounded
-              color="primary"
+              :color="selectedTargetIsOccupied ? 'deep-orange-8' : 'primary'"
+              :icon="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'"
               :label="
                 selectedTargetTableId
-                  ? `ยืนยันย้ายไป ${allTables.find((t) => t.id === selectedTargetTableId)?.name || 'โต๊ะใหม่'}`
+                  ? selectedTargetIsOccupied
+                    ? `ดำเนินการรวมโต๊ะเข้ากับ ${selectedTargetTable?.table.name}`
+                    : `ยืนยันย้ายไป ${selectedTargetTable?.table.name || 'โต๊ะใหม่'}`
                   : 'กรุณาเลือกโต๊ะปลายทาง'
               "
-              :disabled="!selectedTargetTableId || availableTablesForTransfer.length === 0"
+              :disabled="!selectedTargetTableId || allTargetTables.length === 0"
               :loading="isTransferring"
-              @click="handleConfirmTransfer"
+              @click="promptConfirmTransferOrMerge"
               class="full-width font-weight-600"
             />
             <q-btn
@@ -456,6 +578,108 @@
               color="grey-7"
               label="ยกเลิก"
               v-close-popup
+              class="full-width"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Safety Confirmation Dialog to Prevent Accidental Moves/Merges -->
+      <q-dialog v-model="showMergeConfirmDialog" persistent>
+        <q-card style="min-width: 360px; max-width: 440px; width: 100%" class="q-pa-md border-radius-lg no-print">
+          <q-card-section class="text-center q-pb-none">
+            <div
+              class="confirm-icon-wrap q-mx-auto q-mb-sm"
+              :class="selectedTargetIsOccupied ? 'bg-amber-1 text-amber-9' : 'bg-primary-soft text-primary'"
+            >
+              <q-icon :name="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'" size="32px" />
+            </div>
+            <div class="text-h6 text-weight-bold">
+              {{ selectedTargetIsOccupied ? 'ยืนยันการรวมโต๊ะอาหาร ⚠️' : 'ยืนยันการย้ายโต๊ะอาหาร' }}
+            </div>
+            <div class="text-caption text-grey-7 q-mt-xs">
+              {{
+                selectedTargetIsOccupied
+                  ? 'กรุณาตรวจสอบข้อมูลก่อนรวมโต๊ะ รายการนี้ไม่สามารถยกเลิกอัตโนมัติได้'
+                  : 'ต้องการย้ายรายการไปยังโต๊ะใหม่หรือไม่'
+              }}
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-md">
+            <!-- Visual comparison -->
+            <div
+              v-if="selectedTargetIsOccupied && selectedTargetTable && session"
+              class="merge-confirm-card q-pa-sm q-mb-md"
+            >
+              <div class="row items-center justify-between text-caption q-mb-xs">
+                <span class="text-grey-7">โต๊ะต้นทาง (จะเคลียร์ว่าง):</span>
+                <span class="text-weight-bold text-negative">
+                  {{ tableName }} ({{ orders.length }} รายการ • {{ formatPrice(billTotal) }})
+                </span>
+              </div>
+              <div class="row items-center justify-between text-caption q-mb-xs">
+                <span class="text-grey-7">โต๊ะปลายทาง (โต๊ะรวม):</span>
+                <span class="text-weight-bold text-primary">
+                  {{ selectedTargetTable.table.name }} ({{ selectedTargetTable.orderCount }} รายการ • {{ formatPrice(selectedTargetTable.totalAmount) }})
+                </span>
+              </div>
+              <q-separator class="q-my-xs" />
+              <div class="row items-center justify-between text-body2 text-weight-bolder text-amber-10">
+                <span>ยอดเงินรวมบิลใหม่:</span>
+                <span>{{ formatPrice(billTotal + selectedTargetTable.totalAmount) }}</span>
+              </div>
+              <div class="text-caption text-grey-6 text-right font-size-11 q-mt-xs">
+                รวมทั้งหมด {{ orders.length + selectedTargetTable.orderCount }} ออเดอร์
+              </div>
+            </div>
+
+            <div
+              class="confirm-warning-box q-pa-sm"
+              :class="selectedTargetIsOccupied ? 'bg-amber-1 text-amber-10' : 'bg-blue-1 text-primary'"
+            >
+              <div class="row items-start no-wrap">
+                <q-icon
+                  :name="selectedTargetIsOccupied ? 'warning' : 'info'"
+                  size="18px"
+                  class="q-mr-xs q-mt-xs"
+                />
+                <div class="text-caption font-size-12">
+                  <template v-if="selectedTargetIsOccupied">
+                    เมื่อยืนยัน ออเดอร์ทั้งหมดจะถูกรวมเข้ากับ
+                    <strong>{{ selectedTargetTable?.table.name }}</strong> และ
+                    <strong>{{ tableName }}</strong> จะถูกเคลียร์กลับเป็น
+                    <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที กรุณาตรวจสอบให้แน่ใจว่าลูกค้าย้ายมานั่งร่วมกันจริง
+                  </template>
+                  <template v-else>
+                    ออเดอร์ทั้งหมดจะย้ายไปที่ <strong>{{ selectedTargetTable?.table.name }}</strong> และ
+                    <strong>{{ tableName }}</strong> จะกลับเป็นโต๊ะว่าง
+                  </template>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-sm">
+            <q-btn
+              unelevated
+              no-caps
+              rounded
+              :color="selectedTargetIsOccupied ? 'deep-orange-8' : 'primary'"
+              :icon="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'"
+              :label="selectedTargetIsOccupied ? 'ยืนยันรวมโต๊ะ' : 'ยืนยันย้ายโต๊ะ'"
+              :loading="isTransferring"
+              @click="executeTransferOrMerge"
+              class="full-width font-weight-600"
+            />
+            <q-btn
+              flat
+              no-caps
+              rounded
+              color="grey-7"
+              label="ยกเลิก / ตรวจสอบอีกครั้ง"
+              v-close-popup
+              :disable="isTransferring"
               class="full-width"
             />
           </q-card-actions>
@@ -761,30 +985,86 @@ const previewUnitTotal = computed(() => (newBasePrice.value || 0) + itemOptionsT
 const previewSubtotal = computed(() => previewUnitTotal.value * (editingItem.value?.quantity || 1));
 const priceDiff = computed(() => previewSubtotal.value - (editingItem.value?.subtotal || 0));
 
-// Transfer Table Modal State
+// Transfer & Merge Table Modal State
 const showTransferModal = ref(false);
+const showMergeConfirmDialog = ref(false);
 const allTables = ref<TableWithQR[]>([]);
-const activeSessionsList = ref<{ table_id: string; status: string }[]>([]);
+interface SessionWithOrdersAndBill {
+  id: string;
+  table_id: string;
+  customer_name?: string | null;
+  status: string;
+  orders?: { id: string; total_amount?: number }[];
+  bill?: { id: string; total_amount?: number; status?: string }[];
+}
+const activeSessionsList = ref<SessionWithOrdersAndBill[]>([]);
 const selectedTargetTableId = ref<string | null>(null);
 const transferCustomerName = ref('');
+const transferFilter = ref<'all' | 'empty' | 'occupied'>('all');
 const isTransferring = ref(false);
 
-const availableTablesForTransfer = computed(() => {
+export interface DetailTargetTableOption {
+  table: TableWithQR;
+  isTakeaway: boolean;
+  isOccupied: boolean;
+  session: SessionWithOrdersAndBill | null;
+  orderCount: number;
+  totalAmount: number;
+  customerName?: string | null | undefined;
+}
+
+const allTargetTables = computed<DetailTargetTableOption[]>(() => {
   if (!session.value) return [];
   const currentTableId = session.value.table_id;
   const isCurrentTakeaway = isTakeawayName(tableName.value);
-  const occupiedTableIds = new Set(
-    activeSessionsList.value.filter((s) => s.status === 'ACTIVE').map((s) => s.table_id),
-  );
 
-  return allTables.value.filter((t) => {
-    if (!t.is_active || t.id === currentTableId) return false;
-    const isTargetTakeaway = isTakeawayName(t.name);
-    if (isTargetTakeaway) {
-      return !isCurrentTakeaway;
-    }
-    return !occupiedTableIds.has(t.id);
-  });
+  return allTables.value
+    .filter((t) => {
+      if (!t.is_active || t.id === currentTableId) return false;
+      const isTargetTakeaway = isTakeawayName(t.name);
+      if (isTargetTakeaway && isCurrentTakeaway) return false;
+      return true;
+    })
+    .map((t) => {
+      const isTargetTakeaway = isTakeawayName(t.name);
+      const activeSession =
+        activeSessionsList.value.find((s) => s.table_id === t.id && s.status === 'ACTIVE') ?? null;
+      const isOccupied = !isTargetTakeaway && activeSession !== null;
+      const sessionOrders = activeSession?.orders || [];
+      const orderCount = sessionOrders.length;
+      const totalAmount =
+        activeSession?.bill?.[0]?.total_amount ??
+        sessionOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+      return {
+        table: t,
+        isTakeaway: isTargetTakeaway,
+        isOccupied,
+        session: activeSession,
+        orderCount,
+        totalAmount,
+        customerName: activeSession?.customer_name,
+      };
+    });
+});
+
+const filteredTargetTables = computed(() => {
+  if (transferFilter.value === 'empty') {
+    return allTargetTables.value.filter((t) => !t.isOccupied);
+  }
+  if (transferFilter.value === 'occupied') {
+    return allTargetTables.value.filter((t) => t.isOccupied);
+  }
+  return allTargetTables.value;
+});
+
+const selectedTargetTable = computed(() => {
+  if (!selectedTargetTableId.value) return null;
+  return allTargetTables.value.find((t) => t.table.id === selectedTargetTableId.value) ?? null;
+});
+
+const selectedTargetIsOccupied = computed(() => {
+  return Boolean(selectedTargetTable.value?.isOccupied);
 });
 
 const selectedTargetIsTakeaway = computed(() => {
@@ -880,45 +1160,91 @@ async function addDrinkItem(name: string, price: number, type: string) {
 
 async function openTransferModal() {
   selectedTargetTableId.value = null;
+  transferFilter.value = 'all';
   transferCustomerName.value = session.value?.customer_name || '';
   showTransferModal.value = true;
   try {
     const [tablesData, sessionsRes] = await Promise.all([
       fetchTables(),
-      supabase.from('table_sessions').select('table_id, status').eq('status', 'ACTIVE'),
+      supabase
+        .from('table_sessions')
+        .select(
+          'id, table_id, customer_name, status, orders(id, total_amount), bill:bills(id, total_amount, status)',
+        )
+        .eq('status', 'ACTIVE'),
     ]);
     allTables.value = tablesData.filter((t) => t.is_active);
-    activeSessionsList.value = sessionsRes.data ?? [];
+    activeSessionsList.value = (sessionsRes.data as unknown as SessionWithOrdersAndBill[]) ?? [];
   } catch {
-    notifyError('ไม่สามารถโหลดรายชื่อโต๊ะว่างได้', {
+    notifyError('ไม่สามารถโหลดรายชื่อโต๊ะได้', {
       title: 'โหลดรายชื่อโต๊ะไม่สำเร็จ',
     });
   }
 }
 
-async function handleConfirmTransfer() {
+function handleSelectTargetTable(targetTbl: DetailTargetTableOption) {
+  selectedTargetTableId.value = targetTbl.table.id;
+  if (targetTbl.isOccupied) {
+    const srcName = session.value?.customer_name;
+    const tgtName = targetTbl.customerName;
+    if (tgtName && srcName && tgtName !== srcName) {
+      transferCustomerName.value = `${tgtName} / ${srcName}`;
+    } else if (tgtName) {
+      transferCustomerName.value = tgtName;
+    } else if (srcName) {
+      transferCustomerName.value = srcName;
+    }
+  } else if (targetTbl.isTakeaway) {
+    transferCustomerName.value = session.value?.customer_name || '';
+  }
+}
+
+function promptConfirmTransferOrMerge() {
+  if (!session.value || !selectedTargetTableId.value) return;
+  showMergeConfirmDialog.value = true;
+}
+
+async function executeTransferOrMerge() {
   if (!session.value || !selectedTargetTableId.value) return;
 
   isTransferring.value = true;
   try {
     const isTargetTakeaway = Boolean(selectedTargetIsTakeaway.value);
-    const res = await transferTableSession(
-      session.value.id,
-      selectedTargetTableId.value,
-      isTargetTakeaway ? transferCustomerName.value : undefined,
-    );
-    notifySuccess(`ย้ายไปยัง ${res.targetTableName} เรียบร้อยแล้ว`, {
-      title: 'ย้ายโต๊ะสำเร็จ 🔄',
-      caption: 'โอนย้ายออเดอร์และยอดบิลไปยังโต๊ะใหม่เรียบร้อย',
+    const isMerge = Boolean(selectedTargetIsOccupied.value);
+    const res = await transferTableSession(session.value.id, selectedTargetTableId.value, {
+      allowMerge: isMerge,
+      customerName: isTargetTakeaway || isMerge ? transferCustomerName.value : undefined,
     });
+
+    if (res.isMerge) {
+      notifySuccess(
+        `รวมรายการของ ${res.sourceTableName || tableName.value} เข้ากับ ${res.targetTableName} เรียบร้อยแล้ว`,
+        {
+          title: 'รวมโต๊ะสำเร็จ 🔀',
+          caption: `รวมเป็น ${res.orderCount ?? ''} ออเดอร์ • ${formatPrice(res.totalAmount ?? 0)}`,
+        },
+      );
+    } else {
+      notifySuccess(`ย้ายไปยัง ${res.targetTableName} เรียบร้อยแล้ว`, {
+        title: 'ย้ายโต๊ะสำเร็จ 🔄',
+        caption: 'โอนย้ายออเดอร์และยอดบิลไปยังโต๊ะใหม่เรียบร้อย',
+      });
+    }
+
+    showMergeConfirmDialog.value = false;
     showTransferModal.value = false;
     selectedTargetTableId.value = null;
     transferCustomerName.value = '';
-    await loadData();
+
+    if (res.isMerge) {
+      await router.push('/owner/bills');
+    } else {
+      await loadData();
+    }
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการย้ายโต๊ะ';
+    const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการย้าย/รวมโต๊ะ';
     notifyError(msg, {
-      title: 'ย้ายโต๊ะไม่สำเร็จ',
+      title: selectedTargetIsOccupied.value ? 'รวมโต๊ะไม่สำเร็จ' : 'ย้ายโต๊ะไม่สำเร็จ',
     });
   } finally {
     isTransferring.value = false;
@@ -1356,6 +1682,57 @@ async function handleConfirmUpdatePrice() {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: var(--radius-md);
+}
+
+.target-table-occupied-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.target-table-item--occupied {
+  border-color: #fde68a;
+  background: #fffdf5;
+}
+
+.target-table-item--occupied:hover {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.target-table-item--occupied.target-table-item--selected {
+  border-color: #d97706;
+  background: #fef3c7;
+  box-shadow: 0 0 0 1px #d97706;
+}
+
+.merge-preview-card {
+  background: #fffbeb;
+  border: 1.5px dashed #fcd34d;
+  border-radius: var(--radius-md);
+}
+
+.merge-confirm-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+}
+
+.confirm-warning-box {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.confirm-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media print {

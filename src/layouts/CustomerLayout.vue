@@ -103,11 +103,14 @@ import logoMarkSvg from 'src/assets/logo-mark.svg';
 
 import { supabase } from 'src/services/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useNotify } from 'src/composables/useNotify';
+import type { Table, TableSession } from 'src/types/database';
 
 const route = useRoute();
 const router = useRouter();
 const sessionStore = useSessionStore();
 const cartStore = useCartStore();
+const { notifyInfo } = useNotify();
 
 const isScrolled = ref(false);
 const isCartBouncing = ref(false);
@@ -189,7 +192,42 @@ function subscribeToSessionUpdates() {
       },
       (payload) => {
         void (async () => {
-          const updated = payload.new as { table_id?: string; customer_name?: string };
+          const updated = payload.new as {
+            table_id?: string;
+            customer_name?: string;
+            merged_into_session_id?: string | null;
+          };
+
+          // 1. If this session was merged into another table session
+          if (updated?.merged_into_session_id) {
+            const { data: targetSession } = await supabase
+              .from('table_sessions')
+              .select('*, table:tables(*)')
+              .eq('id', updated.merged_into_session_id)
+              .maybeSingle();
+
+            if (targetSession) {
+              const targetTable = (targetSession as unknown as { table?: Table }).table;
+              if (targetTable) {
+                sessionStore.updateTable(targetTable);
+              }
+              sessionStore.updateTableSession(targetSession as TableSession);
+
+              notifyInfo(
+                `โต๊ะของคุณถูกย้ายมารวมกับ ${targetTable?.name || 'โต๊ะใหม่'} เรียบร้อยแล้ว`,
+                {
+                  title: 'ย้ายรวมโต๊ะสำเร็จ 🔀',
+                  caption: 'ออเดอร์และบิลทั้งหมดถูกโอนมารวมกันเรียบร้อย',
+                },
+              );
+
+              // Re-subscribe to the new active session
+              subscribeToSessionUpdates();
+            }
+            return;
+          }
+
+          // 2. Standard table transfer
           if (updated?.table_id && updated.table_id !== sessionStore.table?.id) {
             const { data: newTable } = await supabase
               .from('tables')

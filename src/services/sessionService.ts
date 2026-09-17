@@ -214,15 +214,36 @@ export async function closeTableSession(sessionId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export interface TransferTableOptions {
+  customerName?: string | undefined;
+  allowMerge?: boolean | undefined;
+}
+
+export interface TransferTableResult {
+  sourceTableName?: string | undefined;
+  targetTableName: string;
+  isMerge: boolean;
+  orderCount?: number | undefined;
+  totalAmount?: number | undefined;
+}
+
 /**
- * Transfer an active table session to another empty table or takeaway.
- * Source table becomes available, and target table receives all session orders/bills.
+ * Transfer or merge an active table session to another table or takeaway.
+ * If target table is occupied and allowMerge is true, orders and bills are merged.
  */
 export async function transferTableSession(
   sessionId: string,
   targetTableId: string,
-  customerName?: string,
-): Promise<{ sourceTableName?: string | undefined; targetTableName: string }> {
+  customerNameOrOptions?: string | TransferTableOptions,
+): Promise<TransferTableResult> {
+  const options: TransferTableOptions =
+    typeof customerNameOrOptions === 'string'
+      ? { customerName: customerNameOrOptions }
+      : customerNameOrOptions || {};
+
+  const customerName = options.customerName;
+  const allowMerge = Boolean(options.allowMerge);
+
   // Check target table exists and is active
   const { data: targetTable, error: tErr } = await supabase
     .from('tables')
@@ -237,31 +258,39 @@ export async function transferTableSession(
 
   const isTargetTakeaway = isTakeawayName(targetTable.name);
 
-  // 1. Try DB RPC first (with optional customer name if supported)
+  // 1. Try DB RPC with p_allow_merge
   const { data: rpcData, error: rpcError } = await supabase.rpc('transfer_table_session', {
     p_session_id: sessionId,
     p_target_table_id: targetTableId,
     p_customer_name: customerName?.trim() || null,
+    p_allow_merge: allowMerge,
   });
 
   if (!rpcError && rpcData) {
     const result = rpcData as {
       source_table_name?: string;
       target_table_name?: string;
+      mode?: string;
+      order_count?: number;
+      total_amount?: number;
     };
     return {
       sourceTableName: result.source_table_name,
       targetTableName: result.target_table_name || targetTable.name,
+      isMerge: result.mode === 'MERGED',
+      orderCount: result.order_count,
+      totalAmount: result.total_amount,
     };
   }
 
-  // 1b. If RPC errored and target is NOT takeaway, try legacy 2-parameter RPC call
-  if (rpcError && !isTargetTakeaway) {
+  // 1b. If RPC errored and target is NOT takeaway and not merge, try legacy RPC call
+  if (rpcError && !isTargetTakeaway && !allowMerge) {
     const { data: rpcDataLegacy, error: rpcErrorLegacy } = await supabase.rpc(
       'transfer_table_session',
       {
         p_session_id: sessionId,
         p_target_table_id: targetTableId,
+        p_customer_name: customerName?.trim() || null,
       },
     );
 
@@ -269,10 +298,16 @@ export async function transferTableSession(
       const result = rpcDataLegacy as {
         source_table_name?: string;
         target_table_name?: string;
+        mode?: string;
+        order_count?: number;
+        total_amount?: number;
       };
       return {
         sourceTableName: result.source_table_name,
         targetTableName: result.target_table_name || targetTable.name,
+        isMerge: result.mode === 'MERGED',
+        orderCount: result.order_count,
+        totalAmount: result.total_amount,
       };
     }
   }
@@ -294,24 +329,112 @@ export async function transferTableSession(
     throw new Error('ไม่สามารถย้ายไปยังโต๊ะเดิมได้');
   }
 
+  const srcName = (session as unknown as { table?: { name?: string } }).table?.name;
+
   // Check target table availability:
-  // If target is NOT takeaway, target table must have no active sessions.
-  // If target IS takeaway, multiple active sessions are allowed!
+  // If target is NOT takeaway, check if target table has active sessions
   if (!isTargetTakeaway) {
     const { data: activeOnTarget } = await supabase
       .from('table_sessions')
-      .select('id')
+      .select('id, customer_name')
       .eq('table_id', targetTableId)
       .eq('status', SessionStatus.ACTIVE)
+      .order('created_at', { ascending: true })
       .limit(1);
 
-    if (activeOnTarget && activeOnTarget.length > 0) {
-      throw new Error(`โต๊ะ "${targetTable.name}" มีลูกค้านั่งอยู่แล้ว ไม่สามารถย้ายไปได้`);
+    const targetActiveSession = activeOnTarget?.[0];
+
+    if (targetActiveSession) {
+      if (!allowMerge) {
+        throw new Error(`โต๊ะ "${targetTable.name}" มีลูกค้านั่งอยู่แล้ว ไม่สามารถย้ายไปได้`);
+      }
+
+      // Execute client-side Merge
+      // 1. Move all orders from source session to target session
+      const { error: ordErr } = await supabase
+        .from('orders')
+        .update({ table_session_id: targetActiveSession.id })
+        .eq('table_session_id', sessionId);
+
+      if (ordErr) throw new Error(ordErr.message);
+
+      // 2. Move guest sessions, avoiding unique token collision
+      const { data: srcGuests } = await supabase
+        .from('guest_sessions')
+        .select('*')
+        .eq('table_session_id', sessionId);
+
+      if (srcGuests && srcGuests.length > 0) {
+        for (const guest of srcGuests) {
+          const { data: existingTargetGuest } = await supabase
+            .from('guest_sessions')
+            .select('id')
+            .eq('table_session_id', targetActiveSession.id)
+            .eq('session_token', guest.session_token)
+            .maybeSingle();
+
+          if (existingTargetGuest) {
+            await supabase
+              .from('orders')
+              .update({ guest_session_id: existingTargetGuest.id })
+              .eq('guest_session_id', guest.id);
+            await supabase.from('guest_sessions').delete().eq('id', guest.id);
+          } else {
+            await supabase
+              .from('guest_sessions')
+              .update({ table_session_id: targetActiveSession.id })
+              .eq('id', guest.id);
+          }
+        }
+      }
+
+      // 3. Delete source bill
+      await supabase.from('bills').delete().eq('table_session_id', sessionId);
+
+      // 4. Recalculate target bill
+      await supabase.rpc('calculate_and_update_bill', {
+        p_table_session_id: targetActiveSession.id,
+      });
+
+      // 5. Update customer name if provided
+      let combinedName = customerName?.trim();
+      if (!combinedName) {
+        if (targetActiveSession.customer_name && session.customer_name) {
+          combinedName =
+            targetActiveSession.customer_name === session.customer_name
+              ? targetActiveSession.customer_name
+              : `${targetActiveSession.customer_name} / ${session.customer_name}`;
+        } else {
+          combinedName = targetActiveSession.customer_name || session.customer_name || null;
+        }
+      }
+
+      if (combinedName !== targetActiveSession.customer_name) {
+        await supabase
+          .from('table_sessions')
+          .update({ customer_name: combinedName })
+          .eq('id', targetActiveSession.id);
+      }
+
+      // 6. Close source session and mark merged_into_session_id
+      await supabase
+        .from('table_sessions')
+        .update({
+          status: SessionStatus.CLOSED,
+          closed_at: new Date().toISOString(),
+          merged_into_session_id: targetActiveSession.id,
+        })
+        .eq('id', sessionId);
+
+      return {
+        sourceTableName: srcName,
+        targetTableName: targetTable.name,
+        isMerge: true,
+      };
     }
   }
 
-  // Prepare updated customer name if moving to takeaway or explicitly specified
-  const srcName = (session as unknown as { table?: { name?: string } }).table?.name;
+  // Standard move logic (target is empty or takeaway)
   const updatePayload: { table_id: string; customer_name?: string | null } = {
     table_id: targetTableId,
   };
@@ -339,6 +462,7 @@ export async function transferTableSession(
   return {
     sourceTableName: srcName,
     targetTableName: targetTable.name,
+    isMerge: false,
   };
 }
 

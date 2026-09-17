@@ -49,6 +49,7 @@ export interface TableSession {
   status: SessionStatus;
   created_at: string;
   closed_at: string | null;
+  merged_into_session_id?: string | null;
 }
 
 // ─── Guest Session ───────────────────────────────────────────

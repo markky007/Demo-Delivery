@@ -430,6 +430,20 @@
                   dense
                   no-caps
                   size="sm"
+                  color="deep-orange-8"
+                  icon="edit_note"
+                  label="แก้ไข"
+                  class="q-px-sm"
+                  @click="openEditOrderDialog(order)"
+                >
+                  <q-tooltip class="bg-dark">แก้ไขรายการอาหาร</q-tooltip>
+                </q-btn>
+                <q-btn
+                  flat
+                  rounded
+                  dense
+                  no-caps
+                  size="sm"
                   color="primary"
                   icon="visibility"
                   label="ดูรายละเอียด"
@@ -557,6 +571,20 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <div class="row items-center justify-end q-gutter-xs">
+                <!-- Edit Order -->
+                <q-btn
+                  flat
+                  round
+                  dense
+                  color="deep-orange-8"
+                  icon="edit_note"
+                  size="sm"
+                  class="action-btn-icon"
+                  @click="openEditOrderDialog(props.row)"
+                >
+                  <q-tooltip class="bg-dark">แก้ไขรายการอาหาร</q-tooltip>
+                </q-btn>
+
                 <!-- View Details -->
                 <q-btn
                   flat
@@ -706,14 +734,24 @@
 
           <!-- Modal Actions -->
           <q-card-actions align="between" class="q-pa-md">
-            <q-btn
-              flat
-              no-caps
-              color="negative"
-              icon="delete_outline"
-              label="ลบออเดอร์นี้"
-              @click="promptDeleteOrderFromModal"
-            />
+            <div class="row items-center q-gutter-xs">
+              <q-btn
+                flat
+                no-caps
+                color="negative"
+                icon="delete_outline"
+                label="ลบออเดอร์นี้"
+                @click="promptDeleteOrderFromModal"
+              />
+              <q-btn
+                flat
+                no-caps
+                color="deep-orange-8"
+                icon="edit_note"
+                label="แก้ไขรายการอาหาร"
+                @click="openEditOrderFromDetailModal"
+              />
+            </div>
             <q-btn
               unelevated
               rounded
@@ -791,6 +829,14 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+      <!-- Edit Order Modal (Kitchen/Owner Mode) -->
+      <EditOrderModal
+        v-if="editingOrder"
+        v-model="showEditModal"
+        :order="editingOrder"
+        :is-kitchen="true"
+        @saved="onOrderEdited"
+      />
     </div>
   </q-page>
 </template>
@@ -808,6 +854,7 @@ import { formatPrice, formatDateTime, formatTime, formatElapsed } from 'src/util
 import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import EmptyState from 'src/components/EmptyState.vue';
+import EditOrderModal from 'src/components/EditOrderModal.vue';
 
 const $q = useQuasar();
 
@@ -838,6 +885,9 @@ const sortBy = ref<'CREATED_DESC' | 'CREATED_ASC' | 'QUEUE_ASC' | 'QUEUE_DESC' |
 // ─── Modals ────────────────────────────────────────────────────────────
 const showDetailModal = ref(false);
 const selectedOrder = ref<OrderWithItems | null>(null);
+
+const showEditModal = ref(false);
+const editingOrder = ref<OrderWithItems | null>(null);
 
 const showDeleteDialog = ref(false);
 const orderToDelete = ref<OrderWithItems | null>(null);
@@ -1172,6 +1222,29 @@ function setupRealtime() {
 function openOrderDetails(order: OrderWithItems) {
   selectedOrder.value = order;
   showDetailModal.value = true;
+}
+
+// ─── Actions: Edit Order (Owner) ───────────────────────────────────────
+function openEditOrderDialog(order: OrderWithItems) {
+  editingOrder.value = order;
+  showEditModal.value = true;
+}
+
+function openEditOrderFromDetailModal() {
+  if (!selectedOrder.value) return;
+  editingOrder.value = selectedOrder.value;
+  showDetailModal.value = false;
+  showEditModal.value = true;
+}
+
+async function onOrderEdited() {
+  await loadOrders();
+  if (selectedOrder.value) {
+    const updated = dateScopedOrders.value.find((o) => o.id === selectedOrder.value?.id);
+    if (updated) {
+      selectedOrder.value = updated;
+    }
+  }
 }
 
 // ─── Actions: Delete Order & Cascade Session ────────────────────────────

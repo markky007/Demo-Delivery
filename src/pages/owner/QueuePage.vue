@@ -413,6 +413,39 @@
               </q-btn>
             </div>
           </div>
+
+          <!-- Top Mini Thumbnails Strip for Quick Jump -->
+          <div v-if="filteredFocusOrders.length > 1" class="focus-thumbnails-strip q-mt-xs">
+            <q-separator class="q-my-sm" />
+            <div class="row items-center justify-between q-mb-xs">
+              <div class="text-caption text-grey-7 text-weight-medium">
+                รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
+              </div>
+              <div class="text-caption text-grey-6">
+                แสดงผลหน้าละสูงสุด 3 ออเดอร์ (เลื่อนทีละ 1 ออเดอร์)
+              </div>
+            </div>
+            <div class="thumbnails-scroll-row">
+              <div
+                v-for="ord in filteredFocusOrders"
+                :key="ord.id"
+                class="mini-order-chip"
+                :class="{
+                  'mini-order-chip--active': isOrderOnCurrentPage(ord.id),
+                  'mini-order-chip--queued': ord.status === OrderStatus.QUEUED,
+                  'mini-order-chip--preparing': ord.status === OrderStatus.PREPARING,
+                  'mini-order-chip--prepared': ord.status === OrderStatus.PREPARED,
+                }"
+                @click="jumpToOrder(ord.id)"
+              >
+                <div class="mini-chip-seq">{{ formatQueueNumber(ord.queue_number) }}</div>
+                <div class="mini-chip-table">{{ getTableName(ord) }}</div>
+                <div class="mini-chip-count">
+                  {{ consolidateOrderItems(ord.items).length }} รายการ
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Empty State in Focus Mode -->
@@ -713,37 +746,7 @@
             </q-carousel-slide>
           </q-carousel>
 
-          <!-- Bottom Mini Thumbnails Strip for Quick Jump -->
-          <div v-if="filteredFocusOrders.length > 1" class="focus-thumbnails-strip q-mt-md">
-            <div class="row items-center justify-between q-mb-xs">
-              <div class="text-caption text-grey-7 text-weight-medium">
-                รายการออเดอร์ทั้งหมดในครัว (แตะเพื่อไปยังหน้านั้น):
-              </div>
-              <div class="text-caption text-grey-6">
-                แสดงผลหน้าละสูงสุด 3 ออเดอร์ (เลื่อนทีละ 1 ออเดอร์)
-              </div>
-            </div>
-            <div class="thumbnails-scroll-row">
-              <div
-                v-for="ord in filteredFocusOrders"
-                :key="ord.id"
-                class="mini-order-chip"
-                :class="{
-                  'mini-order-chip--active': isOrderOnCurrentPage(ord.id),
-                  'mini-order-chip--queued': ord.status === OrderStatus.QUEUED,
-                  'mini-order-chip--preparing': ord.status === OrderStatus.PREPARING,
-                  'mini-order-chip--prepared': ord.status === OrderStatus.PREPARED,
-                }"
-                @click="jumpToOrder(ord.id)"
-              >
-                <div class="mini-chip-seq">{{ formatQueueNumber(ord.queue_number) }}</div>
-                <div class="mini-chip-table">{{ getTableName(ord) }}</div>
-                <div class="mini-chip-count">
-                  {{ consolidateOrderItems(ord.items).length }} รายการ
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -2521,13 +2524,9 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   pointer-events: none;
 }
 
-/* Bottom Mini Thumbnails Strip */
+/* Mini Thumbnails Strip inside Top Control Bar */
 .focus-thumbnails-strip {
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-  box-shadow: var(--shadow-subtle);
+  padding-top: 2px;
 }
 
 .thumbnails-scroll-row {

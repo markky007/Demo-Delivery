@@ -617,24 +617,29 @@ const newDishInstruction = ref('');
 const newDishSingleOptions = reactive<Record<string, string>>({});
 const newDishMultiOptions = reactive<Record<string, string[]>>({});
 
-// Initialize editable items when modal opens
+function initItemsFromOrder() {
+  if (!props.order) return;
+  items.value = (props.order.items || []).map((it) => ({
+    temp_id: it.id || crypto.randomUUID(),
+    menu_item_id: it.menu_item_id,
+    name: it.snapshot_name,
+    base_price: it.snapshot_base_price,
+    quantity: it.quantity,
+    special_instruction: it.special_instruction || '',
+    selected_options: (it.options || []).map((o) => ({
+      option_id: o.option_id,
+      name: o.snapshot_option_name,
+      price_adjustment: o.snapshot_price_adjustment,
+    })),
+  }));
+}
+
+// Re-initialize editable items whenever modal opens or order/revision changes
 watch(
-  () => props.modelValue,
-  (isOpen) => {
-    if (isOpen && props.order) {
-      items.value = props.order.items.map((it) => ({
-        temp_id: it.id || crypto.randomUUID(),
-        menu_item_id: it.menu_item_id,
-        name: it.snapshot_name,
-        base_price: it.snapshot_base_price,
-        quantity: it.quantity,
-        special_instruction: it.special_instruction || '',
-        selected_options: (it.options || []).map((o) => ({
-          option_id: o.option_id,
-          name: o.snapshot_option_name,
-          price_adjustment: o.snapshot_price_adjustment,
-        })),
-      }));
+  [() => props.modelValue, () => props.order?.id, () => props.order?.revision],
+  ([isOpen]) => {
+    if (isOpen) {
+      initItemsFromOrder();
     }
   },
   { immediate: true },
@@ -969,7 +974,10 @@ async function saveOrderChanges() {
     emit('update:modelValue', false);
   } catch (err) {
     const rawMsg = err instanceof Error ? err.message : '';
-    if (rawMsg.includes('เริ่มเตรียมอาหาร') || rawMsg.includes('Cannot edit order')) {
+    if (
+      !props.isKitchen &&
+      (rawMsg.includes('เริ่มเตรียมอาหาร') || rawMsg.includes('Cannot edit order'))
+    ) {
       notifyError('ไม่สามารถแก้ไขได้ เนื่องจากร้านเริ่มทำอาหารแล้ว');
       emit('saved'); // Refresh status
       emit('update:modelValue', false);

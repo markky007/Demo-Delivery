@@ -805,61 +805,82 @@
                     <!-- Columns Header -->
                     <div class="receipt-table-header row items-center justify-between no-wrap q-mb-xs">
                       <span class="text-caption text-weight-bold text-grey-7">
-                        รายการอาหาร ({{ order.items?.length || 0 }})
+                        รายการ ({{ consolidateOrderItems(order.items).length }})
                       </span>
                       <span class="text-caption text-weight-bold text-grey-7">
                         จำนวน
                       </span>
                     </div>
 
-                    <!-- Items List -->
+                    <!-- Items List (Grouped by Kitchen Category: อาหาร, ยำ/ต้ม) -->
                     <div class="receipt-items-list">
                       <div
-                        v-for="(item, idx) in order.items"
-                        :key="item.id || idx"
-                        class="receipt-dish-line"
-                        :class="{ 'receipt-dish-line--multi': (item.quantity || 1) > 1 }"
+                        v-for="group in getFocusOrderGroups(order)"
+                        :key="group.key"
+                        class="receipt-category-group"
                       >
-                        <div class="row items-start justify-between no-wrap">
-                          <!-- Dish Title & Options & Comment -->
-                          <div class="receipt-dish-left col q-pr-sm">
-                            <div class="receipt-dish-title">
-                              {{ item.snapshot_name }}
-                            </div>
-
-                            <!-- Options Breakdown Chips -->
-                            <div
-                              v-if="item.options && getVisibleOptions(item.options).length > 0"
-                              class="receipt-options-flow q-mt-xs"
-                            >
-                              <span
-                                v-for="opt in getVisibleOptions(item.options)"
-                                :key="opt.id"
-                                class="receipt-opt-badge"
-                                :class="`receipt-opt-badge--${getOptionDisplayInfo(opt.snapshot_option_name).category}`"
-                              >
-                                <q-icon
-                                  :name="getOptionDisplayInfo(opt.snapshot_option_name).icon"
-                                  size="11px"
-                                  class="q-mr-xs"
-                                />
-                                {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
-                              </span>
-                            </div>
-
-                            <!-- Special Instruction / Customer Comment (No 'หมายเหตุ:', chat_bubble_outline icon) -->
-                            <div v-if="item.special_instruction" class="receipt-note-strip q-mt-xs">
-                              <q-icon name="chat_bubble_outline" size="13px" class="q-mr-xs receipt-note-icon" />
-                              <span class="receipt-note-text">{{ item.special_instruction }}</span>
-                            </div>
-                          </div>
-
-                          <!-- Quantity Box (Monospace Receipt Stamp) -->
+                        <!-- Category Station Divider (อาหาร หรือ ยำ/ต้ม) -->
+                        <div class="receipt-category-divider">
                           <div
-                            class="receipt-dish-qty font-mono"
-                            :class="{ 'receipt-dish-qty--multi': (item.quantity || 1) > 1 }"
+                            class="receipt-category-pill"
+                            :class="`receipt-category-pill--${group.key}`"
                           >
-                            {{ item.quantity }}x
+                            <q-icon :name="group.icon" size="13px" class="q-mr-xs" />
+                            <span>{{ group.label }}</span>
+                          </div>
+                          <div class="receipt-category-rule"></div>
+                        </div>
+
+                        <!-- Dishes List under this Category -->
+                        <div class="receipt-category-items">
+                          <div
+                            v-for="(item, idx) in group.items"
+                            :key="item.id || idx"
+                            class="receipt-dish-line"
+                            :class="{ 'receipt-dish-line--multi': (item.quantity || 1) > 1 }"
+                          >
+                            <div class="row items-start justify-between no-wrap">
+                              <!-- Dish Title & Options & Comment -->
+                              <div class="receipt-dish-left col q-pr-sm">
+                                <div class="receipt-dish-title">
+                                  {{ item.snapshot_name }}
+                                </div>
+
+                                <!-- Options Breakdown Chips -->
+                                <div
+                                  v-if="item.options && getVisibleOptions(item.options).length > 0"
+                                  class="receipt-options-flow q-mt-xs"
+                                >
+                                  <span
+                                    v-for="opt in getVisibleOptions(item.options)"
+                                    :key="opt.id"
+                                    class="receipt-opt-badge"
+                                    :class="`receipt-opt-badge--${getOptionDisplayInfo(opt.snapshot_option_name).category}`"
+                                  >
+                                    <q-icon
+                                      :name="getOptionDisplayInfo(opt.snapshot_option_name).icon"
+                                      size="11px"
+                                      class="q-mr-xs"
+                                    />
+                                    {{ getOptionDisplayInfo(opt.snapshot_option_name).label }}
+                                  </span>
+                                </div>
+
+                                <!-- Special Instruction / Customer Comment (No 'หมายเหตุ:', chat_bubble_outline icon) -->
+                                <div v-if="item.special_instruction" class="receipt-note-strip q-mt-xs">
+                                  <q-icon name="chat_bubble_outline" size="13px" class="q-mr-xs receipt-note-icon" />
+                                  <span class="receipt-note-text">{{ item.special_instruction }}</span>
+                                </div>
+                              </div>
+
+                              <!-- Quantity Box (Monospace Receipt Stamp) -->
+                              <div
+                                class="receipt-dish-qty font-mono"
+                                :class="{ 'receipt-dish-qty--multi': (item.quantity || 1) > 1 }"
+                              >
+                                {{ item.quantity }}x
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -935,7 +956,7 @@
               >
                 <div class="mini-chip-seq">{{ formatQueueNumber(ord.queue_number) }}</div>
                 <div class="mini-chip-table">{{ getTableName(ord) }}</div>
-                <div class="mini-chip-count">{{ ord.items.length }} รายการ</div>
+                <div class="mini-chip-count">{{ consolidateOrderItems(ord.items).length }} รายการ</div>
               </div>
             </div>
           </div>
@@ -2365,6 +2386,8 @@ import {
   getVisibleOptions,
   getOptionDisplayInfo,
   isTakeawayOption,
+  consolidateOrderItems,
+  groupOrderItemsForKitchen,
 } from 'src/utils/formatters';
 import { isTakeawayName } from 'src/services/tableService';
 import {
@@ -2409,6 +2432,14 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 const queueStore = useQueueStore();
 const menuStore = useMenuStore();
 const { notifySuccess, notifyError, notifyWarning } = useNotify();
+
+const menuItemsMap = computed(() => new Map(menuStore.items.map((i) => [i.id, i])));
+const categoriesMap = computed(() => new Map(menuStore.categories.map((c) => [c.id, c])));
+
+function getFocusOrderGroups(order: OrderWithItems) {
+  const consolidated = consolidateOrderItems(order.items);
+  return groupOrderItemsForKitchen(consolidated, menuItemsMap.value, categoriesMap.value);
+}
 
 const isLoading = ref(true);
 const viewMode = ref<'focus' | 'overview' | 'fry' | 'rice' | 'serving'>('focus');
@@ -2731,9 +2762,6 @@ function getTimerColorClass(createdAtStr: string): string {
 }
 
 // Fry Station Computeds & Handlers
-const menuItemsMap = computed(() => new Map(menuStore.items.map((i) => [i.id, i])));
-const categoriesMap = computed(() => new Map(menuStore.categories.map((c) => [c.id, c])));
-
 const allFryRequirements = computed<FryRequirement[]>(() => {
   return extractFryRequirementsFromOrders(queueStore.orders, menuItemsMap.value);
 });
@@ -3578,6 +3606,59 @@ async function advanceStatusAndProceed(orderId: string, newStatus: OrderStatus) 
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.receipt-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.receipt-category-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px 0;
+}
+
+.receipt-category-divider:first-child {
+  margin-top: 2px;
+}
+
+.receipt-category-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.receipt-category-pill--food {
+  color: #524237;
+  background: #ede6dc;
+  border: 1px solid #ddd3c5;
+}
+
+.receipt-category-pill--soup_yam {
+  color: #9c4221;
+  background: #ffede6;
+  border: 1px solid #ffd5c4;
+}
+
+.receipt-category-rule {
+  flex: 1;
+  height: 1px;
+  background: #e8e1d7;
+}
+
+.receipt-category-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .receipt-dish-line {

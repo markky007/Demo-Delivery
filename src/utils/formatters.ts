@@ -1,6 +1,7 @@
 /**
  * Formatting utilities for the application.
  */
+import type { OrderItemOption, MenuItem, MenuCategory } from 'src/types/database';
 
 /**
  * Format a price in Thai Baht.
@@ -265,4 +266,166 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
     category: 'addon',
     icon: 'add_circle_outline',
   };
+}
+
+/**
+ * Consolidate duplicate order items in an order (e.g. for Kitchen Focus Mode slip display).
+ * Groups items by same dish (menu_item_id or snapshot_name), same options, and identical special instructions.
+ * Sums up their quantities and subtotals.
+ * Returns a new array of cloned items without mutating the original input items.
+ */
+export function consolidateOrderItems<
+  T extends {
+    id?: string;
+    menu_item_id?: string;
+    snapshot_name?: string;
+    quantity?: number;
+    subtotal?: number;
+    special_instruction?: string | null;
+    options?: OrderItemOption[];
+  },
+>(items?: T[] | null): T[] {
+  if (!items || items.length === 0) return [];
+
+  const consolidated: T[] = [];
+  const keyMap = new Map<string, T>();
+
+  for (const item of items) {
+    // 1. Dish identity
+    const dishKey = (item.menu_item_id || item.snapshot_name || '').trim();
+
+    // 2. Options canonical signature (sorted by option id, group name, option name, and price adjustment)
+    const optionsKey = (item.options || [])
+      .map(
+        (o) =>
+          `${(o.option_id || '').trim()}::${(o.snapshot_group_name || '').trim()}::${(o.snapshot_option_name || '').trim()}::${o.snapshot_price_adjustment ?? 0}`,
+      )
+      .sort()
+      .join('||');
+
+    // 3. Special instruction / comment (exact trimmed comparison)
+    const commentKey = (item.special_instruction || '').trim();
+
+    const groupKey = `${dishKey}___${optionsKey}___${commentKey}`;
+
+    const existing = keyMap.get(groupKey);
+    if (existing) {
+      existing.quantity = (existing.quantity || 1) + (item.quantity || 1);
+      if (typeof existing.subtotal === 'number' && typeof item.subtotal === 'number') {
+        existing.subtotal += item.subtotal;
+      }
+    } else {
+      const cloned: T = {
+        ...item,
+        quantity: item.quantity || 1,
+        options: item.options ? [...item.options] : [],
+      };
+      keyMap.set(groupKey, cloned);
+      consolidated.push(cloned);
+    }
+  }
+
+  return consolidated;
+}
+
+export interface KitchenCategoryGroup<T> {
+  key: 'food' | 'soup_yam';
+  label: string;
+  icon: string;
+  items: T[];
+}
+
+/**
+ * Categorize order items into kitchen station groups ("อาหาร" and "ยำ/ต้ม").
+ * Sorts items by station (อาหาร first, then ยำ/ต้ม), and within each station by menu item sort order or name.
+ * Only returns groups that have at least one item.
+ */
+export function groupOrderItemsForKitchen<
+  T extends {
+    menu_item_id?: string;
+    snapshot_name?: string;
+    quantity?: number;
+  },
+>(
+  items: T[],
+  menuItemsMap?: Map<string, MenuItem>,
+  categoriesMap?: Map<string, MenuCategory>,
+): KitchenCategoryGroup<T>[] {
+  if (!items || items.length === 0) return [];
+
+  const foodItems: T[] = [];
+  const soupYamItems: T[] = [];
+
+  for (const item of items) {
+    const menuItem =
+      item.menu_item_id && menuItemsMap ? menuItemsMap.get(item.menu_item_id) : undefined;
+    const category =
+      menuItem?.category_id && categoriesMap ? categoriesMap.get(menuItem.category_id) : undefined;
+
+    const catName = (category?.name || '').toLowerCase().trim();
+    const dishName = (item.snapshot_name || menuItem?.name || '').toLowerCase().trim();
+
+    // Check if it belongs to "ยำ/ต้ม"
+    const isYamOrTom =
+      catName.includes('ยำ') ||
+      catName.includes('ต้ม') ||
+      catName.includes('แกง') ||
+      catName.includes('ซุป') ||
+      catName.includes('soup') ||
+      catName.includes('tom yum') ||
+      catName.includes('yum') ||
+      dishName.includes('ต้มยำ') ||
+      dishName.includes('แกงจืด') ||
+      dishName.includes('ต้มจืด') ||
+      dishName.includes('ต้มแซ่บ') ||
+      dishName.includes('ต้มข่า') ||
+      dishName.includes('แกงส้ม') ||
+      dishName.includes('แกงเลียง') ||
+      dishName.includes('แกงป่า') ||
+      dishName.startsWith('ยำ') ||
+      dishName.includes(' ยำ') ||
+      dishName.includes('ส้มตำ');
+
+    if (isYamOrTom) {
+      soupYamItems.push(item);
+    } else {
+      foodItems.push(item);
+    }
+  }
+
+  // Sort items within each group: sort_order asc, then name Thai locale
+  const sortGroup = (list: T[]) => {
+    return list.sort((a, b) => {
+      const mA = a.menu_item_id && menuItemsMap ? menuItemsMap.get(a.menu_item_id) : undefined;
+      const mB = b.menu_item_id && menuItemsMap ? menuItemsMap.get(b.menu_item_id) : undefined;
+
+      const orderA = mA?.sort_order ?? 9999;
+      const orderB = mB?.sort_order ?? 9999;
+
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.snapshot_name || '').localeCompare(b.snapshot_name || '', 'th');
+    });
+  };
+
+  const groups: KitchenCategoryGroup<T>[] = [];
+
+  if (foodItems.length > 0) {
+    groups.push({
+      key: 'food',
+      label: 'อาหาร',
+      icon: 'restaurant',
+      items: sortGroup(foodItems),
+    });
+  }
+
+  if (soupYamItems.length > 0) {
+    groups.push({
+      key: 'soup_yam',
+      label: 'ยำ/ต้ม',
+      icon: 'soup_kitchen',
+      items: sortGroup(soupYamItems),
+    });
+  }
+
+  return groups;
 }

@@ -843,7 +843,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useQuasar } from 'quasar';
+import { useNotify } from 'src/composables/useNotify';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from 'src/services/supabase';
 import { fetchManageOrders, deleteOrderAndSession } from 'src/services/orderService';
@@ -856,7 +856,7 @@ import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import EmptyState from 'src/components/EmptyState.vue';
 import EditOrderModal from 'src/components/EditOrderModal.vue';
 
-const $q = useQuasar();
+const { notifySuccess, notifyError } = useNotify();
 
 // ─── View Mode & UI State ──────────────────────────────────────────────
 const viewMode = ref<'cards' | 'table'>('cards');
@@ -1180,11 +1180,7 @@ async function loadOrders() {
     });
     dateScopedOrders.value = fetched;
   } catch (err) {
-    $q.notify({
-      type: 'negative',
-      message: err instanceof Error ? err.message : 'ไม่สามารถโหลดรายการออเดอร์ได้',
-      position: 'top',
-    });
+    notifyError(err instanceof Error ? err.message : 'ไม่สามารถโหลดรายการออเดอร์ได้');
   } finally {
     isLoading.value = false;
   }
@@ -1270,23 +1266,13 @@ async function handleConfirmDeleteOrder() {
   try {
     const res = await deleteOrderAndSession(targetOrder.id);
     if (res.success) {
-      $q.notify({
-        type: 'positive',
-        message: `ลบออเดอร์คิว #${qNum} (${targetName}) และเคลียร์ข้อมูลเรียบร้อยแล้ว`,
-        icon: 'check_circle',
-        position: 'top',
-      });
+      notifySuccess(`ลบออเดอร์คิว #${qNum} (${targetName}) และเคลียร์ข้อมูลเรียบร้อยแล้ว`);
       showDeleteDialog.value = false;
       orderToDelete.value = null;
       await loadOrders();
     }
   } catch (err) {
-    $q.notify({
-      type: 'negative',
-      message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบออเดอร์',
-      icon: 'error',
-      position: 'top',
-    });
+    notifyError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบออเดอร์');
   } finally {
     isDeleting.value = false;
   }

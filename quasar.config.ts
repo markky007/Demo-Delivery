@@ -76,14 +76,9 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
     framework: {
-      config: {
-        notify: {
-          position: 'top',
-          timeout: 2500,
-        },
-      },
+      config: {},
 
-      plugins: ['Notify', 'Dialog', 'Loading'],
+      plugins: ['Dialog', 'Loading'],
     },
 
     // animations: 'all', // --- includes all animations

@@ -1,50 +1,74 @@
 /**
- * Composable for Quasar Notify plugin.
- * Provides typed, consistent notification helpers.
+ * Composable for in-app notifications / toasts.
+ * Replaces Quasar Notify with custom, modern, glassmorphic toast notifications.
+ * Fully typed and backward-compatible with all existing notify calls.
  */
-import { useQuasar } from 'quasar';
+import {
+  useNotificationStore,
+  type NotificationPayload,
+  type NotificationType,
+  type NotificationAction,
+} from 'src/stores/notificationStore';
+
+export type NotifyOptions = Partial<Omit<NotificationPayload, 'message' | 'type'>> & {
+  type?: NotificationType | 'positive' | 'negative';
+};
 
 export function useNotify() {
-  const $q = useQuasar();
+  const store = useNotificationStore();
 
-  function notifySuccess(message: string) {
-    $q.notify({
-      type: 'positive',
+  function parseArgs(
+    defaultType: NotificationType,
+    message: string,
+    extra?: string | NotifyOptions,
+  ): NotificationPayload {
+    if (typeof extra === 'string') {
+      // If a second string is passed, treat first as title and second as message
+      return {
+        type: defaultType,
+        title: message,
+        message: extra,
+      };
+    }
+
+    return {
+      type: defaultType,
       message,
-      icon: 'check_circle',
-      position: 'top',
-      timeout: 2000,
-    });
+      title: extra?.title,
+      caption: extra?.caption,
+      icon: extra?.icon,
+      timeout: extra?.timeout,
+      actions: extra?.actions,
+      dismissible: extra?.dismissible,
+    };
   }
 
-  function notifyError(message: string) {
-    $q.notify({
-      type: 'negative',
-      message,
-      icon: 'error',
-      position: 'top',
-      timeout: 3000,
-    });
+  function notifySuccess(message: string, extra?: string | NotifyOptions): string {
+    return store.addToast(parseArgs('success', message, extra));
   }
 
-  function notifyWarning(message: string) {
-    $q.notify({
-      type: 'warning',
-      message,
-      icon: 'warning',
-      position: 'top',
-      timeout: 3000,
-    });
+  function notifyError(message: string, extra?: string | NotifyOptions): string {
+    return store.addToast(parseArgs('error', message, extra));
   }
 
-  function notifyInfo(message: string) {
-    $q.notify({
-      type: 'info',
-      message,
-      icon: 'info',
-      position: 'top',
-      timeout: 2500,
-    });
+  function notifyWarning(message: string, extra?: string | NotifyOptions): string {
+    return store.addToast(parseArgs('warning', message, extra));
+  }
+
+  function notifyInfo(message: string, extra?: string | NotifyOptions): string {
+    return store.addToast(parseArgs('info', message, extra));
+  }
+
+  function notify(payload: NotificationPayload): string {
+    return store.addToast(payload);
+  }
+
+  function dismiss(id: string): void {
+    store.removeToast(id);
+  }
+
+  function clearAll(): void {
+    store.clearAll();
   }
 
   return {
@@ -52,5 +76,10 @@ export function useNotify() {
     notifyError,
     notifyWarning,
     notifyInfo,
+    notify,
+    dismiss,
+    clearAll,
   };
 }
+
+export type { NotificationType, NotificationAction, NotificationPayload };

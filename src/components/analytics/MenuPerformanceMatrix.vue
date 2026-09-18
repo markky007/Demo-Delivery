@@ -87,7 +87,7 @@
           <!-- Left: Horizontal Bar Chart -->
           <div class="col-12 col-md-7">
             <div class="top-chart-wrapper">
-              <canvas ref="topMenuCanvasRef"></canvas>
+              <VChart class="echarts-view" :option="topMenuChartOption" autoresize />
             </div>
           </div>
 
@@ -249,7 +249,7 @@
       <div class="row q-col-gutter-md items-center">
         <div class="col-12 col-md-5">
           <div class="category-chart-wrapper">
-            <canvas ref="categoryCanvasRef"></canvas>
+            <VChart class="echarts-view" :option="categoryChartOption" autoresize />
           </div>
         </div>
 
@@ -379,16 +379,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
-import Chart from 'chart.js/auto';
-import type { ChartConfiguration } from 'chart.js';
+import VChart from 'vue-echarts';
+import type { EChartsOption } from 'echarts';
 import { formatPrice } from 'src/utils/formatters';
 import type {
   MenuItemPerformance,
   CategorySalesSummary,
   TopAddonOption,
 } from 'src/services/salesAnalyticsService';
+import { APPLE_COLORS, FONT_FAMILY, appleTooltipBase } from 'src/utils/appleChartTheme';
 
 const props = defineProps<{
   topSellingItems: MenuItemPerformance[];
@@ -414,13 +415,6 @@ const sortOptions = computed(() => {
         { label: 'เรียงตามยอดขาย (฿)', value: 'revenue' as const },
       ];
 });
-
-// ─── Canvases & Chart Instances ─────────────────────────────────────────────
-const topMenuCanvasRef = ref<HTMLCanvasElement | null>(null);
-let topMenuChartInstance: Chart | null = null;
-
-const categoryCanvasRef = ref<HTMLCanvasElement | null>(null);
-let categoryChartInstance: Chart | null = null;
 
 // Apple Analytical Palette for Top Menu
 const TOP_MENU_COLORS = [
@@ -475,245 +469,164 @@ function getCategoryColor(idx: number): string {
   return CATEGORY_COLORS[idx % CATEGORY_COLORS.length] || '#86868b';
 }
 
-// ─── Initialize Top Selling Menu Horizontal Bar Chart ───────────────────────
-function initTopMenuChart() {
-  if (!topMenuCanvasRef.value) return;
-  if (sortedTopItems.value.length === 0) return;
-
-  const ctx = topMenuCanvasRef.value.getContext('2d');
-  if (!ctx) return;
-
-  const items = sortedTopItems.value.slice(0, 10);
-  const labels = items.map((it) => it.name);
+// ─── ECharts Computed for Top Menu Horizontal Bars ─────────────────────────
+const topMenuChartOption = computed<EChartsOption>(() => {
+  const items = sortedTopItems.value.slice(0, 10).reverse();
+  const isMobile = $q.screen.xs;
+  const labels = items.map((it) => {
+    const maxLen = isMobile ? 10 : 16;
+    return it.name.length > maxLen ? it.name.slice(0, maxLen - 2) + '...' : it.name;
+  });
   const dataValues =
     topMenuSortBy.value === 'revenue'
       ? items.map((it) => it.totalRevenue)
       : items.map((it) => it.quantitySold);
 
-  const datasetLabel = topMenuSortBy.value === 'revenue' ? 'ยอดขายรวม (บาท)' : 'จำนวนที่ขาย (จาน)';
-  const isMobile = $q.screen.xs;
-
-  const config: ChartConfiguration<'bar'> = {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: datasetLabel,
-          data: dataValues,
-          backgroundColor: TOP_MENU_COLORS.slice(0, items.length),
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: isMobile ? 0.75 : 0.68,
-        },
-      ],
+  return {
+    renderer: 'svg',
+    animationDuration: 700,
+    animationEasing: 'cubicOut',
+    grid: {
+      top: 10,
+      left: 10,
+      right: 24,
+      bottom: 10,
+      containLabel: true,
     },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(29, 29, 31, 0.94)',
-          titleFont: {
-            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
-            size: 12,
-            weight: 'bold',
-          },
-          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
-          padding: 10,
-          cornerRadius: 8,
-          callbacks: {
-            label: (context) => {
-              const idx = context.dataIndex;
-              const item = items[idx];
-              if (!item) return '';
-              return [
-                ` ขายได้: ${item.quantitySold} จาน`,
-                ` ยอดขายรวม: ${formatPrice(item.totalRevenue)} (${item.revenueShare}%)`,
-              ];
-            },
-          },
+    tooltip: {
+      ...appleTooltipBase,
+      trigger: 'item',
+      formatter: (params: unknown) => {
+        const p = params as { dataIndex: number; name: string; value: number };
+        const item = items[p.dataIndex];
+        if (!item) return '';
+        return `<div style="font-family:${FONT_FAMILY}">
+          <div style="font-weight:600;color:#1D1D1F;margin-bottom:4px;">${item.name}</div>
+          <div style="display:flex;justify-content:space-between;gap:14px;color:#6E6E73;font-size:12px;">
+            <span>ขายได้:</span>
+            <strong style="color:#0071E3;font-variant-numeric:tabular-nums;">${item.quantitySold} จาน</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:14px;color:#6E6E73;font-size:12px;margin-top:2px;">
+            <span>ยอดขายรวม:</span>
+            <strong style="color:#1D1D1F;font-variant-numeric:tabular-nums;">${formatPrice(item.totalRevenue)} (${item.revenueShare}%)</strong>
+          </div>
+        </div>`;
+      },
+    },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: {
+        lineStyle: {
+          color: '#F5F5F7',
         },
       },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: {
-            color: '#f5f5f7',
-          },
-          ticks: {
-            precision: 0,
-            font: { family: 'Inter, sans-serif', size: isMobile ? 9 : 10 },
-            color: '#86868b',
-            callback: (val) => {
-              if (topMenuSortBy.value === 'revenue') {
-                return typeof val === 'number' && val >= 1000
-                  ? `฿${(val / 1000).toFixed(0)}k`
-                  : `฿${val}`;
-              }
-              return `${val} จาน`;
-            },
-          },
-        },
-        y: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            font: {
-              family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
-              size: isMobile ? 10 : 11,
-              weight: 'bold',
-            },
-            color: '#1d1d1f',
-            callback: function (val: string | number) {
-              const label = this.getLabelForValue(Number(val));
-              const maxLen = isMobile ? 10 : 16;
-              return label.length > maxLen ? label.slice(0, maxLen - 2) + '...' : label;
-            },
-          },
+      axisLabel: {
+        color: APPLE_COLORS.mutedLight,
+        fontFamily: FONT_FAMILY,
+        fontSize: isMobile ? 9 : 10,
+        formatter: (val: number) => {
+          if (topMenuSortBy.value === 'revenue') {
+            return val >= 1000 ? `฿${(val / 1000).toFixed(0)}k` : `฿${val}`;
+          }
+          return `${val}`;
         },
       },
     },
+    yAxis: {
+      type: 'category',
+      data: labels,
+      axisLine: { lineStyle: { color: APPLE_COLORS.hairline } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: APPLE_COLORS.ink,
+        fontFamily: FONT_FAMILY,
+        fontSize: isMobile ? 10 : 11,
+      },
+    },
+    series: [
+      {
+        name: topMenuSortBy.value === 'revenue' ? 'ยอดขายรวม' : 'จำนวนที่ขาย',
+        type: 'bar',
+        data: dataValues.map((val, i) => ({
+          value: val,
+          itemStyle: {
+            color: TOP_MENU_COLORS[i % TOP_MENU_COLORS.length] ?? '#0071e3',
+            borderRadius: [0, 980, 980, 0],
+          },
+        })),
+        barWidth: isMobile ? 12 : 16,
+      },
+    ],
   };
-
-  if (topMenuChartInstance) {
-    topMenuChartInstance.destroy();
-  }
-
-  topMenuChartInstance = new Chart(ctx, config);
-}
-
-// ─── Initialize Categories Doughnut Chart (Cutout 70%) ───────────────────────
-function initCategoryChart() {
-  if (!categoryCanvasRef.value) return;
-  const ctx = categoryCanvasRef.value.getContext('2d');
-  if (!ctx) return;
-
-  const labels = props.categoryDistribution.map((c) => c.name);
-  const data = props.categoryDistribution.map((c) => c.totalSales);
-  const isMobile = $q.screen.xs;
-
-  const config: ChartConfiguration<'doughnut'> = {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: CATEGORY_COLORS.slice(0, labels.length),
-          borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 6,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '70%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            boxWidth: isMobile ? 6 : 8,
-            padding: isMobile ? 8 : 12,
-            font: {
-              family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
-              size: isMobile ? 10 : 11,
-            },
-            color: '#1d1d1f',
-          },
-        },
-        tooltip: {
-          backgroundColor: 'rgba(29, 29, 31, 0.94)',
-          titleFont: {
-            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
-            size: 12,
-            weight: 'bold',
-          },
-          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
-          padding: 10,
-          cornerRadius: 8,
-          callbacks: {
-            label: (item) => {
-              const val = Number(item.raw);
-              return ` ${item.label}: ${formatPrice(val)}`;
-            },
-          },
-        },
-      },
-    },
-  };
-
-  if (categoryChartInstance) {
-    categoryChartInstance.destroy();
-  }
-
-  categoryChartInstance = new Chart(ctx, config);
-}
-
-watch(
-  () => [props.topSellingItems, topMenuSortBy.value, activeTab.value],
-  () => {
-    if (activeTab.value === 'best') {
-      void nextTick(() => {
-        initTopMenuChart();
-      });
-    }
-  },
-  { deep: true },
-);
-
-watch(
-  () => [props.categoryDistribution, activeTab.value],
-  () => {
-    if (activeTab.value === 'categories') {
-      void nextTick(() => {
-        initCategoryChart();
-      });
-    }
-  },
-  { deep: true },
-);
-
-watch(
-  () => $q.screen.xs,
-  () => {
-    void nextTick(() => {
-      if (activeTab.value === 'best') {
-        initTopMenuChart();
-      } else if (activeTab.value === 'categories') {
-        initCategoryChart();
-      }
-    });
-  },
-);
-
-onMounted(() => {
-  void nextTick(() => {
-    if (activeTab.value === 'best') {
-      initTopMenuChart();
-    } else if (activeTab.value === 'categories') {
-      initCategoryChart();
-    }
-  });
 });
 
-onBeforeUnmount(() => {
-  if (topMenuChartInstance) {
-    topMenuChartInstance.destroy();
-    topMenuChartInstance = null;
-  }
-  if (categoryChartInstance) {
-    categoryChartInstance.destroy();
-    categoryChartInstance = null;
-  }
+// ─── ECharts Computed for Categories Doughnut ───────────────────────────────
+const categoryChartOption = computed<EChartsOption>(() => {
+  const isMobile = $q.screen.xs;
+  const data = props.categoryDistribution.map((c, i) => ({
+    name: c.name,
+    value: c.totalSales,
+    itemStyle: {
+      color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] ?? '#8e8e93',
+      borderRadius: 6,
+      borderColor: '#ffffff',
+      borderWidth: 2,
+    },
+  }));
+
+  return {
+    renderer: 'svg',
+    animationDuration: 700,
+    animationEasing: 'cubicOut',
+    tooltip: {
+      ...appleTooltipBase,
+      trigger: 'item',
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number; percent: number; color: string };
+        const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>`;
+        return `<div style="font-family:${FONT_FAMILY}">
+          <div style="font-weight:600;color:#1D1D1F;margin-bottom:4px;">${dot}${p.name}</div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;">
+            <span>ยอดขาย:</span>
+            <strong style="color:#1D1D1F;font-variant-numeric:tabular-nums;">${formatPrice(p.value)}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;margin-top:2px;">
+            <span>สัดส่วน:</span>
+            <strong style="color:#0071E3;font-variant-numeric:tabular-nums;">${p.percent}%</strong>
+          </div>
+        </div>`;
+      },
+    },
+    legend: {
+      orient: 'horizontal',
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: isMobile ? 6 : 8,
+      itemHeight: isMobile ? 6 : 8,
+      textStyle: {
+        fontFamily: FONT_FAMILY,
+        fontSize: isMobile ? 10 : 11,
+        color: APPLE_COLORS.ink,
+      },
+    },
+    series: [
+      {
+        name: 'สัดส่วนยอดขาย',
+        type: 'pie',
+        radius: ['54%', '78%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: false,
+        label: { show: false },
+        emphasis: {
+          scale: true,
+          scaleSize: 5,
+        },
+        data,
+      },
+    ],
+  };
 });
 </script>
 
@@ -724,6 +637,11 @@ onBeforeUnmount(() => {
   border: 1px solid #d2d2d7;
   padding: 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.echarts-view {
+  width: 100%;
+  height: 100%;
 }
 
 .text-ink {

@@ -971,16 +971,10 @@
                         size="18px"
                         :color="targetTbl.isOccupied ? 'amber-9' : 'primary'"
                       />
-                      <span
-                        v-else-if="targetTbl.isTakeaway"
-                        class="target-table-takeaway-badge"
-                      >
+                      <span v-else-if="targetTbl.isTakeaway" class="target-table-takeaway-badge">
                         สั่งกลับบ้าน
                       </span>
-                      <span
-                        v-else-if="targetTbl.isOccupied"
-                        class="target-table-occupied-badge"
-                      >
+                      <span v-else-if="targetTbl.isOccupied" class="target-table-occupied-badge">
                         รวมโต๊ะ
                       </span>
                       <span v-else class="target-table-free-badge">ว่าง</span>
@@ -1001,7 +995,7 @@
               <div
                 v-if="selectedTargetIsTakeaway"
                 class="q-mt-sm bg-orange-1 q-pa-sm border-radius-md"
-                style="border: 1px dashed #fdba74;"
+                style="border: 1px dashed #fdba74"
               >
                 <div class="text-caption text-weight-bold text-orange-10 q-mb-xs row items-center">
                   <q-icon name="person" size="16px" class="q-mr-xs" />
@@ -1031,21 +1025,27 @@
                   <div class="row items-center justify-between text-caption text-grey-8">
                     <span>{{ tableToTransfer.table.name }} (โต๊ะต้นทาง):</span>
                     <span class="text-weight-bold">
-                      {{ tableToTransfer.orderCount }} ออเดอร์ • {{ formatPrice(tableToTransfer.totalAmount) }}
+                      {{ tableToTransfer.orderCount }} ออเดอร์ •
+                      {{ formatPrice(tableToTransfer.totalAmount) }}
                     </span>
                   </div>
                   <div class="row items-center justify-between text-caption text-grey-8 q-mt-xs">
                     <span>{{ selectedTargetTable.table.name }} (โต๊ะปลายทาง):</span>
                     <span class="text-weight-bold">
-                      {{ selectedTargetTable.orderCount }} ออเดอร์ • {{ formatPrice(selectedTargetTable.totalAmount) }}
+                      {{ selectedTargetTable.orderCount }} ออเดอร์ •
+                      {{ formatPrice(selectedTargetTable.totalAmount) }}
                     </span>
                   </div>
                   <q-separator class="q-my-xs" />
-                  <div class="row items-center justify-between text-caption text-weight-bolder text-amber-10">
+                  <div
+                    class="row items-center justify-between text-caption text-weight-bolder text-amber-10"
+                  >
                     <span>รวมทั้งหมดที่ {{ selectedTargetTable.table.name }}:</span>
                     <span>
                       {{ tableToTransfer.orderCount + selectedTargetTable.orderCount }} ออเดอร์ •
-                      {{ formatPrice(tableToTransfer.totalAmount + selectedTargetTable.totalAmount) }}
+                      {{
+                        formatPrice(tableToTransfer.totalAmount + selectedTargetTable.totalAmount)
+                      }}
                     </span>
                   </div>
                 </div>
@@ -1060,7 +1060,9 @@
 
               <!-- Notice Info Box when Target is Empty Table -->
               <div
-                v-else-if="selectedTargetTableId && !selectedTargetIsTakeaway && !selectedTargetIsOccupied"
+                v-else-if="
+                  selectedTargetTableId && !selectedTargetIsTakeaway && !selectedTargetIsOccupied
+                "
                 class="transfer-hint-box q-pa-sm q-mt-md"
               >
                 <div class="row items-start no-wrap">
@@ -1111,11 +1113,18 @@
 
       <!-- Safety Confirmation Dialog to Prevent Accidental Moves/Merges -->
       <q-dialog v-model="showMergeConfirmDialog" persistent>
-        <q-card style="min-width: 360px; max-width: 440px; width: 100%" class="q-pa-md border-radius-lg">
+        <q-card
+          style="min-width: 360px; max-width: 440px; width: 100%"
+          class="q-pa-md border-radius-lg"
+        >
           <q-card-section class="text-center q-pb-none">
             <div
               class="confirm-icon-wrap q-mx-auto q-mb-sm"
-              :class="selectedTargetIsOccupied ? 'bg-amber-1 text-amber-9' : 'bg-primary-soft text-primary'"
+              :class="
+                selectedTargetIsOccupied
+                  ? 'bg-amber-1 text-amber-9'
+                  : 'bg-primary-soft text-primary'
+              "
             >
               <q-icon :name="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'" size="32px" />
             </div>
@@ -1140,19 +1149,25 @@
               <div class="row items-center justify-between text-caption q-mb-xs">
                 <span class="text-grey-7">โต๊ะต้นทาง (จะเคลียร์ว่าง):</span>
                 <span class="text-weight-bold text-negative">
-                  {{ tableToTransfer.table.name }} ({{ tableToTransfer.orderCount }} รายการ • {{ formatPrice(tableToTransfer.totalAmount) }})
+                  {{ tableToTransfer.table.name }} ({{ tableToTransfer.orderCount }} รายการ •
+                  {{ formatPrice(tableToTransfer.totalAmount) }})
                 </span>
               </div>
               <div class="row items-center justify-between text-caption q-mb-xs">
                 <span class="text-grey-7">โต๊ะปลายทาง (โต๊ะรวม):</span>
                 <span class="text-weight-bold text-primary">
-                  {{ selectedTargetTable.table.name }} ({{ selectedTargetTable.orderCount }} รายการ • {{ formatPrice(selectedTargetTable.totalAmount) }})
+                  {{ selectedTargetTable.table.name }} ({{ selectedTargetTable.orderCount }} รายการ
+                  • {{ formatPrice(selectedTargetTable.totalAmount) }})
                 </span>
               </div>
               <q-separator class="q-my-xs" />
-              <div class="row items-center justify-between text-body2 text-weight-bolder text-amber-10">
+              <div
+                class="row items-center justify-between text-body2 text-weight-bolder text-amber-10"
+              >
                 <span>ยอดเงินรวมบิลใหม่:</span>
-                <span>{{ formatPrice(tableToTransfer.totalAmount + selectedTargetTable.totalAmount) }}</span>
+                <span>{{
+                  formatPrice(tableToTransfer.totalAmount + selectedTargetTable.totalAmount)
+                }}</span>
               </div>
               <div class="text-caption text-grey-6 text-right font-size-11 q-mt-xs">
                 รวมทั้งหมด {{ tableToTransfer.orderCount + selectedTargetTable.orderCount }} ออเดอร์
@@ -1161,7 +1176,9 @@
 
             <div
               class="confirm-warning-box q-pa-sm"
-              :class="selectedTargetIsOccupied ? 'bg-amber-1 text-amber-10' : 'bg-blue-1 text-primary'"
+              :class="
+                selectedTargetIsOccupied ? 'bg-amber-1 text-amber-10' : 'bg-blue-1 text-primary'
+              "
             >
               <div class="row items-start no-wrap">
                 <q-icon
@@ -1174,10 +1191,12 @@
                     เมื่อยืนยัน ออเดอร์ทั้งหมดจะถูกรวมเข้ากับ
                     <strong>{{ selectedTargetTable?.table.name }}</strong> และ
                     <strong>{{ tableToTransfer?.table.name }}</strong> จะถูกเคลียร์กลับเป็น
-                    <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที กรุณาตรวจสอบให้แน่ใจว่าลูกค้าย้ายมานั่งร่วมกันจริง
+                    <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที
+                    กรุณาตรวจสอบให้แน่ใจว่าลูกค้าย้ายมานั่งร่วมกันจริง
                   </template>
                   <template v-else>
-                    ออเดอร์ทั้งหมดจะย้ายไปที่ <strong>{{ selectedTargetTable?.table.name }}</strong> และ
+                    ออเดอร์ทั้งหมดจะย้ายไปที่
+                    <strong>{{ selectedTargetTable?.table.name }}</strong> และ
                     <strong>{{ tableToTransfer?.table.name }}</strong> จะกลับเป็นโต๊ะว่าง
                   </template>
                 </div>

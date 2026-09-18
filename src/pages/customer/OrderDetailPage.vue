@@ -226,7 +226,9 @@
           <div class="row items-center justify-between q-mb-sm">
             <div class="text-weight-bold text-subtitle2">
               รายการอาหารที่สั่ง
-              <span class="text-caption text-grey-6 q-ml-xs">({{ order.items.length }} รายการ)</span>
+              <span class="text-caption text-grey-6 q-ml-xs"
+                >({{ order.items.length }} รายการ)</span
+              >
             </div>
           </div>
 

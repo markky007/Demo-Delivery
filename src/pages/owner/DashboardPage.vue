@@ -1,46 +1,45 @@
 <template>
-  <q-page class="dashboard-page q-pa-md">
+  <q-page class="dashboard-page q-pa-lg">
     <div class="dashboard-container">
-      <!-- Welcome Greeting & Quick CTA Header -->
-      <div class="row items-center justify-between q-mb-lg header-section">
+      <!-- ─── Welcome Greeting & Quick CTA Header ───────────────────────── -->
+      <div class="row items-center justify-between q-mb-xl header-section">
         <div>
           <div class="row items-center q-gutter-sm">
-            <h5 class="q-my-none text-weight-bold page-heading">ภาพรวมร้านค้าวันนี้</h5>
-            <q-badge color="positive" rounded class="live-badge q-px-sm">
-              <span class="live-dot q-mr-xs"></span>
-              Live
-            </q-badge>
+            <h1 class="page-heading">ภาพรวมร้านค้าวันนี้</h1>
+            <div class="live-pill">
+              <span class="live-dot"></span>
+              LIVE
+            </div>
           </div>
-          <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
-            สรุปยอดขาย กราฟวิเคราะห์ออเดอร์ และสถานะคิวแบบเรียลไทม์
-            <span v-if="lastRefreshedText" class="text-grey-6">
-              • อัปเดตล่าสุด: {{ lastRefreshedText }}</span
-            >
+          <p class="page-subheading q-mb-none q-mt-xs">
+            สรุปยอดขาย การวิเคราะห์เชิงธุรกิจ และสถานะหน้าร้านแบบเรียลไทม์
+            <span v-if="lastRefreshedText" class="text-muted">
+              • อัปเดตล่าสุด: {{ lastRefreshedText }}
+            </span>
           </p>
         </div>
 
-        <div class="row items-center q-gutter-sm">
+        <div class="row items-center q-gutter-sm header-actions">
           <q-btn
-            outline
+            unelevated
             dense
-            rounded
             no-caps
-            color="grey-8"
+            color="surface-alt"
+            text-color="ink"
             icon="refresh"
             label="รีเฟรชข้อมูล"
             :loading="isRefreshing"
             @click="refreshData"
-            class="q-px-md refresh-btn"
+            class="pill-btn secondary-action-btn q-px-md"
           />
           <q-btn
             color="primary"
             unelevated
             no-caps
-            rounded
             icon="soup_kitchen"
             label="ดูคิวออเดอร์"
             to="/owner/queue"
-            class="queue-cta-btn"
+            class="pill-btn primary-action-btn q-px-lg"
           />
         </div>
       </div>
@@ -49,140 +48,93 @@
       <LoadingSkeleton v-if="isLoading" type="dashboard" />
 
       <template v-else>
-        <!-- Stats 4 Cards Grid -->
-        <div class="stats-grid q-mb-lg">
+        <!-- ─── 1. Stats 4 Cards Grid (Apple Style) ────────────────────────── -->
+        <div class="stats-grid q-mb-xl">
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-wrap--primary">
-              <q-icon name="payments" size="24px" color="primary" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">ยอดขายวันนี้</div>
-              <div class="stat-value text-primary font-mono">
-                {{ formatPrice(stats.totalSales) }}
+            <div class="stat-header row items-center justify-between">
+              <span class="stat-label">ยอดขายวันนี้</span>
+              <div class="stat-icon-wrap stat-icon-wrap--primary">
+                <q-icon name="payments" size="20px" color="primary" />
               </div>
             </div>
+            <div class="stat-value text-ink font-mono q-mt-sm">
+              {{ formatPrice(stats.totalSales) }}
+            </div>
+            <div class="stat-caption text-muted">รวมทุกออเดอร์ในวันนี้</div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-wrap--blue">
-              <q-icon name="receipt_long" size="24px" color="light-blue-8" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">จำนวนออเดอร์</div>
-              <div class="stat-value font-mono">
-                {{ stats.totalOrders }} <span class="stat-unit">รายการ</span>
+            <div class="stat-header row items-center justify-between">
+              <span class="stat-label">จำนวนออเดอร์</span>
+              <div class="stat-icon-wrap stat-icon-wrap--blue">
+                <q-icon name="receipt_long" size="20px" color="primary" />
               </div>
             </div>
+            <div class="stat-value text-ink font-mono q-mt-sm">
+              {{ stats.totalOrders }} <span class="stat-unit">รายการ</span>
+            </div>
+            <div class="stat-caption text-muted">ออเดอร์ที่เข้ามาทั้งหมด</div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-wrap--amber">
-              <q-icon name="restaurant" size="24px" color="amber-9" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">จำนวนจานที่ขาย</div>
-              <div class="stat-value font-mono">
-                {{ stats.itemsSold }} <span class="stat-unit">จาน</span>
+            <div class="stat-header row items-center justify-between">
+              <span class="stat-label">จำนวนจานที่ขาย</span>
+              <div class="stat-icon-wrap stat-icon-wrap--amber">
+                <q-icon name="restaurant" size="20px" color="amber-9" />
               </div>
             </div>
+            <div class="stat-value text-ink font-mono q-mt-sm">
+              {{ stats.itemsSold }} <span class="stat-unit">จาน</span>
+            </div>
+            <div class="stat-caption text-muted">ปริมาณเมนูที่จำหน่าย</div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-wrap--green">
-              <q-icon name="trending_up" size="24px" color="green-8" />
+            <div class="stat-header row items-center justify-between">
+              <span class="stat-label">ยอดเฉลี่ยต่อออเดอร์</span>
+              <div class="stat-icon-wrap stat-icon-wrap--green">
+                <q-icon name="trending_up" size="20px" color="positive" />
+              </div>
             </div>
-            <div class="stat-content">
-              <div class="stat-label">ยอดเฉลี่ยต่อออเดอร์</div>
-              <div class="stat-value font-mono">{{ formatPrice(stats.avgOrderValue) }}</div>
+            <div class="stat-value text-ink font-mono q-mt-sm">
+              {{ formatPrice(stats.avgOrderValue) }}
             </div>
+            <div class="stat-caption text-muted">Basket Size เฉลี่ย</div>
           </div>
         </div>
 
-        <!-- Current Queue Summary Section -->
-        <div class="section-card q-mb-lg">
-          <div class="row items-center justify-between q-mb-md">
-            <div>
-              <div class="text-weight-bold text-subtitle1">สถานะคิวในครัวขณะนี้</div>
-              <div class="text-caption text-grey-7">จำนวนออเดอร์ที่อยู่ในแต่ละขั้นตอน</div>
-            </div>
-            <q-btn
-              flat
-              dense
-              no-caps
-              rounded
-              size="sm"
-              color="primary"
-              label="ไปยังหน้าครัว →"
-              to="/owner/queue"
+        <!-- ─── 2. Operational & Settlement Pulse (Replaces Kitchen Queue) ──── -->
+        <div class="row q-col-gutter-lg q-mb-xl">
+          <div class="col-12 col-md-6">
+            <TableOccupancyCard
+              :occupied-tables="tableStats.occupiedTables"
+              :total-tables="tableStats.totalTables"
+              :avg-dwell-mins="tableStats.avgDwellMins"
+              :turnover-rate="tableStats.turnoverRate"
             />
           </div>
-
-          <div class="queue-stats-grid">
-            <!-- Queued -->
-            <div
-              class="queue-stat-card queue-stat-card--queued"
-              @click="$router.push('/owner/queue')"
-            >
-              <div class="row items-center justify-between">
-                <span class="queue-stat-label">รับออเดอร์แล้ว</span>
-                <q-icon name="schedule" size="20px" class="queue-stat-icon text-light-blue-8" />
-              </div>
-              <div class="queue-stat-count text-light-blue-8 font-mono">
-                {{ queueCounts.queued }}
-              </div>
-              <div class="text-caption text-grey-6">รอเริ่มทำอาหาร</div>
-            </div>
-
-            <!-- Preparing -->
-            <div
-              class="queue-stat-card queue-stat-card--preparing"
-              @click="$router.push('/owner/queue')"
-            >
-              <div class="row items-center justify-between">
-                <span class="queue-stat-label">กำลังเตรียม</span>
-                <q-icon name="soup_kitchen" size="20px" class="queue-stat-icon text-amber-9" />
-              </div>
-              <div class="queue-stat-count text-amber-9 font-mono">{{ queueCounts.preparing }}</div>
-              <div class="text-caption text-grey-6">กำลังปรุงในครัว</div>
-            </div>
-
-            <!-- Prepared -->
-            <div
-              class="queue-stat-card queue-stat-card--prepared"
-              @click="$router.push('/owner/queue')"
-            >
-              <div class="row items-center justify-between">
-                <span class="queue-stat-label">เตรียมเสร็จแล้ว</span>
-                <q-icon name="check_circle" size="20px" class="queue-stat-icon text-green-7" />
-              </div>
-              <div class="queue-stat-count text-green-7 font-mono">{{ queueCounts.prepared }}</div>
-              <div class="text-caption text-grey-6">พร้อมยกไปเสิร์ฟ</div>
-            </div>
-
-            <!-- Served -->
-            <div
-              class="queue-stat-card queue-stat-card--served"
-              @click="$router.push('/owner/queue')"
-            >
-              <div class="row items-center justify-between">
-                <span class="queue-stat-label">เสิร์ฟครบแล้ว</span>
-                <q-icon name="done_all" size="20px" class="queue-stat-icon text-blue-grey-6" />
-              </div>
-              <div class="queue-stat-count text-blue-grey-6 font-mono">
-                {{ queueCounts.served }}
-              </div>
-              <div class="text-caption text-grey-6">เสิร์ฟถึงโต๊ะแล้ว</div>
-            </div>
+          <div class="col-12 col-md-6">
+            <SettlementSummaryCard
+              :paid-sales="settlementStats.paidSales"
+              :pending-sales="settlementStats.pendingSales"
+              :paid-bills-count="settlementStats.paidBillsCount"
+              :total-bills-count="settlementStats.totalBillsCount"
+            />
           </div>
         </div>
 
-        <!-- 1. Primary Line Chart: Peak Time of Orders & Revenue -->
-        <div class="q-mb-lg">
+        <!-- ─── 3. Meal Period Rush Breakdown (New Insight Graph) ───────────── -->
+        <div class="q-mb-xl">
+          <MealPeriodChart :meal-periods="mealPeriods" />
+        </div>
+
+        <!-- ─── 4. Primary Peak Time Hourly Curve Chart ─────────────────────── -->
+        <div class="q-mb-xl">
           <HourlyPeakTimeChart :hourly-data="hourlyData" />
         </div>
 
-        <!-- 2. Secondary Analytics Row: Best Selling & Category Breakdown -->
-        <div class="row q-col-gutter-lg q-mb-lg">
+        <!-- ─── 5. Secondary Analytics Row: Best Selling & Category Breakdown ── -->
+        <div class="row q-col-gutter-lg q-mb-xl">
           <div class="col-12 col-md-6">
             <TopSellingItemsChart :items="topSellingItems" />
           </div>
@@ -191,8 +143,8 @@
           </div>
         </div>
 
-        <!-- 3. Tertiary Analytics Row: Dining Type & Kitchen Velocity -->
-        <div class="row q-col-gutter-lg q-mb-lg">
+        <!-- ─── 6. Tertiary Analytics Row: Dining Type & Kitchen Velocity ───── -->
+        <div class="row q-col-gutter-lg q-mb-xl">
           <div class="col-12 col-md-5">
             <DiningTypeCard
               :dine-in-orders="diningStats.dineInOrders"
@@ -219,7 +171,7 @@ import { ref, reactive, onMounted, onBeforeUnmount } from 'vue';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from 'src/services/supabase';
 import { formatPrice, formatTime } from 'src/utils/formatters';
-import { OrderStatus } from 'src/types/enums';
+import type { OrderStatus } from 'src/types/enums';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import HourlyPeakTimeChart, {
   type HourlyDataPoint,
@@ -232,6 +184,9 @@ import CategorySalesChart, {
 } from 'src/components/dashboard/CategorySalesChart.vue';
 import DiningTypeCard from 'src/components/dashboard/DiningTypeCard.vue';
 import KitchenVelocityCard from 'src/components/dashboard/KitchenVelocityCard.vue';
+import TableOccupancyCard from 'src/components/dashboard/TableOccupancyCard.vue';
+import SettlementSummaryCard from 'src/components/dashboard/SettlementSummaryCard.vue';
+import MealPeriodChart, { type MealPeriodItem } from 'src/components/dashboard/MealPeriodChart.vue';
 
 interface FetchedOrder {
   id: string;
@@ -283,13 +238,21 @@ const stats = reactive({
   avgOrderValue: 0,
 });
 
-const queueCounts = reactive({
-  queued: 0,
-  preparing: 0,
-  prepared: 0,
-  served: 0,
+const tableStats = reactive({
+  occupiedTables: 0,
+  totalTables: 0,
+  avgDwellMins: 0,
+  turnoverRate: 0,
 });
 
+const settlementStats = reactive({
+  paidSales: 0,
+  pendingSales: 0,
+  paidBillsCount: 0,
+  totalBillsCount: 0,
+});
+
+const mealPeriods = ref<MealPeriodItem[]>([]);
 const hourlyData = ref<HourlyDataPoint[]>([]);
 const topSellingItems = ref<TopMenuItem[]>([]);
 const categoryDistribution = ref<CategoryData[]>([]);
@@ -368,21 +331,161 @@ async function loadDashboardData() {
 
     const orderItems = (rawOrderItems as unknown as FetchedOrderItem[]) || null;
 
+    // 3. Fetch active tables & table sessions for occupancy metrics
+    const { data: rawTables } = await supabase
+      .from('tables')
+      .select('id, name, is_active')
+      .eq('is_active', true);
+
+    const dineInTables = (rawTables || []).filter(
+      (t) => !t.name.includes('กลับบ้าน') && !t.name.toLowerCase().includes('takeaway'),
+    );
+    const dineInTableIds = new Set(dineInTables.map((t) => t.id));
+    tableStats.totalTables = dineInTables.length;
+
+    const { data: rawSessions } = await supabase
+      .from('table_sessions')
+      .select('id, table_id, status, created_at, closed_at')
+      .gte('created_at', todayStart.toISOString());
+
+    if (rawSessions) {
+      const activeSessions = rawSessions.filter(
+        (s) => s.status === 'ACTIVE' && dineInTableIds.has(s.table_id),
+      );
+      tableStats.occupiedTables = activeSessions.length;
+
+      const closedSessions = rawSessions.filter(
+        (s) => s.closed_at && dineInTableIds.has(s.table_id),
+      );
+      if (closedSessions.length > 0) {
+        const totalDwell = closedSessions.reduce((sum, s) => {
+          const diff = (new Date(s.closed_at).getTime() - new Date(s.created_at).getTime()) / 60000;
+          return sum + Math.max(0, diff);
+        }, 0);
+        tableStats.avgDwellMins = Math.round(totalDwell / closedSessions.length);
+      } else {
+        tableStats.avgDwellMins = 0;
+      }
+
+      tableStats.turnoverRate =
+        tableStats.totalTables > 0 ? rawSessions.length / tableStats.totalTables : 0;
+    }
+
+    // 4. Fetch bills of today for settlement pulse
+    const { data: rawBills } = await supabase
+      .from('bills')
+      .select('id, total_amount, status, created_at, paid_at')
+      .gte('created_at', todayStart.toISOString());
+
     // Process Orders Data
     if (orders) {
       stats.totalOrders = orders.length;
-      // Include all orders of today (both those in the kitchen and served) to keep sales consistent across all dashboard cards & charts
       stats.totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
       stats.avgOrderValue =
         stats.totalOrders > 0 ? Math.round(stats.totalSales / stats.totalOrders) : 0;
 
-      queueCounts.queued = orders.filter((o) => o.status === OrderStatus.QUEUED).length;
-      queueCounts.preparing = orders.filter((o) => o.status === OrderStatus.PREPARING).length;
-      queueCounts.prepared = orders.filter((o) => o.status === OrderStatus.PREPARED).length;
-      queueCounts.served = orders.filter((o) => o.status === OrderStatus.SERVED).length;
+      // Settlement calculations
+      if (rawBills && rawBills.length > 0) {
+        const paid = rawBills.filter((b) => b.status === 'PAID');
+        settlementStats.paidBillsCount = paid.length;
+        settlementStats.totalBillsCount = rawBills.length;
+        settlementStats.paidSales = paid.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+        const pending = rawBills.filter((b) => b.status === 'PENDING');
+        const pendingAmountFromBills = pending.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+        settlementStats.pendingSales = Math.max(
+          pendingAmountFromBills,
+          Math.max(0, stats.totalSales - settlementStats.paidSales),
+        );
+      } else {
+        settlementStats.paidSales = stats.totalSales;
+        settlementStats.pendingSales = 0;
+        settlementStats.paidBillsCount = stats.totalOrders;
+        settlementStats.totalBillsCount = stats.totalOrders;
+      }
+
+      // ─── Compute Meal Periods Breakdown ───────────────────
+      type MealKey = 'morning' | 'lunch' | 'afternoon' | 'dinner' | 'late';
+      const periodBuckets: Record<MealKey, { sales: number; orders: number }> = {
+        morning: { sales: 0, orders: 0 },
+        lunch: { sales: 0, orders: 0 },
+        afternoon: { sales: 0, orders: 0 },
+        dinner: { sales: 0, orders: 0 },
+        late: { sales: 0, orders: 0 },
+      };
+
+      orders.forEach((ord) => {
+        const h = new Date(ord.created_at).getHours();
+        const amt = ord.total_amount || 0;
+
+        if (h >= 8 && h < 11) {
+          periodBuckets.morning.sales += amt;
+          periodBuckets.morning.orders += 1;
+        } else if (h >= 11 && h < 14) {
+          periodBuckets.lunch.sales += amt;
+          periodBuckets.lunch.orders += 1;
+        } else if (h >= 14 && h < 17) {
+          periodBuckets.afternoon.sales += amt;
+          periodBuckets.afternoon.orders += 1;
+        } else if (h >= 17 && h < 21) {
+          periodBuckets.dinner.sales += amt;
+          periodBuckets.dinner.orders += 1;
+        } else {
+          periodBuckets.late.sales += amt;
+          periodBuckets.late.orders += 1;
+        }
+      });
+
+      const totalPeriodSales = Math.max(1, stats.totalSales);
+      mealPeriods.value = [
+        {
+          id: 'morning',
+          name: 'มื้อเช้า',
+          timeRange: '08:00 - 11:00',
+          icon: '🌅',
+          sales: periodBuckets.morning.sales,
+          orderCount: periodBuckets.morning.orders,
+          percent: Math.round((periodBuckets.morning.sales / totalPeriodSales) * 100),
+        },
+        {
+          id: 'lunch',
+          name: 'มื้อกลางวัน (Rush)',
+          timeRange: '11:00 - 14:00',
+          icon: '☀️',
+          sales: periodBuckets.lunch.sales,
+          orderCount: periodBuckets.lunch.orders,
+          percent: Math.round((periodBuckets.lunch.sales / totalPeriodSales) * 100),
+        },
+        {
+          id: 'afternoon',
+          name: 'มื้อบ่าย / ของว่าง',
+          timeRange: '14:00 - 17:00',
+          icon: '☕',
+          sales: periodBuckets.afternoon.sales,
+          orderCount: periodBuckets.afternoon.orders,
+          percent: Math.round((periodBuckets.afternoon.sales / totalPeriodSales) * 100),
+        },
+        {
+          id: 'dinner',
+          name: 'มื้อเย็น (Rush)',
+          timeRange: '17:00 - 21:00',
+          icon: '🌙',
+          sales: periodBuckets.dinner.sales,
+          orderCount: periodBuckets.dinner.orders,
+          percent: Math.round((periodBuckets.dinner.sales / totalPeriodSales) * 100),
+        },
+        {
+          id: 'late',
+          name: 'มื้อดึก',
+          timeRange: '21:00 - 24:00',
+          icon: '🌃',
+          sales: periodBuckets.late.sales,
+          orderCount: periodBuckets.late.orders,
+          percent: Math.round((periodBuckets.late.sales / totalPeriodSales) * 100),
+        },
+      ];
 
       // ─── Compute Hourly Peak Time Buckets ─────────────────
-      // Initialize full range 08:00 to 22:00
       const hourMap = new Map<number, { orderCount: number; totalSales: number }>();
       for (let h = 8; h <= 22; h++) {
         hourMap.set(h, { orderCount: 0, totalSales: 0 });
@@ -481,15 +584,15 @@ async function loadDashboardData() {
       stats.totalOrders = 0;
       stats.totalSales = 0;
       stats.avgOrderValue = 0;
-      queueCounts.queued = 0;
-      queueCounts.preparing = 0;
-      queueCounts.prepared = 0;
-      queueCounts.served = 0;
+      settlementStats.paidSales = 0;
+      settlementStats.pendingSales = 0;
+      settlementStats.paidBillsCount = 0;
+      settlementStats.totalBillsCount = 0;
+      mealPeriods.value = [];
     }
 
     // Process Order Items Data (Best Sellers & Categories)
     if (orderItems) {
-      // Synchronize order items to only include items belonging to today's active orders
       const todayOrderIds = orders ? new Set(orders.map((o) => o.id)) : new Set<string>();
       const todayOrderItems = orderItems.filter((it) => todayOrderIds.has(it.order_id));
 
@@ -565,6 +668,28 @@ function setupRealtime() {
         void loadDashboardData();
       },
     )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'table_sessions',
+      },
+      () => {
+        void loadDashboardData();
+      },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'bills',
+      },
+      () => {
+        void loadDashboardData();
+      },
+    )
     .subscribe();
 }
 
@@ -583,39 +708,56 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dashboard-page {
-  background: var(--color-background);
+  background-color: #fafafc;
+  min-height: 100vh;
 }
 
 .dashboard-container {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
 }
 
 .header-section {
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
 .page-heading {
-  color: var(--color-text-primary);
-  line-height: 1.2;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #1d1d1f;
+  margin: 0;
+  letter-spacing: 0;
 }
 
-.live-badge {
+.page-subheading {
+  font-size: 15px;
+  color: #6e6e73;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.live-pill {
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
+  background: #e6f4ea;
+  color: #137333;
+  padding: 3px 10px;
+  border-radius: 980px;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
 }
 
 .live-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ffffff;
+  background: #137333;
   display: inline-block;
-  animation: pulse-dot 1.5s infinite;
+  animation: pulse-dot 1.8s infinite;
 }
 
 @keyframes pulse-dot {
@@ -624,7 +766,7 @@ onBeforeUnmount(() => {
     transform: scale(1);
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.3;
     transform: scale(1.3);
   }
   100% {
@@ -633,38 +775,72 @@ onBeforeUnmount(() => {
   }
 }
 
-.refresh-btn {
-  font-weight: 500;
-  background: #ffffff;
+.header-actions {
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.queue-cta-btn {
-  padding: 8px 20px;
+.pill-btn {
+  border-radius: 980px;
   font-weight: 600;
+  letter-spacing: 0;
+  transition: all 0.2s ease;
+}
+
+.secondary-action-btn {
+  background: #e8e8ed;
+  color: #1d1d1f;
+  border: 1px solid #d2d2d7;
+}
+
+.secondary-action-btn:hover {
+  background: #dedee3;
+}
+
+.primary-action-btn {
+  background: #0071e3 !important;
+  color: #ffffff !important;
+}
+
+.primary-action-btn:hover {
+  background: #0066cc !important;
 }
 
 /* Stats 4 Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
 }
 
 .stat-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 18px;
+  border-radius: 28px;
+  border: 1px solid #e8e8ed;
+  padding: 22px 24px;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: var(--shadow-subtle);
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6e6e73;
 }
 
 .stat-icon-wrap {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-md);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -672,7 +848,7 @@ onBeforeUnmount(() => {
 }
 
 .stat-icon-wrap--primary {
-  background: var(--color-primary-soft);
+  background: #e8f4fd;
 }
 
 .stat-icon-wrap--blue {
@@ -687,83 +863,29 @@ onBeforeUnmount(() => {
   background: #dcfce7;
 }
 
-.stat-label {
-  font-size: 0.84rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 2px;
-}
-
 .stat-value {
-  font-size: 1.45rem;
+  font-size: 1.85rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .stat-unit {
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: #6e6e73;
 }
 
-/* Section Card */
-.section-card {
-  background: #ffffff;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 20px;
-  box-shadow: var(--shadow-subtle);
+.stat-caption {
+  font-size: 0.75rem;
+  margin-top: 6px;
 }
 
-/* Queue Status Grid */
-.queue-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
+.text-ink {
+  color: #1d1d1f;
 }
 
-.queue-stat-card {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 16px;
-  cursor: pointer;
-  background: var(--color-surface-subtle);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.queue-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
-}
-
-.queue-stat-card--queued {
-  border-left: 4px solid var(--color-status-queued);
-}
-
-.queue-stat-card--preparing {
-  border-left: 4px solid var(--color-status-preparing);
-}
-
-.queue-stat-card--prepared {
-  border-left: 4px solid var(--color-status-prepared);
-}
-
-.queue-stat-card--served {
-  border-left: 4px solid var(--color-status-served);
-}
-
-.queue-stat-label {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.queue-stat-count {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 6px 0 2px;
-  line-height: 1;
+.text-muted {
+  color: #6e6e73;
 }
 </style>

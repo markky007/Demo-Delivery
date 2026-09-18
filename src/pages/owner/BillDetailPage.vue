@@ -22,7 +22,9 @@
             />
             <div>
               <div class="row items-center no-wrap">
-                <span class="text-h6 text-weight-bolder text-grey-9 table-title-header ellipsis">{{ tableName }}</span>
+                <span class="text-h6 text-weight-bolder text-grey-9 table-title-header ellipsis">{{
+                  tableName
+                }}</span>
                 <StatusBadge
                   :status="session.status"
                   mode="raw"
@@ -101,7 +103,9 @@
 
               <!-- Price Box -->
               <div class="payment-price-box q-pa-md q-mb-md text-center">
-                <div class="text-caption text-grey-7 text-weight-medium">ยอดรวมสุทธิที่ต้องชำระ</div>
+                <div class="text-caption text-grey-7 text-weight-medium">
+                  ยอดรวมสุทธิที่ต้องชำระ
+                </div>
                 <div class="text-h4 text-weight-bolder text-primary font-mono q-my-xs">
                   {{ formatPrice(billTotal) }}
                 </div>
@@ -115,7 +119,10 @@
               <!-- Control Actions for ACTIVE session -->
               <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm">
                 <!-- Case 1: No orders placed -->
-                <div v-if="orders.length === 0" class="empty-orders-action-card q-pa-sm text-center">
+                <div
+                  v-if="orders.length === 0"
+                  class="empty-orders-action-card q-pa-sm text-center"
+                >
                   <div class="text-caption text-grey-8 q-mb-xs">
                     ยังไม่มีรายการสั่งอาหาร สามารถยกเลิกการเปิดโต๊ะได้
                   </div>
@@ -137,7 +144,9 @@
                 <div v-else-if="!allServed" class="not-served-warning q-pa-sm">
                   <div class="row items-center">
                     <q-icon name="warning" size="18px" class="q-mr-xs text-amber-9" />
-                    <span class="text-weight-bold text-caption text-amber-10">ยังมีอาหารที่ยังไม่ได้เสิร์ฟ</span>
+                    <span class="text-weight-bold text-caption text-amber-10"
+                      >ยังมีอาหารที่ยังไม่ได้เสิร์ฟ</span
+                    >
                   </div>
                   <p class="q-mb-none text-caption text-grey-8 q-mt-xs">
                     ต้องเสิร์ฟอาหารให้ครบทุกรายการก่อน จึงจะสามารถรับชำระเงินและปิดโต๊ะได้
@@ -186,14 +195,20 @@
               </div>
 
               <!-- When session is CLOSED -->
-              <div v-else-if="session.status === 'CLOSED'" class="closed-banner q-pa-sm text-center">
+              <div
+                v-else-if="session.status === 'CLOSED'"
+                class="closed-banner q-pa-sm text-center"
+              >
                 <q-icon name="task_alt" size="24px" color="positive" class="q-mb-xs" />
                 <div class="text-weight-bold text-caption">โต๊ะนี้ปิดบิลเรียบร้อยแล้ว</div>
               </div>
             </div>
 
             <!-- 2. Quick Add Drinks Section (ACTIVE session only) -->
-            <div v-if="session.status === 'ACTIVE' && (!bill || bill.status !== 'PAID')" class="quick-add-card q-pa-md">
+            <div
+              v-if="session.status === 'ACTIVE' && (!bill || bill.status !== 'PAID')"
+              class="quick-add-card q-pa-md"
+            >
               <div class="row items-center justify-between q-mb-sm">
                 <div class="row items-center">
                   <q-icon name="local_bar" size="18px" color="primary" class="q-mr-xs" />
@@ -208,8 +223,12 @@
                   <div class="row items-center no-wrap col ellipsis q-mr-xs">
                     <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">🥤</div>
                     <div class="ellipsis">
-                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำอัดลมกระป๋อง</div>
-                      <div class="text-caption text-primary text-weight-bold font-mono">{{ formatPrice(20) }}</div>
+                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">
+                        น้ำอัดลมกระป๋อง
+                      </div>
+                      <div class="text-caption text-primary text-weight-bold font-mono">
+                        {{ formatPrice(20) }}
+                      </div>
                     </div>
                   </div>
                   <q-btn
@@ -233,7 +252,9 @@
                     <div class="drink-icon-wrap drink-icon-wrap--plain q-mr-sm">🫗</div>
                     <div class="ellipsis">
                       <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำเปล่า</div>
-                      <div class="text-caption text-primary text-weight-bold font-mono">{{ formatPrice(10) }}</div>
+                      <div class="text-caption text-primary text-weight-bold font-mono">
+                        {{ formatPrice(10) }}
+                      </div>
                     </div>
                   </div>
                   <q-btn
@@ -257,7 +278,9 @@
                     <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">💧</div>
                     <div class="ellipsis">
                       <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำขวด</div>
-                      <div class="text-caption text-primary text-weight-bold font-mono">{{ formatPrice(25) }}</div>
+                      <div class="text-caption text-primary text-weight-bold font-mono">
+                        {{ formatPrice(25) }}
+                      </div>
                     </div>
                   </div>
                   <q-btn
@@ -446,16 +469,10 @@
                         size="18px"
                         :color="targetTbl.isOccupied ? 'amber-9' : 'primary'"
                       />
-                      <span
-                        v-else-if="targetTbl.isTakeaway"
-                        class="target-table-takeaway-badge"
-                      >
+                      <span v-else-if="targetTbl.isTakeaway" class="target-table-takeaway-badge">
                         สั่งกลับบ้าน
                       </span>
-                      <span
-                        v-else-if="targetTbl.isOccupied"
-                        class="target-table-occupied-badge"
-                      >
+                      <span v-else-if="targetTbl.isOccupied" class="target-table-occupied-badge">
                         รวมโต๊ะ
                       </span>
                       <span v-else class="target-table-free-badge">ว่าง</span>
@@ -476,7 +493,7 @@
               <div
                 v-if="selectedTargetIsTakeaway"
                 class="q-mt-sm bg-orange-1 q-pa-sm border-radius-md"
-                style="border: 1px dashed #fdba74;"
+                style="border: 1px dashed #fdba74"
               >
                 <div class="text-caption text-weight-bold text-orange-10 q-mb-xs row items-center">
                   <q-icon name="person" size="16px" class="q-mr-xs" />
@@ -512,11 +529,14 @@
                   <div class="row items-center justify-between text-caption text-grey-8 q-mt-xs">
                     <span>{{ selectedTargetTable.table.name }} (โต๊ะปลายทาง):</span>
                     <span class="text-weight-bold">
-                      {{ selectedTargetTable.orderCount }} ออเดอร์ • {{ formatPrice(selectedTargetTable.totalAmount) }}
+                      {{ selectedTargetTable.orderCount }} ออเดอร์ •
+                      {{ formatPrice(selectedTargetTable.totalAmount) }}
                     </span>
                   </div>
                   <q-separator class="q-my-xs" />
-                  <div class="row items-center justify-between text-caption text-weight-bolder text-amber-10">
+                  <div
+                    class="row items-center justify-between text-caption text-weight-bolder text-amber-10"
+                  >
                     <span>รวมทั้งหมดที่ {{ selectedTargetTable.table.name }}:</span>
                     <span>
                       {{ orders.length + selectedTargetTable.orderCount }} ออเดอร์ •
@@ -535,7 +555,9 @@
 
               <!-- Notice Info Box -->
               <div
-                v-else-if="selectedTargetTableId && !selectedTargetIsTakeaway && !selectedTargetIsOccupied"
+                v-else-if="
+                  selectedTargetTableId && !selectedTargetIsTakeaway && !selectedTargetIsOccupied
+                "
                 class="transfer-hint-box q-pa-sm q-mt-md"
               >
                 <div class="row items-start no-wrap">
@@ -586,11 +608,18 @@
 
       <!-- Safety Confirmation Dialog to Prevent Accidental Moves/Merges -->
       <q-dialog v-model="showMergeConfirmDialog" persistent>
-        <q-card style="min-width: 360px; max-width: 440px; width: 100%" class="q-pa-md border-radius-lg no-print">
+        <q-card
+          style="min-width: 360px; max-width: 440px; width: 100%"
+          class="q-pa-md border-radius-lg no-print"
+        >
           <q-card-section class="text-center q-pb-none">
             <div
               class="confirm-icon-wrap q-mx-auto q-mb-sm"
-              :class="selectedTargetIsOccupied ? 'bg-amber-1 text-amber-9' : 'bg-primary-soft text-primary'"
+              :class="
+                selectedTargetIsOccupied
+                  ? 'bg-amber-1 text-amber-9'
+                  : 'bg-primary-soft text-primary'
+              "
             >
               <q-icon :name="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'" size="32px" />
             </div>
@@ -621,11 +650,14 @@
               <div class="row items-center justify-between text-caption q-mb-xs">
                 <span class="text-grey-7">โต๊ะปลายทาง (โต๊ะรวม):</span>
                 <span class="text-weight-bold text-primary">
-                  {{ selectedTargetTable.table.name }} ({{ selectedTargetTable.orderCount }} รายการ • {{ formatPrice(selectedTargetTable.totalAmount) }})
+                  {{ selectedTargetTable.table.name }} ({{ selectedTargetTable.orderCount }} รายการ
+                  • {{ formatPrice(selectedTargetTable.totalAmount) }})
                 </span>
               </div>
               <q-separator class="q-my-xs" />
-              <div class="row items-center justify-between text-body2 text-weight-bolder text-amber-10">
+              <div
+                class="row items-center justify-between text-body2 text-weight-bolder text-amber-10"
+              >
                 <span>ยอดเงินรวมบิลใหม่:</span>
                 <span>{{ formatPrice(billTotal + selectedTargetTable.totalAmount) }}</span>
               </div>
@@ -636,7 +668,9 @@
 
             <div
               class="confirm-warning-box q-pa-sm"
-              :class="selectedTargetIsOccupied ? 'bg-amber-1 text-amber-10' : 'bg-blue-1 text-primary'"
+              :class="
+                selectedTargetIsOccupied ? 'bg-amber-1 text-amber-10' : 'bg-blue-1 text-primary'
+              "
             >
               <div class="row items-start no-wrap">
                 <q-icon
@@ -649,10 +683,12 @@
                     เมื่อยืนยัน ออเดอร์ทั้งหมดจะถูกรวมเข้ากับ
                     <strong>{{ selectedTargetTable?.table.name }}</strong> และ
                     <strong>{{ tableName }}</strong> จะถูกเคลียร์กลับเป็น
-                    <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที กรุณาตรวจสอบให้แน่ใจว่าลูกค้าย้ายมานั่งร่วมกันจริง
+                    <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที
+                    กรุณาตรวจสอบให้แน่ใจว่าลูกค้าย้ายมานั่งร่วมกันจริง
                   </template>
                   <template v-else>
-                    ออเดอร์ทั้งหมดจะย้ายไปที่ <strong>{{ selectedTargetTable?.table.name }}</strong> และ
+                    ออเดอร์ทั้งหมดจะย้ายไปที่
+                    <strong>{{ selectedTargetTable?.table.name }}</strong> และ
                     <strong>{{ tableName }}</strong> จะกลับเป็นโต๊ะว่าง
                   </template>
                 </div>

@@ -184,10 +184,7 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
   const lower = name.toLowerCase();
 
   // Strip leading emoji or symbols and leading pluses/whitespace to avoid double icons
-  const cleanName =
-    name
-      .replace(/^([^\p{L}\p{N}]|\s)+/gu, '')
-      .trim() || name;
+  const cleanName = name.replace(/^([^\p{L}\p{N}]|\s)+/gu, '').trim() || name;
 
   // 1. Takeaway / packaging
   if (

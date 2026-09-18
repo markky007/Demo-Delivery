@@ -1,9 +1,6 @@
 import { ref, computed, type Ref } from 'vue';
 import type { MenuItem, OrderWithItems } from 'src/types/database';
-import {
-  extractFryRequirementsFromOrders,
-  type FryRequirement,
-} from 'src/utils/fryHelper';
+import { extractFryRequirementsFromOrders, type FryRequirement } from 'src/utils/fryHelper';
 
 export interface FryOrderGroup {
   orderId: string;

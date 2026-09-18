@@ -80,12 +80,12 @@
       </div>
     </div>
 
-    <!-- Chart Canvas Area -->
+    <!-- Chart Canvas Area (ECharts SVG) -->
     <div class="chart-wrapper q-mb-md">
-      <canvas ref="canvasRef"></canvas>
+      <VChart v-if="hasData" class="echarts-view" :option="chartOption" autoresize />
 
       <!-- Empty state overlay -->
-      <div v-if="!hasData" class="empty-overlay">
+      <div v-else class="empty-overlay">
         <q-icon name="event_busy" size="36px" color="grey-4" />
         <div class="text-caption text-muted q-mt-sm">ยังไม่มีข้อมูลยอดขายในช่วงเวลานี้</div>
       </div>
@@ -162,11 +162,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import Chart from 'chart.js/auto';
-import type { ChartConfiguration } from 'chart.js';
+import { ref, computed } from 'vue';
+import VChart from 'vue-echarts';
+import type { EChartsOption } from 'echarts';
 import { formatPrice } from 'src/utils/formatters';
 import type { DayOfWeekDataPoint } from 'src/services/salesAnalyticsService';
+import { APPLE_COLORS, FONT_FAMILY, appleTooltipBase } from 'src/utils/appleChartTheme';
 
 const props = defineProps<{
   dayOfWeekData: DayOfWeekDataPoint[];
@@ -177,9 +178,6 @@ const props = defineProps<{
     higherType: 'weekend' | 'weekday' | 'equal';
   };
 }>();
-
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
 
 const activeMetric = ref<'avg_sales' | 'total_sales' | 'orders'>('avg_sales');
 
@@ -193,191 +191,114 @@ const sortedDays = computed(() => {
   return [...props.dayOfWeekData].sort((a, b) => b.avgSales - a.avgSales);
 });
 
-function initOrUpdateChart() {
-  if (!canvasRef.value) return;
-  const ctx = canvasRef.value.getContext('2d');
-  if (!ctx) return;
-
+const chartOption = computed<EChartsOption>(() => {
   const labels = props.dayOfWeekData.map((d) => d.dayName);
 
   let dataValues: number[];
   let yAxisLabel: string;
-  let datasetLabel: string;
 
   if (activeMetric.value === 'avg_sales') {
     dataValues = props.dayOfWeekData.map((d) => d.avgSales);
     yAxisLabel = 'ยอดขายเฉลี่ย (บาท/วัน)';
-    datasetLabel = 'ยอดขายเฉลี่ยต่อวัน (฿)';
   } else if (activeMetric.value === 'total_sales') {
     dataValues = props.dayOfWeekData.map((d) => d.totalSales);
     yAxisLabel = 'ยอดขายรวมสะสม (บาท)';
-    datasetLabel = 'ยอดขายรวมสะสม (฿)';
   } else {
     dataValues = props.dayOfWeekData.map((d) => d.avgOrders);
-    yAxisLabel = 'จำนวนออเดอร์เฉลี่ย (รายการ/วัน)';
-    datasetLabel = 'จำนวนออเดอร์เฉลี่ยต่อวัน';
+    yAxisLabel = 'จำนวนออเดอร์เฉลี่ย';
   }
 
-  // Find max value to highlight peak bar
   const maxVal = Math.max(...dataValues, 1);
 
-  // Apple Monochromatic + Action Blue
-  const bgColors = dataValues.map((val) => {
-    if (val === maxVal && val > 0) {
-      return '#0071e3'; // Action Blue for peak day
-    }
-    return '#e8e8ed'; // Clean neutral for other days
-  });
-
-  const borderColors = dataValues.map((val) => {
-    if (val === maxVal && val > 0) {
-      return '#0071e3';
-    }
-    return '#d2d2d7';
-  });
-
-  const config: ChartConfiguration<'bar'> = {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: datasetLabel,
-          data: dataValues,
-          backgroundColor: bgColors,
-          borderColor: borderColors,
-          borderWidth: 1,
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.52,
-          categoryPercentage: 0.75,
-        },
-      ],
+  return {
+    renderer: 'svg',
+    animationDuration: 750,
+    animationEasing: 'cubicOut',
+    grid: {
+      top: 24,
+      left: 12,
+      right: 12,
+      bottom: 10,
+      containLabel: true,
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(29, 29, 31, 0.94)',
-          titleFont: {
-            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
-            size: 12,
-            weight: 'bold',
-          },
-          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
-          padding: 10,
-          cornerRadius: 8,
-          callbacks: {
-            title: (items) => {
-              const item = items[0];
-              if (!item) return '';
-              const day = props.dayOfWeekData[item.dataIndex];
-              return day
-                ? `${day.dayName}${day.daysCount > 0 ? ` (มียอดขาย ${day.daysCount} วัน)` : ' (ยังไม่มียอดขาย)'}`
-                : '';
-            },
-            label: (item) => {
-              const idx = item.dataIndex;
-              const day = props.dayOfWeekData[idx];
-              if (!day) return '';
-
-              if (activeMetric.value === 'avg_sales') {
-                return [
-                  ` ยอดขายเฉลี่ย: ${formatPrice(day.avgSales)}/วัน`,
-                  ` ยอดขายสะสม: ${formatPrice(day.totalSales)} (${day.salesPercentage}%)`,
-                  ` ออเดอร์เฉลี่ย: ${day.avgOrders} รายการ/วัน`,
-                ];
-              } else if (activeMetric.value === 'total_sales') {
-                return [
-                  ` ยอดขายสะสม: ${formatPrice(day.totalSales)} (${day.salesPercentage}%)`,
-                  ` ยอดขายเฉลี่ย: ${formatPrice(day.avgSales)}/วัน`,
-                  ` จำนวนบิลรวม: ${day.billCount} บิล`,
-                ];
-              } else {
-                return [
-                  ` ออเดอร์เฉลี่ย: ${day.avgOrders} รายการ/วัน`,
-                  ` ออเดอร์สะสม: ${day.totalOrders} รายการ`,
-                  ` ยอดขายเฉลี่ย: ${formatPrice(day.avgSales)}/วัน`,
-                ];
-              }
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            font: {
-              family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
-              size: 12,
-              weight: 'bold',
-            },
-            color: '#1d1d1f',
-          },
-        },
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: '#f5f5f7',
-          },
-          ticks: {
-            font: { family: 'Inter, sans-serif', size: 11 },
-            color: '#86868b',
-            callback: (val) => {
-              if (activeMetric.value === 'orders') {
-                return `${val} รายการ`;
-              }
-              return typeof val === 'number' && val >= 1000
-                ? `฿${(val / 1000).toFixed(0)}k`
-                : `฿${val}`;
-            },
-          },
-          title: {
-            display: true,
-            text: yAxisLabel,
-            font: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
-            color: '#86868b',
-          },
-        },
+    tooltip: {
+      ...appleTooltipBase,
+      trigger: 'item',
+      formatter: (params: unknown) => {
+        const p = params as { dataIndex: number; name: string; value: number };
+        const day = props.dayOfWeekData[p.dataIndex];
+        if (!day) return '';
+        const dayTitle = `${day.dayName}${day.daysCount > 0 ? ` (มียอดขาย ${day.daysCount} วัน)` : ''}`;
+        return `<div style="font-family:${FONT_FAMILY}">
+          <div style="font-weight:600;color:#1D1D1F;margin-bottom:4px;">${dayTitle}</div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;">
+            <span>ยอดขายเฉลี่ย:</span>
+            <strong style="color:#0071E3;font-variant-numeric:tabular-nums;">${formatPrice(day.avgSales)}/วัน</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;margin-top:2px;">
+            <span>ยอดขายสะสม:</span>
+            <strong style="color:#1D1D1F;font-variant-numeric:tabular-nums;">${formatPrice(day.totalSales)} (${day.salesPercentage}%)</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;margin-top:2px;">
+            <span>ออเดอร์เฉลี่ย:</span>
+            <strong style="color:#1D1D1F;font-variant-numeric:tabular-nums;">${day.avgOrders} รายการ/วัน</strong>
+          </div>
+        </div>`;
       },
     },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLine: { lineStyle: { color: APPLE_COLORS.hairline } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: APPLE_COLORS.ink,
+        fontFamily: FONT_FAMILY,
+        fontSize: 11,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      name: yAxisLabel,
+      nameTextStyle: {
+        color: APPLE_COLORS.muted,
+        fontFamily: FONT_FAMILY,
+        fontSize: 11,
+        align: 'left',
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#F5F5F7',
+        },
+      },
+      axisLabel: {
+        formatter: (val: number) => {
+          if (activeMetric.value === 'orders') return `${val}`;
+          return `฿${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`;
+        },
+        color: APPLE_COLORS.mutedLight,
+        fontFamily: FONT_FAMILY,
+        fontSize: 11,
+      },
+    },
+    series: [
+      {
+        name: yAxisLabel,
+        type: 'bar',
+        data: dataValues.map((val) => {
+          const isPeak = val === maxVal && val > 0;
+          return {
+            value: val,
+            itemStyle: {
+              color: isPeak ? APPLE_COLORS.primary : APPLE_COLORS.hairline,
+              borderRadius: [8, 8, 0, 0],
+            },
+          };
+        }),
+        barWidth: 26,
+      },
+    ],
   };
-
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(ctx, config);
-}
-
-watch(
-  () => [props.dayOfWeekData, activeMetric.value],
-  () => {
-    void nextTick(() => {
-      initOrUpdateChart();
-    });
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  void nextTick(() => {
-    initOrUpdateChart();
-  });
-});
-
-onBeforeUnmount(() => {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
 });
 </script>
 
@@ -392,10 +313,6 @@ onBeforeUnmount(() => {
 
 .text-ink {
   color: #1d1d1f;
-}
-
-.text-body {
-  color: #414143;
 }
 
 .text-muted {
@@ -428,12 +345,12 @@ onBeforeUnmount(() => {
   background: #fafafc;
   border: 1px solid #e8e8ed;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 10px 16px;
 }
 
 .comp-icon-box {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 980px;
   background: #f0f6ff;
   display: flex;
@@ -445,6 +362,11 @@ onBeforeUnmount(() => {
   position: relative;
   height: 270px;
   width: 100%;
+}
+
+.echarts-view {
+  width: 100%;
+  height: 100%;
 }
 
 .empty-overlay {
@@ -461,7 +383,7 @@ onBeforeUnmount(() => {
 /* Day Ranking Grid */
 .day-ranking-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 10px;
 }
 
@@ -472,52 +394,49 @@ onBeforeUnmount(() => {
   padding: 10px 12px;
   transition:
     transform 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.15s ease;
 }
 
 .day-card:hover {
   transform: translateY(-2px);
   border-color: #0071e3;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .day-card--best {
-  border-left: 3px solid #0071e3;
+  border-color: #0071e3;
   background: #fbfdff;
 }
 
 .day-card--slow {
-  border-left: 3px solid #86868b;
+  background: #fafafc;
 }
 
 .day-badge-name {
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   color: #1d1d1f;
 }
 
 .rank-tag {
   font-size: 0.68rem;
-  padding: 2px 6px;
+  padding: 1px 6px;
   border-radius: 980px;
   font-weight: 600;
 }
 
 .rank-tag--best {
-  background: #f0f6ff;
-  color: #0071e3;
+  background: #0071e3;
+  color: #fff;
 }
 
 .rank-tag--slow {
-  background: #f5f5f7;
-  color: #86868b;
+  background: #e8e8ed;
+  color: #6e6e73;
 }
 
 .day-stat-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 0.78rem;
+  justify-content: space-between;
   margin-top: 2px;
 }
 

@@ -1,9 +1,6 @@
 import { ref, computed, type Ref } from 'vue';
 import type { MenuItem, MenuCategory, OrderWithItems } from 'src/types/database';
-import {
-  extractRiceRequirementsFromOrders,
-  type RiceRequirement,
-} from 'src/utils/riceHelper';
+import { extractRiceRequirementsFromOrders, type RiceRequirement } from 'src/utils/riceHelper';
 
 export interface RiceOrderGroup {
   orderId: string;
@@ -44,11 +41,7 @@ export function useRiceStation(
   }
 
   const allRiceRequirements = computed<RiceRequirement[]>(() => {
-    return extractRiceRequirementsFromOrders(
-      orders.value,
-      menuItemsMap.value,
-      categoriesMap.value,
-    );
+    return extractRiceRequirementsFromOrders(orders.value, menuItemsMap.value, categoriesMap.value);
   });
 
   const pendingRiceRequirements = computed(() =>

@@ -8,7 +8,8 @@
     local('LINE Seed Sans TH Regular'),
     local('LINESeedSansTH-Regular'),
     url('/fonts/LINESeedSansTH_A_Rg.otf') format('opentype'),
-    url('https://cdn.jsdelivr.net/npm/@fontpkg/line-seed-sans-th-app@1.0.1/LINESeedSansTH_A_Rg.otf') format('opentype');
+    url('https://cdn.jsdelivr.net/npm/@fontpkg/line-seed-sans-th-app@1.0.1/LINESeedSansTH_A_Rg.otf')
+      format('opentype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -20,7 +21,8 @@
     local('LINE Seed Sans TH Bold'),
     local('LINESeedSansTH-Bold'),
     url('/fonts/LINESeedSansTH_A_Bd.otf') format('opentype'),
-    url('https://cdn.jsdelivr.net/npm/@fontpkg/line-seed-sans-th-app@1.0.1/LINESeedSansTH_A_Bd.otf') format('opentype');
+    url('https://cdn.jsdelivr.net/npm/@fontpkg/line-seed-sans-th-app@1.0.1/LINESeedSansTH_A_Bd.otf')
+      format('opentype');
   font-weight: 600 700 800;
   font-style: normal;
   font-display: swap;
@@ -31,9 +33,9 @@
 :root {
   /* Typography Families */
   --app-font-family:
-    'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Sukhumvit Set', sans-serif;
-  --app-font-mono:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    'Inter', 'LINE Seed Sans TH', 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Sukhumvit Set', sans-serif;
+  --app-font-mono: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --app-font-code:
     'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -398,7 +400,9 @@ body {
 .font-mono {
   font-family: var(--app-font-mono) !important;
   font-variant-numeric: tabular-nums !important;
-  font-feature-settings: 'tnum' 1, 'cv05' 1 !important;
+  font-feature-settings:
+    'tnum' 1,
+    'cv05' 1 !important;
   letter-spacing: -0.01em;
 }
 
@@ -408,7 +412,9 @@ body {
 
 .tabular-nums {
   font-variant-numeric: tabular-nums !important;
-  font-feature-settings: 'tnum' 1, 'cv05' 1 !important;
+  font-feature-settings:
+    'tnum' 1,
+    'cv05' 1 !important;
 }
 
 /* Clean Unified Numeric Typography across tables, stats, receipts */
@@ -423,7 +429,9 @@ body {
 .receipt-timer-chip {
   font-family: var(--app-font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1, 'cv05' 1;
+  font-feature-settings:
+    'tnum' 1,
+    'cv05' 1;
 }
 
 .type-display {

@@ -100,8 +100,7 @@
             </q-badge>
             <span
               v-if="
-                orderGroup.customerName &&
-                !orderGroup.tableName.includes(orderGroup.customerName)
+                orderGroup.customerName && !orderGroup.tableName.includes(orderGroup.customerName)
               "
               class="text-caption text-muted"
             >

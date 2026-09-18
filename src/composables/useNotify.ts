@@ -15,8 +15,7 @@ export type NotifyOptions = Partial<Omit<NotificationPayload, 'message' | 'type'
 };
 
 export type NotifyInput =
-  | string
-  | (Partial<Omit<NotificationPayload, 'type'>> & { message: string });
+  string | (Partial<Omit<NotificationPayload, 'type'>> & { message: string });
 
 export function useNotify() {
   const store = useNotificationStore();

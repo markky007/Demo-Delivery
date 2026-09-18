@@ -185,11 +185,7 @@
         </div>
 
         <div class="row items-center q-gutter-x-sm no-wrap">
-          <q-icon
-            name="volume_mute"
-            size="18px"
-            :color="soundEnabled ? 'grey-7' : 'grey-5'"
-          />
+          <q-icon name="volume_mute" size="18px" :color="soundEnabled ? 'grey-7' : 'grey-5'" />
           <q-slider
             v-model="soundVolume"
             :min="0"
@@ -200,11 +196,7 @@
             class="col apple-slider"
             @change="onVolumeChange"
           />
-          <q-icon
-            name="volume_up"
-            size="18px"
-            :color="soundEnabled ? 'grey-7' : 'grey-5'"
-          />
+          <q-icon name="volume_up" size="18px" :color="soundEnabled ? 'grey-7' : 'grey-5'" />
         </div>
 
         <!-- Volume Presets -->

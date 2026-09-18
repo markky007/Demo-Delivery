@@ -183,7 +183,12 @@ import { useSessionStore } from 'src/stores/sessionStore';
 import { useNotify } from 'src/composables/useNotify';
 import { createOrder } from 'src/services/orderService';
 import { isTakeawayName } from 'src/services/tableService';
-import { formatPrice, formatQueueNumber, getVisibleOptions, isTakeawayOption } from 'src/utils/formatters';
+import {
+  formatPrice,
+  formatQueueNumber,
+  getVisibleOptions,
+  isTakeawayOption,
+} from 'src/utils/formatters';
 import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
@@ -271,9 +276,7 @@ async function confirmOrder() {
       items,
     });
 
-    const qNum = createdOrder?.queue_number
-      ? formatQueueNumber(createdOrder.queue_number)
-      : '';
+    const qNum = createdOrder?.queue_number ? formatQueueNumber(createdOrder.queue_number) : '';
 
     cartStore.clearCart();
     notifySuccess(`${itemCount} รายการอาหาร • ยอดรวม ${formatPrice(orderTotal)}`, {

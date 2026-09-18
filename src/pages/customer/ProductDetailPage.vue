@@ -338,7 +338,6 @@ function isOptionEffectivelyAvailable(
   return isOptionAvailable(opt, menuStore.items);
 }
 
-
 onMounted(async () => {
   if (!menuStore.isLoaded) {
     await menuStore.loadMenu();

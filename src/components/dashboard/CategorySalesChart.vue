@@ -1,27 +1,27 @@
 <template>
-  <div class="chart-card">
+  <div class="apple-card">
     <div class="row items-center justify-between q-mb-md">
       <div class="row items-center q-gutter-xs">
-        <q-icon name="pie_chart" color="teal-8" size="22px" />
-        <span class="text-subtitle1 text-weight-bold">สัดส่วนยอดขายตามหมวดหมู่</span>
+        <q-icon name="pie_chart" color="primary" size="22px" />
+        <span class="card-title">สัดส่วนยอดขายตามหมวดหมู่</span>
       </div>
-      <div class="text-caption text-grey-7">{{ categories.length }} หมวดหมู่</div>
+      <div class="card-subtitle">{{ categories.length }} หมวดหมู่</div>
     </div>
 
     <!-- Empty State -->
     <div v-if="categories.length === 0" class="empty-box">
       <q-icon name="category" size="36px" color="grey-4" />
-      <div class="text-caption text-grey-6 q-mt-xs">ยังไม่มีข้อมูลหมวดหมู่อาหาร</div>
+      <div class="text-caption text-muted q-mt-xs">ยังไม่มีข้อมูลหมวดหมู่อาหาร</div>
     </div>
 
     <!-- Chart & Custom Legend -->
     <div v-else class="row items-center q-col-gutter-md">
       <div class="col-12 col-sm-6">
         <div class="chart-wrapper">
-          <canvas ref="canvasRef"></canvas>
+          <VChart class="echarts-view" :option="chartOption" autoresize />
           <div class="donut-center-text">
-            <div class="text-caption text-grey-6">ยอดขายรวม</div>
-            <div class="text-weight-bold text-dark font-mono">{{ formatPrice(totalSales) }}</div>
+            <div class="donut-label text-muted">ยอดขายรวม</div>
+            <div class="donut-value font-mono text-ink">{{ formatPrice(totalSales) }}</div>
           </div>
         </div>
       </div>
@@ -38,15 +38,13 @@
                 class="legend-dot"
                 :style="{ backgroundColor: palette[idx % palette.length] }"
               ></span>
-              <span class="text-caption text-weight-medium text-dark ellipsis">{{ cat.name }}</span>
+              <span class="legend-name text-ink ellipsis">{{ cat.name }}</span>
             </div>
-            <div class="row items-center q-gutter-xs flex-shrink-0 text-right">
-              <span class="text-caption text-weight-bold text-dark font-mono">
+            <div class="row items-center q-gutter-xs flex-shrink-0 text-right font-mono">
+              <span class="text-caption text-weight-bold text-ink">
                 {{ formatPrice(cat.sales) }}
               </span>
-              <span class="text-caption text-grey-6 font-mono">
-                ({{ getPercent(cat.sales) }}%)
-              </span>
+              <span class="text-caption text-muted"> ({{ getPercent(cat.sales) }}%) </span>
             </div>
           </div>
         </div>
@@ -56,10 +54,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import Chart from 'chart.js/auto';
-import type { ChartConfiguration } from 'chart.js';
+import { computed } from 'vue';
+import VChart from 'vue-echarts';
+import type { EChartsOption } from 'echarts';
 import { formatPrice } from 'src/utils/formatters';
+import { APPLE_PALETTE, FONT_FAMILY, appleTooltipBase } from 'src/utils/appleChartTheme';
 
 export interface CategoryData {
   name: string;
@@ -71,19 +70,7 @@ const props = defineProps<{
   categories: CategoryData[];
 }>();
 
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
-
-const palette = [
-  '#0288D1', // Cyan Blue
-  '#00897B', // Teal
-  '#F57C00', // Amber / Orange
-  '#7B1FA2', // Purple
-  '#E91E63', // Pink
-  '#43A047', // Green
-  '#5C6BC0', // Indigo
-  '#8D6E63', // Brown
-];
+const palette = APPLE_PALETTE;
 
 const totalSales = computed(() => {
   return props.categories.reduce((sum, c) => sum + c.sales, 0);
@@ -94,107 +81,96 @@ function getPercent(sales: number): string {
   return ((sales / totalSales.value) * 100).toFixed(1);
 }
 
-function initOrUpdateChart() {
-  if (!canvasRef.value) return;
-  if (!props.categories || props.categories.length === 0) return;
-
-  const ctx = canvasRef.value.getContext('2d');
-  if (!ctx) return;
-
-  const labels = props.categories.map((c) => c.name);
-  const data = props.categories.map((c) => c.sales);
-  const colors = props.categories.map((_, i) => palette[i % palette.length]);
-
-  const config: ChartConfiguration<'doughnut'> = {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: colors,
-          borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 4,
-        },
-      ],
+const chartOption = computed<EChartsOption>(() => {
+  const data = props.categories.map((c, i) => ({
+    name: c.name,
+    value: c.sales,
+    itemStyle: {
+      color: palette[i % palette.length] ?? '#0071E3',
+      borderRadius: 6,
+      borderColor: '#ffffff',
+      borderWidth: 2,
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '72%',
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 12, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 11 },
-          padding: 8,
-          cornerRadius: 6,
-          callbacks: {
-            label: (context) => {
-              const val = Number(context.raw);
-              const pct = getPercent(val);
-              return ` ยอดขาย: ${formatPrice(val)} (${pct}%)`;
-            },
-          },
-        },
+  }));
+
+  return {
+    renderer: 'svg',
+    animationDuration: 750,
+    animationEasing: 'cubicOut',
+    tooltip: {
+      ...appleTooltipBase,
+      trigger: 'item',
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number; percent: number; color: string };
+        const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>`;
+        return `<div style="font-family:${FONT_FAMILY}">
+          <div style="font-weight:600;color:#1D1D1F;margin-bottom:4px;">${dot}${p.name}</div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;">
+            <span>ยอดขาย:</span>
+            <strong style="color:#1D1D1F;font-variant-numeric:tabular-nums;">${formatPrice(p.value)}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:16px;color:#6E6E73;font-size:12px;margin-top:2px;">
+            <span>สัดส่วน:</span>
+            <strong style="color:#0071E3;font-variant-numeric:tabular-nums;">${p.percent}%</strong>
+          </div>
+        </div>`;
       },
     },
+    series: [
+      {
+        name: 'สัดส่วนหมวดหมู่',
+        type: 'pie',
+        radius: ['68%', '88%'],
+        center: ['50%', '50%'],
+        avoidLabelOverlap: false,
+        label: { show: false },
+        emphasis: {
+          scale: true,
+          scaleSize: 5,
+        },
+        data,
+      },
+    ],
   };
-
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(ctx, config);
-}
-
-watch(
-  () => props.categories,
-  () => {
-    void nextTick(() => {
-      initOrUpdateChart();
-    });
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  void nextTick(() => {
-    initOrUpdateChart();
-  });
-});
-
-onBeforeUnmount(() => {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
 });
 </script>
 
 <style scoped>
-.chart-card {
-  background: #ffffff;
-  border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  padding: 20px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.05));
+.apple-card {
+  background: var(--colors-surface, #ffffff);
+  border-radius: 28px;
+  border: 1px solid var(--colors-hairline, #e8e8ed);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 24px;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--colors-ink, #1d1d1f);
+  line-height: 1.3;
+}
+
+.card-subtitle {
+  font-size: 0.8125rem;
+  color: var(--colors-muted, #6e6e73);
+}
+
 .chart-wrapper {
   position: relative;
-  height: 180px;
+  height: 190px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.echarts-view {
+  width: 100%;
+  height: 100%;
 }
 
 .donut-center-text {
@@ -206,8 +182,19 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+.donut-label {
+  font-size: 0.72rem;
+  margin-bottom: 2px;
+}
+
+.donut-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
 .empty-box {
-  min-height: 180px;
+  min-height: 190px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -218,23 +205,36 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 190px;
+  max-height: 200px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .legend-item {
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #fafafc;
+  border: 1px solid #f0f0f4;
   font-size: 0.82rem;
 }
 
+.legend-name {
+  font-weight: 500;
+}
+
 .legend-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+}
+
+.text-ink {
+  color: #1d1d1f;
+}
+
+.text-muted {
+  color: #6e6e73;
 }
 </style>

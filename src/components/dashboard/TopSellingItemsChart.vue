@@ -1,27 +1,27 @@
 <template>
-  <div class="chart-card">
+  <div class="apple-card">
     <div class="row items-center justify-between q-mb-md">
       <div class="row items-center q-gutter-xs">
         <q-icon name="military_tech" color="amber-9" size="22px" />
-        <span class="text-subtitle1 text-weight-bold">5 อันดับเมนูขายดีประจำวัน</span>
+        <span class="card-title">5 อันดับเมนูขายดีประจำวัน</span>
       </div>
-      <div class="text-caption text-grey-7">เรียงตามจำนวนจาน</div>
+      <div class="card-subtitle">เรียงตามจำนวนจาน</div>
     </div>
 
     <!-- Empty State -->
     <div v-if="items.length === 0" class="empty-box">
       <q-icon name="lunch_dining" size="36px" color="grey-4" />
-      <div class="text-caption text-grey-6 q-mt-xs">ยังไม่มีข้อมูลยอดขายเมนู</div>
+      <div class="text-caption text-muted q-mt-xs">ยังไม่มีข้อมูลยอดขายเมนู</div>
     </div>
 
     <!-- Chart & List Container -->
-    <div v-else>
+    <div v-else class="content-body">
       <div class="chart-wrapper">
-        <canvas ref="canvasRef"></canvas>
+        <VChart class="echarts-view" :option="chartOption" autoresize />
       </div>
 
       <!-- Quick Ranking Badges List -->
-      <div class="ranking-list q-mt-sm">
+      <div class="ranking-list q-mt-md">
         <div
           v-for="(item, index) in items"
           :key="item.name"
@@ -29,13 +29,11 @@
         >
           <div class="row items-center q-gutter-sm ellipsis col">
             <span class="rank-badge" :class="'rank-badge--' + (index + 1)">#{{ index + 1 }}</span>
-            <span class="text-weight-medium text-dark ellipsis">{{ item.name }}</span>
+            <span class="item-name text-ink ellipsis">{{ item.name }}</span>
           </div>
-          <div class="row items-center q-gutter-sm text-right flex-shrink-0">
-            <span class="text-weight-bold text-dark font-mono">{{ item.quantity }} จาน</span>
-            <span class="text-caption text-grey-7 font-mono"
-              >({{ formatPrice(item.subtotal) }})</span
-            >
+          <div class="row items-center q-gutter-sm text-right flex-shrink-0 font-mono">
+            <span class="text-weight-bold text-ink">{{ item.quantity }} จาน</span>
+            <span class="text-caption text-muted">({{ formatPrice(item.subtotal) }})</span>
           </div>
         </div>
       </div>
@@ -44,10 +42,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import Chart from 'chart.js/auto';
-import type { ChartConfiguration } from 'chart.js';
+import { computed } from 'vue';
+import VChart from 'vue-echarts';
+import type { EChartsOption } from 'echarts';
 import { formatPrice } from 'src/utils/formatters';
+import {
+  APPLE_PALETTE,
+  APPLE_COLORS,
+  FONT_FAMILY,
+  appleTooltipBase,
+} from 'src/utils/appleChartTheme';
 
 export interface TopMenuItem {
   name: string;
@@ -59,145 +63,122 @@ const props = defineProps<{
   items: TopMenuItem[];
 }>();
 
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
-
-const barColors = [
-  '#1976D2', // 1st - Primary Blue
-  '#0288D1', // 2nd - Cyan Blue
-  '#00897B', // 3rd - Teal
-  '#F57C00', // 4th - Orange
-  '#7B1FA2', // 5th - Purple
-];
-
-function initOrUpdateChart() {
-  if (!canvasRef.value) return;
-  if (!props.items || props.items.length === 0) return;
-
-  const ctx = canvasRef.value.getContext('2d');
-  if (!ctx) return;
-
-  // Horizontal bar needs reverse so #1 is at top
-  const sorted = [...props.items].slice(0, 5);
-  const labels = sorted.map((it) => it.name);
+const chartOption = computed<EChartsOption>(() => {
+  const sorted = [...props.items].slice(0, 5).reverse(); // Reverse for horizontal bar from top to bottom
+  const labels = sorted.map((it) => (it.name.length > 18 ? it.name.slice(0, 16) + '...' : it.name));
   const quantities = sorted.map((it) => it.quantity);
   const subtotals = sorted.map((it) => it.subtotal);
 
-  const config: ChartConfiguration<'bar'> = {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'จำนวนที่ขาย (จาน)',
-          data: quantities,
-          backgroundColor: barColors.slice(0, sorted.length),
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.65,
-        },
-      ],
+  return {
+    renderer: 'svg',
+    animationDuration: 750,
+    animationEasing: 'cubicOut',
+    grid: {
+      top: 10,
+      left: 8,
+      right: 24,
+      bottom: 10,
+      containLabel: true,
     },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 12, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 11 },
-          padding: 8,
-          cornerRadius: 6,
-          callbacks: {
-            label: (context) => {
-              const idx = context.dataIndex;
-              const qty = quantities[idx];
-              const price = formatPrice(subtotals[idx] ?? 0);
-              return ` ${qty} จาน (รวม ${price})`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: {
-            color: '#f1f5f9',
-          },
-          ticks: {
-            precision: 0,
-            font: { family: 'Prompt, sans-serif', size: 10 },
-            color: '#64748b',
-          },
-        },
-        y: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#334155',
-            callback: function (val: string | number) {
-              const label = this.getLabelForValue(Number(val));
-              return label.length > 18 ? label.slice(0, 16) + '...' : label;
-            },
-          },
-        },
+    tooltip: {
+      ...appleTooltipBase,
+      trigger: 'item',
+      formatter: (params: unknown) => {
+        const p = params as { dataIndex: number; name: string; value: number };
+        const idx = p.dataIndex;
+        const rawName = sorted[idx]?.name || p.name;
+        const qty = sorted[idx]?.quantity || p.value;
+        const total = formatPrice(subtotals[idx] ?? 0);
+        return `<div style="font-family:${FONT_FAMILY}">
+          <div style="font-weight:600;color:#1D1D1F;margin-bottom:4px;">${rawName}</div>
+          <div style="display:flex;justify-content:space-between;gap:14px;color:#6E6E73;font-size:12px;">
+            <span>ปริมาณที่ขาย:</span>
+            <strong style="color:#0071E3;font-variant-numeric:tabular-nums;">${qty} จาน</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:14px;color:#6E6E73;font-size:12px;margin-top:2px;">
+            <span>ยอดขายรวม:</span>
+            <strong style="color:#1D1D1F;font-variant-numeric:tabular-nums;">${total}</strong>
+          </div>
+        </div>`;
       },
     },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: {
+        lineStyle: {
+          color: '#F5F5F7',
+        },
+      },
+      axisLabel: {
+        color: APPLE_COLORS.mutedLight,
+        fontFamily: FONT_FAMILY,
+        fontSize: 10,
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: labels,
+      axisLine: { lineStyle: { color: APPLE_COLORS.hairline } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: APPLE_COLORS.ink,
+        fontFamily: FONT_FAMILY,
+        fontSize: 11,
+      },
+    },
+    series: [
+      {
+        name: 'จำนวนจาน',
+        type: 'bar',
+        data: quantities.map((qty, i) => ({
+          value: qty,
+          itemStyle: {
+            color: APPLE_PALETTE[i % APPLE_PALETTE.length] ?? APPLE_COLORS.primary,
+            borderRadius: [0, 980, 980, 0], // Pill shaped right ends
+          },
+        })),
+        barWidth: 14,
+      },
+    ],
   };
-
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(ctx, config);
-}
-
-watch(
-  () => props.items,
-  () => {
-    void nextTick(() => {
-      initOrUpdateChart();
-    });
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  void nextTick(() => {
-    initOrUpdateChart();
-  });
-});
-
-onBeforeUnmount(() => {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
 });
 </script>
 
 <style scoped>
-.chart-card {
-  background: #ffffff;
-  border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  padding: 20px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.05));
+.apple-card {
+  background: var(--colors-surface, #ffffff);
+  border-radius: 28px;
+  border: 1px solid var(--colors-hairline, #e8e8ed);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 24px;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--colors-ink, #1d1d1f);
+  line-height: 1.3;
+}
+
+.card-subtitle {
+  font-size: 0.8125rem;
+  color: var(--colors-muted, #6e6e73);
+}
+
 .chart-wrapper {
   position: relative;
-  height: 170px;
+  height: 180px;
   width: 100%;
+}
+
+.echarts-view {
+  width: 100%;
+  height: 100%;
 }
 
 .empty-box {
@@ -211,40 +192,52 @@ onBeforeUnmount(() => {
 .ranking-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  border-top: 1px dashed var(--color-border, #e2e8f0);
-  padding-top: 10px;
+  gap: 8px;
+  border-top: 1px solid #f0f0f4;
+  padding-top: 14px;
 }
 
 .ranking-item {
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fafafc;
   font-size: 0.84rem;
+  border: 1px solid #f0f0f4;
+}
+
+.item-name {
+  font-weight: 500;
 }
 
 .rank-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  width: 24px;
-  height: 20px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 980px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  background: #94a3b8;
+  background: #86868b;
 }
 
 .rank-badge--1 {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #b64400;
 }
 
 .rank-badge--2 {
-  background: linear-gradient(135deg, #94a3b8, #64748b);
+  background: #0071e3;
 }
 
 .rank-badge--3 {
-  background: linear-gradient(135deg, #b45309, #78350f);
+  background: #6e6e73;
+}
+
+.text-ink {
+  color: #1d1d1f;
+}
+
+.text-muted {
+  color: #6e6e73;
 }
 </style>

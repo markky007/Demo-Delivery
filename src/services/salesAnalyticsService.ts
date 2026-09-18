@@ -457,7 +457,10 @@ export async function fetchFullSalesAnalytics(
       return data as FullSalesAnalytics;
     }
     if (error) {
-      console.warn('RPC get_sales_analytics unavailable or failed, falling back to client computation:', error.message);
+      console.warn(
+        'RPC get_sales_analytics unavailable or failed, falling back to client computation:',
+        error.message,
+      );
     }
   } catch (err) {
     console.warn('Error invoking get_sales_analytics RPC, using client fallback:', err);
@@ -522,7 +525,10 @@ export async function fetchBillsPaginated(params: FetchBillsParams): Promise<Pag
       };
     }
     if (error) {
-      console.warn('RPC get_paginated_bills unavailable, falling back to table query:', error.message);
+      console.warn(
+        'RPC get_paginated_bills unavailable, falling back to table query:',
+        error.message,
+      );
     }
   } catch (err) {
     console.warn('Error invoking get_paginated_bills RPC, using fallback:', err);
@@ -575,10 +581,7 @@ export async function fetchBillsPaginated(params: FetchBillsParams): Promise<Pag
     status: b.status,
     created_at: b.created_at,
     paid_at: b.paid_at,
-    table_name: mapBillDisplayName(
-      b.table_session?.table?.name,
-      b.table_session?.customer_name,
-    ),
+    table_name: mapBillDisplayName(b.table_session?.table?.name, b.table_session?.customer_name),
   }));
 
   const totalSalesSum = rows.reduce((sum, r) => sum + (r.total_amount || 0), 0);
@@ -650,10 +653,7 @@ export async function fetchBillsForExport(
     status: b.status,
     created_at: b.created_at,
     paid_at: b.paid_at,
-    table_name: mapBillDisplayName(
-      b.table_session?.table?.name,
-      b.table_session?.customer_name,
-    ),
+    table_name: mapBillDisplayName(b.table_session?.table?.name, b.table_session?.customer_name),
   }));
 }
 

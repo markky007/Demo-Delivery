@@ -208,16 +208,16 @@ The system implements a bilingual, Thai-first and Latin-precision typography sta
 
 ### Hierarchy & Scale
 
-| Token                         | Size      | Weight | Line Height | Letter Spacing | Thai-Safe Guideline                                |
-| ----------------------------- | --------- | ------ | ----------- | -------------- | -------------------------------------------------- |
-| `{typography.hero-display}`   | 36px / 56px | 700 / 800 | 1.20      | normal / 0     | Hero banners and primary dashboard metrics         |
-| `{typography.display-md}`     | 28px      | 600    | 1.25        | normal / 0     | Main section titles (`.text-h3`, `.type-h1`)       |
-| `{typography.title-lead}`     | 22px      | 600    | 1.30        | normal / 0     | Card headings / category headers (`.type-h2`)      |
-| `{typography.body-lg}`        | 17px      | 500/600| 1.45        | normal / 0     | Primary buttons, navigation, highlights            |
-| `{typography.body}`           | 15px      | 400    | 1.50        | normal / 0     | Food item titles, descriptions, standard reading   |
-| `{typography.body-sm}`        | 13px      | 400    | 1.45        | normal / 0     | Secondary metadata, customer notes, options        |
-| `{typography.caption}`        | 12px      | 500    | 1.40        | 0.01em         | Status badges, tags, timestamps                    |
-| `{typography.mono}`           | 13px–15px | 500/600| 1.40        | 0              | Order IDs, receipt line items, tabular currency    |
+| Token                       | Size        | Weight    | Line Height | Letter Spacing | Thai-Safe Guideline                              |
+| --------------------------- | ----------- | --------- | ----------- | -------------- | ------------------------------------------------ |
+| `{typography.hero-display}` | 36px / 56px | 700 / 800 | 1.20        | normal / 0     | Hero banners and primary dashboard metrics       |
+| `{typography.display-md}`   | 28px        | 600       | 1.25        | normal / 0     | Main section titles (`.text-h3`, `.type-h1`)     |
+| `{typography.title-lead}`   | 22px        | 600       | 1.30        | normal / 0     | Card headings / category headers (`.type-h2`)    |
+| `{typography.body-lg}`      | 17px        | 500/600   | 1.45        | normal / 0     | Primary buttons, navigation, highlights          |
+| `{typography.body}`         | 15px        | 400       | 1.50        | normal / 0     | Food item titles, descriptions, standard reading |
+| `{typography.body-sm}`      | 13px        | 400       | 1.45        | normal / 0     | Secondary metadata, customer notes, options      |
+| `{typography.caption}`      | 12px        | 500       | 1.40        | 0.01em         | Status badges, tags, timestamps                  |
+| `{typography.mono}`         | 13px–15px   | 500/600   | 1.40        | 0              | Order IDs, receipt line items, tabular currency  |
 
 ### Principles & Thai Typography Rules
 

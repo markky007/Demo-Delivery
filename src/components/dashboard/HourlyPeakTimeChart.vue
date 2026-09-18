@@ -1,32 +1,42 @@
 <template>
-  <div class="chart-card">
+  <div class="apple-card">
     <div class="row items-center justify-between q-mb-md header-row">
       <div>
         <div class="row items-center q-gutter-xs">
           <q-icon name="show_chart" color="primary" size="22px" />
-          <span class="text-subtitle1 text-weight-bold">ช่วงเวลาออเดอร์ & ยอดขาย (Peak Time)</span>
+          <span class="card-title">ช่วงเวลาออเดอร์ & ยอดขาย (Peak Time)</span>
         </div>
-        <div class="text-caption text-grey-7">
+        <div class="card-subtitle">
           วิเคราะห์ความหนาแน่นของออเดอร์และยอดขายในแต่ละชั่วโมงของวันนี้
         </div>
       </div>
 
-      <!-- Mode Toggle Buttons -->
-      <div class="row items-center q-gutter-xs mode-toggle-group">
-        <q-btn-toggle
-          v-model="activeView"
-          toggle-color="primary"
-          flat
-          dense
-          rounded
-          no-caps
-          size="sm"
-          :options="[
-            { label: 'ดูรวมทั้งสองแบบ', value: 'dual' },
-            { label: 'จำนวนออเดอร์', value: 'orders' },
-            { label: 'ยอดขาย (฿)', value: 'sales' },
-          ]"
-        />
+      <!-- Apple-style Segmented Toggle Buttons -->
+      <div class="segmented-control">
+        <button
+          type="button"
+          class="segmented-btn"
+          :class="{ 'segmented-btn--active': activeView === 'dual' }"
+          @click="activeView = 'dual'"
+        >
+          ดูรวมสองแบบ
+        </button>
+        <button
+          type="button"
+          class="segmented-btn"
+          :class="{ 'segmented-btn--active': activeView === 'orders' }"
+          @click="activeView = 'orders'"
+        >
+          จำนวนออเดอร์
+        </button>
+        <button
+          type="button"
+          class="segmented-btn"
+          :class="{ 'segmented-btn--active': activeView === 'sales' }"
+          @click="activeView = 'sales'"
+        >
+          ยอดขาย (฿)
+        </button>
       </div>
     </div>
 
@@ -36,7 +46,7 @@
         <div class="row items-center q-gutter-sm">
           <span class="peak-icon">🔥</span>
           <div>
-            <span class="text-weight-bold text-dark">ช่วงเวลาพีคที่สุด: </span>
+            <span class="text-weight-semibold text-ink">ช่วงเวลาพีคที่สุด: </span>
             <span class="text-weight-bold text-primary font-mono text-subtitle2">{{
               peakHourInfo.label
             }}</span>
@@ -44,43 +54,45 @@
         </div>
         <div class="row items-center q-gutter-md text-caption">
           <div class="row items-center q-gutter-xs">
-            <span class="text-grey-7">ออเดอร์:</span>
-            <span class="text-weight-bold text-dark font-mono"
-              >{{ peakHourInfo.orderCount }} รายการ</span
-            >
+            <span class="text-muted">ออเดอร์:</span>
+            <span class="text-weight-bold text-ink font-mono">
+              {{ peakHourInfo.orderCount }} รายการ
+            </span>
           </div>
           <div class="row items-center q-gutter-xs">
-            <span class="text-grey-7">ยอดขาย:</span>
-            <span class="text-weight-bold text-positive font-mono">{{
-              formatPrice(peakHourInfo.totalSales)
-            }}</span>
+            <span class="text-muted">ยอดขาย:</span>
+            <span class="text-weight-bold text-ink font-mono">
+              {{ formatPrice(peakHourInfo.totalSales) }}
+            </span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Chart Canvas Area -->
+    <!-- ECharts Vector Canvas Area -->
     <div class="chart-wrapper">
-      <canvas ref="canvasRef"></canvas>
+      <VChart v-if="!isEmpty" class="echarts-view" :option="chartOption" autoresize />
 
       <!-- Empty State Overlay if no orders yet -->
-      <div v-if="isEmpty" class="empty-overlay">
+      <div v-else class="empty-overlay">
         <q-icon name="query_builder" size="40px" color="grey-5" />
-        <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีข้อมูลออเดอร์สำหรับวันนี้</div>
+        <div class="text-caption text-muted q-mt-sm">ยังไม่มีข้อมูลออเดอร์สำหรับวันนี้</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import Chart from 'chart.js/auto';
-import type { ChartConfiguration, ChartDataset } from 'chart.js';
+import { ref, computed } from 'vue';
+import VChart from 'vue-echarts';
+import { graphic } from 'echarts';
+import type { EChartsOption } from 'echarts';
 import { formatPrice } from 'src/utils/formatters';
+import { APPLE_COLORS, FONT_FAMILY, appleTooltipBase } from 'src/utils/appleChartTheme';
 
 export interface HourlyDataPoint {
-  hour: number; // 0..23
-  label: string; // "12:00"
+  hour: number;
+  label: string;
   orderCount: number;
   totalSales: number;
 }
@@ -88,9 +100,6 @@ export interface HourlyDataPoint {
 const props = defineProps<{
   hourlyData: HourlyDataPoint[];
 }>();
-
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
 
 const activeView = ref<'dual' | 'orders' | 'sales'>('dual');
 
@@ -122,206 +131,200 @@ const peakHourInfo = computed(() => {
   };
 });
 
-function initOrUpdateChart() {
-  if (!canvasRef.value) return;
-
-  const ctx = canvasRef.value.getContext('2d');
-  if (!ctx) return;
-
+const chartOption = computed<EChartsOption>(() => {
   const labels = props.hourlyData.map((d) => d.label);
   const orderCounts = props.hourlyData.map((d) => d.orderCount);
   const salesAmounts = props.hourlyData.map((d) => d.totalSales);
 
-  // Gradient for Orders (Light Blue / Primary)
-  const orderGradient = ctx.createLinearGradient(0, 0, 0, 260);
-  orderGradient.addColorStop(0, 'rgba(25, 118, 210, 0.28)');
-  orderGradient.addColorStop(1, 'rgba(25, 118, 210, 0.01)');
+  const series: EChartsOption['series'] = [];
 
-  // Gradient for Sales (Teal / Green)
-  const salesGradient = ctx.createLinearGradient(0, 0, 0, 260);
-  salesGradient.addColorStop(0, 'rgba(46, 125, 50, 0.22)');
-  salesGradient.addColorStop(1, 'rgba(46, 125, 50, 0.01)');
-
-  const datasets: ChartDataset<'line'>[] = [];
-
+  // Series 1: Orders (Action Blue)
   if (activeView.value === 'dual' || activeView.value === 'orders') {
-    datasets.push({
-      type: 'line' as const,
-      label: 'จำนวนออเดอร์ (รายการ)',
+    series.push({
+      name: 'จำนวนออเดอร์',
+      type: 'line',
+      yAxisIndex: 0,
       data: orderCounts,
-      borderColor: '#1976D2',
-      backgroundColor: orderGradient,
-      borderWidth: 2.5,
-      pointBackgroundColor: '#1976D2',
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      fill: true,
-      tension: 0.35,
-      yAxisID: 'yOrders',
+      smooth: 0.35,
+      showSymbol: false,
+      symbol: 'circle',
+      symbolSize: 7,
+      itemStyle: {
+        color: APPLE_COLORS.primary,
+        borderColor: '#ffffff',
+        borderWidth: 2,
+      },
+      lineStyle: {
+        width: 2.75,
+        color: APPLE_COLORS.primary,
+        shadowColor: 'rgba(0, 113, 227, 0.2)',
+        shadowBlur: 8,
+        shadowOffsetY: 4,
+      },
+      areaStyle: {
+        color: new graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(0, 113, 227, 0.24)' },
+          { offset: 0.8, color: 'rgba(0, 113, 227, 0.02)' },
+          { offset: 1, color: 'rgba(0, 113, 227, 0)' },
+        ]),
+      },
     });
   }
 
+  // Series 2: Sales (Apple Green / Emerald)
   if (activeView.value === 'dual' || activeView.value === 'sales') {
-    datasets.push({
-      type: 'line' as const,
-      label: 'ยอดขาย (บาท)',
+    series.push({
+      name: 'ยอดขาย (บาท)',
+      type: 'line',
+      yAxisIndex: activeView.value === 'dual' ? 1 : 0,
       data: salesAmounts,
-      borderColor: '#2e7d32',
-      backgroundColor: salesGradient,
-      borderWidth: 2.5,
-      borderDash: activeView.value === 'dual' ? [4, 4] : [],
-      pointBackgroundColor: '#2e7d32',
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      fill: activeView.value === 'sales',
-      tension: 0.35,
-      yAxisID: activeView.value === 'dual' ? 'ySales' : 'yOrders',
+      smooth: 0.35,
+      showSymbol: false,
+      symbol: 'circle',
+      symbolSize: 7,
+      itemStyle: {
+        color: APPLE_COLORS.greenDark,
+        borderColor: '#ffffff',
+        borderWidth: 2,
+      },
+      lineStyle: {
+        width: 2.75,
+        color: APPLE_COLORS.greenDark,
+        type: activeView.value === 'dual' ? 'dashed' : 'solid',
+        shadowColor: 'rgba(19, 115, 51, 0.15)',
+        shadowBlur: 8,
+        shadowOffsetY: 4,
+      },
+      ...(activeView.value === 'sales'
+        ? {
+            areaStyle: {
+              color: new graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(19, 115, 51, 0.22)' },
+                { offset: 0.8, color: 'rgba(19, 115, 51, 0.02)' },
+                { offset: 1, color: 'rgba(19, 115, 51, 0)' },
+              ]),
+            },
+          }
+        : {}),
     });
   }
 
-  const config: ChartConfiguration<'line'> = {
-    type: 'line',
-    data: {
-      labels,
-      datasets,
+  return {
+    renderer: 'svg',
+    animationDuration: 750,
+    animationEasing: 'cubicOut',
+    grid: {
+      top: 36,
+      left: 12,
+      right: activeView.value === 'dual' ? 24 : 12,
+      bottom: 10,
+      containLabel: true,
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: {
-            usePointStyle: true,
-            boxWidth: 8,
-            font: {
-              family: 'Prompt, sans-serif',
-              size: 12,
-            },
-          },
-        },
-        tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 13, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 12 },
-          padding: 10,
-          cornerRadius: 8,
-          callbacks: {
-            title: (items) => {
-              const label = items[0]?.label || '';
-              return `ช่วงเวลา ${label} น.`;
-            },
-            label: (item) => {
-              if (item.dataset.label?.includes('ยอดขาย')) {
-                return ` ยอดขาย: ${formatPrice(Number(item.raw))}`;
-              }
-              return ` ออเดอร์: ${Number(item.raw)} รายการ`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#64748b',
-          },
-        },
-        yOrders: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          beginAtZero: true,
-          grid: {
-            color: '#f1f5f9',
-          },
-          ticks: {
-            precision: 0,
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#64748b',
-          },
-          title: {
-            display: activeView.value !== 'sales',
-            text: 'จำนวนออเดอร์',
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#1976D2',
-          },
-        },
-        ySales: {
-          type: 'linear',
-          display: activeView.value === 'dual',
-          position: 'right',
-          beginAtZero: true,
-          grid: {
-            drawOnChartArea: false, // only want grid on left axis
-          },
-          ticks: {
-            callback: (val) => (typeof val === 'number' ? `฿${val}` : `฿${String(val)}`),
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#2e7d32',
-          },
-          title: {
-            display: true,
-            text: 'ยอดขาย (บาท)',
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#2e7d32',
-          },
-        },
+    tooltip: {
+      ...appleTooltipBase,
+      formatter: (params: unknown) => {
+        const pArr = Array.isArray(params) ? params : [params];
+        if (pArr.length === 0) return '';
+        const title = pArr[0]?.axisValueLabel || '';
+        let html = `<div style="font-weight:600;margin-bottom:6px;color:#1D1D1F;font-family:${FONT_FAMILY}">ช่วงเวลา ${title} น.</div>`;
+        pArr.forEach((p: { seriesName?: string; value?: number; color?: string }) => {
+          const isSales = p.seriesName?.includes('ยอดขาย');
+          const valFormatted = isSales
+            ? formatPrice(Number(p.value || 0))
+            : `${p.value || 0} รายการ`;
+          const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px;"></span>`;
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:4px;font-size:12px;font-family:${FONT_FAMILY}">
+            <span style="color:#6E6E73">${dot}${p.seriesName}</span>
+            <span style="font-weight:600;color:#1D1D1F;font-variant-numeric:tabular-nums">${valFormatted}</span>
+          </div>`;
+        });
+        return html;
       },
     },
+    legend: {
+      show: true,
+      top: 0,
+      right: 0,
+      icon: 'circle',
+      itemWidth: 8,
+      itemHeight: 8,
+      textStyle: {
+        fontFamily: FONT_FAMILY,
+        color: APPLE_COLORS.ink,
+        fontSize: 12,
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: APPLE_COLORS.hairline } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: APPLE_COLORS.mutedLight,
+        fontFamily: FONT_FAMILY,
+        fontSize: 11,
+      },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        ...(activeView.value !== 'sales'
+          ? {
+              name: 'ออเดอร์',
+              nameTextStyle: {
+                color: APPLE_COLORS.primary,
+                fontFamily: FONT_FAMILY,
+                fontSize: 11,
+                align: 'left' as const,
+              },
+            }
+          : {}),
+        splitLine: {
+          lineStyle: {
+            color: '#F5F5F7',
+          },
+        },
+        axisLabel: {
+          color: APPLE_COLORS.mutedLight,
+          fontFamily: FONT_FAMILY,
+          fontSize: 11,
+        },
+      },
+      ...(activeView.value === 'dual'
+        ? [
+            {
+              type: 'value' as const,
+              name: 'ยอดขาย (฿)',
+              nameTextStyle: {
+                color: APPLE_COLORS.greenDark,
+                fontFamily: FONT_FAMILY,
+                fontSize: 11,
+                align: 'right' as const,
+              },
+              splitLine: { show: false },
+              axisLabel: {
+                formatter: (val: number) => `฿${val}`,
+                color: APPLE_COLORS.greenDark,
+                fontFamily: FONT_FAMILY,
+                fontSize: 11,
+              },
+            },
+          ]
+        : []),
+    ],
+    series,
   };
-
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  chartInstance = new Chart(ctx, config);
-}
-
-watch(
-  () => [props.hourlyData, activeView.value],
-  () => {
-    void nextTick(() => {
-      initOrUpdateChart();
-    });
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  void nextTick(() => {
-    initOrUpdateChart();
-  });
-});
-
-onBeforeUnmount(() => {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
 });
 </script>
 
 <style scoped>
-.chart-card {
-  background: #ffffff;
-  border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  padding: 20px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.05));
+.apple-card {
+  background: var(--colors-surface, #ffffff);
+  border-radius: 28px;
+  border: 1px solid var(--colors-hairline, #e8e8ed);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 24px;
 }
 
 .header-row {
@@ -329,17 +332,57 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
-.mode-toggle-group {
-  background: #f1f5f9;
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--colors-ink, #1d1d1f);
+  line-height: 1.3;
+}
+
+.card-subtitle {
+  font-size: 0.8125rem;
+  color: var(--colors-muted, #6e6e73);
+  margin-top: 2px;
+}
+
+.segmented-control {
+  background: #f5f5f7;
   padding: 3px;
-  border-radius: 20px;
+  border-radius: 980px;
+  display: inline-flex;
+  gap: 2px;
+  border: 1px solid #e8e8ed;
+}
+
+.segmented-btn {
+  border: none;
+  background: transparent;
+  color: #6e6e73;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 980px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.segmented-btn:hover {
+  color: #1d1d1f;
+}
+
+.segmented-btn--active {
+  background: #ffffff;
+  color: #0071e3;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .peak-banner {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border: 1px solid #fed7aa;
-  border-radius: 10px;
-  padding: 10px 16px;
+  background: #fafafc;
+  border: 1px solid #e8e8ed;
+  border-radius: 16px;
+  padding: 12px 18px;
 }
 
 .peak-icon {
@@ -349,18 +392,31 @@ onBeforeUnmount(() => {
 
 .chart-wrapper {
   position: relative;
-  height: 280px;
+  height: 310px;
   width: 100%;
+}
+
+.echarts-view {
+  width: 100%;
+  height: 100%;
 }
 
 .empty-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 18px;
+}
+
+.text-ink {
+  color: #1d1d1f;
+}
+
+.text-muted {
+  color: #6e6e73;
 }
 </style>

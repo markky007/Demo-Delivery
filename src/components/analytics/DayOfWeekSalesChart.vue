@@ -4,13 +4,15 @@
     <div class="row items-center justify-between q-mb-md header-row">
       <div>
         <div class="row items-center q-gutter-xs">
-          <q-icon name="calendar_view_week" color="primary" size="22px" />
-          <span class="text-subtitle1 text-weight-bold">
-            แนวโน้ม & ค่าเฉลี่ยตามวันในสัปดาห์ (Day-of-Week Trends)
+          <div class="header-icon-pill">
+            <q-icon name="calendar_view_week" color="primary" size="18px" />
+          </div>
+          <span class="text-subtitle1 text-weight-bold text-ink">
+            แนวโน้ม & ค่าเฉลี่ยตามวันในสัปดาห์
           </span>
         </div>
-        <div class="text-caption text-grey-7">
-          เปรียบเทียบยอดขายเฉลี่ยและสัดส่วนรายได้ในแต่ละวันทำการ (จันทร์ - เสาร์ •
+        <div class="text-caption text-muted">
+          Day-of-Week Trends • สัดส่วนยอดขายเฉลี่ยในแต่ละวันทำการ (จันทร์ - เสาร์ •
           วันอาทิตย์ร้านหยุด)
         </div>
       </div>
@@ -25,10 +27,11 @@
           rounded
           no-caps
           size="sm"
+          class="segmented-toggle"
           :options="[
             { label: 'ยอดขายเฉลี่ย (฿/วัน)', value: 'avg_sales' },
-            { label: 'ยอดขายรวมสะสม (฿)', value: 'total_sales' },
-            { label: 'จำนวนออเดอร์ (รายการ)', value: 'orders' },
+            { label: 'ยอดรวมสะสม (฿)', value: 'total_sales' },
+            { label: 'จำนวนออเดอร์', value: 'orders' },
           ]"
         />
       </div>
@@ -39,19 +42,19 @@
       <div class="row items-center justify-between flex-wrap q-gutter-y-xs">
         <div class="row items-center q-gutter-sm">
           <div class="comp-icon-box">
-            <q-icon name="insights" size="20px" color="primary" />
+            <q-icon name="insights" size="18px" color="primary" />
           </div>
           <div>
-            <span class="text-weight-bold text-dark"
+            <span class="text-weight-bold text-ink"
               >เปรียบเทียบต้น-กลางสัปดาห์ vs ปลายสัปดาห์:
             </span>
-            <span class="text-caption text-grey-8">
+            <span class="text-caption text-body">
               จันทร์-พฤหัสบดี เฉลี่ย
-              <strong class="font-mono text-dark">{{
+              <strong class="font-mono text-ink">{{
                 formatPrice(weekdayVsWeekend.weekdayAvgSales)
               }}</strong>
               /วัน | ศุกร์-เสาร์ เฉลี่ย
-              <strong class="font-mono text-dark">{{
+              <strong class="font-mono text-ink">{{
                 formatPrice(weekdayVsWeekend.weekendAvgSales)
               }}</strong>
               /วัน
@@ -60,14 +63,10 @@
         </div>
 
         <div v-if="weekdayVsWeekend.diffPercentage > 0" class="row items-center q-gutter-xs">
-          <q-badge
-            :color="weekdayVsWeekend.higherType === 'weekend' ? 'positive' : 'info'"
-            rounded
-            class="q-px-sm q-py-xs"
-          >
+          <q-badge color="primary" rounded class="q-px-sm q-py-xs text-caption">
             <q-icon
               :name="weekdayVsWeekend.higherType === 'weekend' ? 'trending_up' : 'trending_flat'"
-              size="14px"
+              size="13px"
               class="q-mr-xs"
             />
             <span v-if="weekdayVsWeekend.higherType === 'weekend'">
@@ -87,8 +86,8 @@
 
       <!-- Empty state overlay -->
       <div v-if="!hasData" class="empty-overlay">
-        <q-icon name="event_busy" size="40px" color="grey-5" />
-        <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีข้อมูลยอดขายในช่วงเวลานี้</div>
+        <q-icon name="event_busy" size="36px" color="grey-4" />
+        <div class="text-caption text-muted q-mt-sm">ยังไม่มีข้อมูลยอดขายในช่วงเวลานี้</div>
       </div>
     </div>
 
@@ -107,29 +106,29 @@
           <div class="row items-center q-gutter-xs">
             <span class="day-badge-name text-weight-bold">{{ day.dayName }}</span>
             <span v-if="idx === 0 && day.totalSales > 0" class="rank-tag rank-tag--best">
-              🔥 สูงสุด
+              สูงสุด
             </span>
             <span
               v-else-if="idx === sortedDays.length - 1 && day.totalSales > 0"
               class="rank-tag rank-tag--slow"
             >
-              📉 ช้าสุด
+              ช้าสุด
             </span>
           </div>
-          <span class="text-caption text-grey-7 font-mono font-weight-bold">
+          <span class="text-caption text-muted font-mono font-weight-bold">
             {{ day.salesPercentage }}%
           </span>
         </div>
 
         <div class="day-stat-row">
-          <span class="text-caption text-grey-7">เฉลี่ยต่อวัน:</span>
+          <span class="text-caption text-muted">เฉลี่ยต่อวัน:</span>
           <div class="row items-center q-gutter-xs">
             <span class="text-weight-bold font-mono text-primary">{{
               formatPrice(day.avgSales)
             }}</span>
             <span
               v-if="day.daysCount > 0"
-              class="text-caption text-grey-6 text-weight-regular"
+              class="text-caption text-muted"
               style="font-size: 0.72rem"
             >
               ({{ day.daysCount }} วัน)
@@ -137,14 +136,14 @@
           </div>
         </div>
 
-        <div class="day-stat-row text-caption text-grey-7">
+        <div class="day-stat-row text-caption text-muted">
           <span>ยอดรวมสะสม:</span>
-          <span class="font-mono text-dark">{{ formatPrice(day.totalSales) }}</span>
+          <span class="font-mono text-ink">{{ formatPrice(day.totalSales) }}</span>
         </div>
 
-        <div class="day-stat-row text-caption text-grey-7">
+        <div class="day-stat-row text-caption text-muted">
           <span>ออเดอร์เฉลี่ย:</span>
-          <span class="font-mono text-dark">{{ day.avgOrders }} รายการ/วัน</span>
+          <span class="font-mono text-ink">{{ day.avgOrders }} รายการ/วัน</span>
         </div>
 
         <!-- Progress Bar for visual share -->
@@ -153,8 +152,7 @@
             class="day-progress-bar"
             :style="{
               width: `${day.salesPercentage}%`,
-              background:
-                idx === 0 ? 'var(--color-primary, #e05836)' : 'var(--color-status-queued, #0284c7)',
+              background: idx === 0 ? '#0071e3' : '#86868b',
             }"
           ></div>
         </div>
@@ -223,19 +221,19 @@ function initOrUpdateChart() {
   // Find max value to highlight peak bar
   const maxVal = Math.max(...dataValues, 1);
 
-  // Background colors: Warm terracotta for peak day, soft warm orange/blue for other days
+  // Apple Monochromatic + Action Blue
   const bgColors = dataValues.map((val) => {
     if (val === maxVal && val > 0) {
-      return 'rgba(224, 88, 54, 0.9)'; // Primary Brand
+      return '#0071e3'; // Action Blue for peak day
     }
-    return 'rgba(224, 88, 54, 0.45)';
+    return '#e8e8ed'; // Clean neutral for other days
   });
 
   const borderColors = dataValues.map((val) => {
     if (val === maxVal && val > 0) {
-      return '#c84323';
+      return '#0071e3';
     }
-    return '#e05836';
+    return '#d2d2d7';
   });
 
   const config: ChartConfiguration<'bar'> = {
@@ -248,11 +246,11 @@ function initOrUpdateChart() {
           data: dataValues,
           backgroundColor: bgColors,
           borderColor: borderColors,
-          borderWidth: 1.5,
-          borderRadius: 8,
+          borderWidth: 1,
+          borderRadius: 6,
           borderSkipped: false,
-          barPercentage: 0.55,
-          categoryPercentage: 0.8,
+          barPercentage: 0.52,
+          categoryPercentage: 0.75,
         },
       ],
     },
@@ -264,9 +262,13 @@ function initOrUpdateChart() {
           display: false,
         },
         tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 13, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 12 },
+          backgroundColor: 'rgba(29, 29, 31, 0.94)',
+          titleFont: {
+            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+            size: 12,
+            weight: 'bold',
+          },
+          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
           padding: 10,
           cornerRadius: 8,
           callbacks: {
@@ -312,18 +314,22 @@ function initOrUpdateChart() {
             display: false,
           },
           ticks: {
-            font: { family: 'Prompt, sans-serif', size: 12, weight: 'bold' },
-            color: '#475569',
+            font: {
+              family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+              size: 12,
+              weight: 'bold',
+            },
+            color: '#1d1d1f',
           },
         },
         y: {
           beginAtZero: true,
           grid: {
-            color: '#f1f5f9',
+            color: '#f5f5f7',
           },
           ticks: {
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#64748b',
+            font: { family: 'Inter, sans-serif', size: 11 },
+            color: '#86868b',
             callback: (val) => {
               if (activeMetric.value === 'orders') {
                 return `${val} รายการ`;
@@ -336,8 +342,8 @@ function initOrUpdateChart() {
           title: {
             display: true,
             text: yAxisLabel,
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#64748b',
+            font: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
+            color: '#86868b',
           },
         },
       },
@@ -378,10 +384,22 @@ onBeforeUnmount(() => {
 <style scoped>
 .analytics-card {
   background: #ffffff;
-  border-radius: var(--radius-md, 16px);
-  border: 1px solid var(--color-border, #ede5dc);
+  border-radius: 20px;
+  border: 1px solid #d2d2d7;
   padding: 20px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.text-ink {
+  color: #1d1d1f;
+}
+
+.text-body {
+  color: #414143;
+}
+
+.text-muted {
+  color: #6e6e73;
 }
 
 .header-row {
@@ -389,24 +407,35 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.header-icon-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 980px;
+  background: #f0f6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .mode-toggle-group {
-  background: var(--color-surface-subtle, #f5efe9);
+  background: #f5f5f7;
   padding: 3px;
-  border-radius: 20px;
+  border-radius: 980px;
 }
 
 .comparison-banner {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border: 1px solid #fed7aa;
-  border-radius: var(--radius-sm, 10px);
+  background: #fafafc;
+  border: 1px solid #e8e8ed;
+  border-radius: 12px;
   padding: 10px 14px;
 }
 
 .comp-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #ffffff;
+  width: 30px;
+  height: 30px;
+  border-radius: 980px;
+  background: #f0f6ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -437,48 +466,51 @@ onBeforeUnmount(() => {
 }
 
 .day-card {
-  background: var(--color-surface-subtle, #f5efe9);
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 12px;
   padding: 10px 12px;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .day-card:hover {
-  background: #ffffff;
-  border-color: var(--color-primary-tint, #ffe6dc);
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  transform: translateY(-2px);
+  border-color: #0071e3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .day-card--best {
-  border-left: 3px solid var(--color-primary, #e05836);
-  background: #fff8f5;
+  border-left: 3px solid #0071e3;
+  background: #fbfdff;
 }
 
 .day-card--slow {
-  border-left: 3px solid var(--color-status-served, #64748b);
+  border-left: 3px solid #86868b;
 }
 
 .day-badge-name {
   font-size: 0.86rem;
-  color: var(--color-text-primary, #2d231e);
+  color: #1d1d1f;
 }
 
 .rank-tag {
   font-size: 0.68rem;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 980px;
   font-weight: 600;
 }
 
 .rank-tag--best {
-  background: #fee2e2;
-  color: #dc2626;
+  background: #f0f6ff;
+  color: #0071e3;
 }
 
 .rank-tag--slow {
-  background: #f1f5f9;
-  color: #64748b;
+  background: #f5f5f7;
+  color: #86868b;
 }
 
 .day-stat-row {
@@ -492,7 +524,7 @@ onBeforeUnmount(() => {
 .day-progress-track {
   width: 100%;
   height: 4px;
-  background: #e2e8f0;
+  background: #e8e8ed;
   border-radius: 2px;
   overflow: hidden;
 }
@@ -504,7 +536,7 @@ onBeforeUnmount(() => {
 }
 
 .font-mono {
-  font-family: var(--app-font-mono);
+  font-family: var(--app-font-mono, 'Inter', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 </style>

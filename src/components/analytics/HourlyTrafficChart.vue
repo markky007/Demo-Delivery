@@ -4,13 +4,15 @@
     <div class="row items-center justify-between q-mb-md header-row">
       <div>
         <div class="row items-center q-gutter-xs">
-          <q-icon name="schedule" color="primary" size="22px" />
-          <span class="text-subtitle1 text-weight-bold">
-            ช่วงเวลาขายดี & ความหนาแน่นรายชั่วโมง (Hourly Peak Trends)
+          <div class="header-icon-pill">
+            <q-icon name="schedule" color="primary" size="18px" />
+          </div>
+          <span class="text-subtitle1 text-weight-bold text-ink">
+            ช่วงเวลาขายดี & ความหนาแน่นรายชั่วโมง
           </span>
         </div>
-        <div class="text-caption text-grey-7">
-          วิเคราะห์แนวโน้มช่วงเวลาที่ลูกค้าสั่งอาหารและยอดขายเฉลี่ยตลอดทั้งวัน (11:00 - 23:00 น.)
+        <div class="text-caption text-muted">
+          Hourly Peak Trends • แนวโน้มช่วงเวลาที่มีคำสั่งซื้อและยอดขายตลอดทั้งวัน (11:00 - 23:00 น.)
         </div>
       </div>
 
@@ -24,6 +26,7 @@
           rounded
           no-caps
           size="sm"
+          class="segmented-toggle"
           :options="[
             { label: 'ดูรวมทั้งสองแบบ', value: 'dual' },
             { label: 'จำนวนออเดอร์', value: 'orders' },
@@ -37,9 +40,11 @@
     <div v-if="peakHourInfo" class="peak-banner q-mb-md">
       <div class="row items-center justify-between flex-wrap q-gutter-y-xs">
         <div class="row items-center q-gutter-sm">
-          <span class="peak-icon">🔥</span>
+          <div class="peak-icon-pill">
+            <q-icon name="bolt" size="18px" color="primary" />
+          </div>
           <div>
-            <span class="text-weight-bold text-dark">ช่วงเวลาที่ลูกค้าเยอะที่สุด: </span>
+            <span class="text-weight-bold text-ink">ช่วงเวลาที่ลูกค้าหนาแน่นที่สุด: </span>
             <span class="text-weight-bold text-primary font-mono text-subtitle2">{{
               peakHourInfo.label
             }}</span>
@@ -47,14 +52,14 @@
         </div>
         <div class="row items-center q-gutter-md text-caption">
           <div class="row items-center q-gutter-xs">
-            <span class="text-grey-7">ออเดอร์รวม:</span>
-            <span class="text-weight-bold text-dark font-mono"
+            <span class="text-muted">ออเดอร์รวม:</span>
+            <span class="text-weight-bold text-ink font-mono"
               >{{ peakHourInfo.orderCount }} รายการ</span
             >
           </div>
           <div class="row items-center q-gutter-xs">
-            <span class="text-grey-7">ยอดขายรวม:</span>
-            <span class="text-weight-bold text-positive font-mono">{{
+            <span class="text-muted">ยอดขายรวม:</span>
+            <span class="text-weight-bold text-primary font-mono">{{
               formatPrice(peakHourInfo.totalSales)
             }}</span>
           </div>
@@ -68,8 +73,8 @@
 
       <!-- Empty State Overlay -->
       <div v-if="isEmpty" class="empty-overlay">
-        <q-icon name="query_builder" size="40px" color="grey-5" />
-        <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</div>
+        <q-icon name="query_builder" size="36px" color="grey-4" />
+        <div class="text-caption text-muted q-mt-sm">ยังไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</div>
       </div>
     </div>
 
@@ -83,7 +88,7 @@
       >
         <div class="row items-center justify-between q-mb-xs">
           <div class="row items-center q-gutter-xs">
-            <q-icon :name="period.icon" size="18px" color="primary" />
+            <q-icon :name="period.icon" size="16px" color="primary" />
             <span class="meal-title text-weight-bold">{{ period.title }}</span>
           </div>
           <span class="meal-percent font-mono text-weight-bold text-primary">
@@ -91,18 +96,18 @@
           </span>
         </div>
 
-        <div class="text-caption text-grey-7 q-mb-xs">{{ period.timeRange }}</div>
+        <div class="text-caption text-muted q-mb-xs">{{ period.timeRange }}</div>
 
         <div class="row items-center justify-between text-caption">
-          <span class="text-grey-7">ยอดขายรวม:</span>
-          <span class="text-weight-bold text-dark font-mono">{{
+          <span class="text-muted">ยอดขายรวม:</span>
+          <span class="text-weight-bold text-ink font-mono">{{
             formatPrice(period.totalSales)
           }}</span>
         </div>
 
-        <div class="row items-center justify-between text-caption text-grey-7">
+        <div class="row items-center justify-between text-caption text-muted">
           <span>ออเดอร์:</span>
-          <span class="font-mono text-dark">{{ period.orderCount }} รายการ</span>
+          <span class="font-mono text-ink">{{ period.orderCount }} รายการ</span>
         </div>
 
         <!-- Progress bar for meal period share -->
@@ -111,10 +116,7 @@
             class="meal-progress-bar"
             :style="{
               width: `${period.salesPercentage}%`,
-              background:
-                period.salesPercentage >= 30
-                  ? 'var(--color-primary, #e05836)'
-                  : 'var(--color-status-queued, #0284c7)',
+              background: period.salesPercentage >= 30 ? '#0071e3' : '#86868b',
             }"
           ></div>
         </div>
@@ -177,15 +179,15 @@ function initOrUpdateChart() {
   const orderCounts = props.hourlyData.map((d) => d.orderCount);
   const salesAmounts = props.hourlyData.map((d) => d.totalSales);
 
-  // Gradient for Orders (Blue)
-  const orderGradient = ctx.createLinearGradient(0, 0, 0, 260);
-  orderGradient.addColorStop(0, 'rgba(2, 132, 199, 0.28)');
-  orderGradient.addColorStop(1, 'rgba(2, 132, 199, 0.01)');
+  // Gradient for Action Blue
+  const blueGradient = ctx.createLinearGradient(0, 0, 0, 260);
+  blueGradient.addColorStop(0, 'rgba(0, 113, 227, 0.20)');
+  blueGradient.addColorStop(1, 'rgba(0, 113, 227, 0.00)');
 
-  // Gradient for Sales (Warm Terracotta / Primary)
-  const salesGradient = ctx.createLinearGradient(0, 0, 0, 260);
-  salesGradient.addColorStop(0, 'rgba(224, 88, 54, 0.28)');
-  salesGradient.addColorStop(1, 'rgba(224, 88, 54, 0.01)');
+  // Gradient for Slate / Neutral
+  const slateGradient = ctx.createLinearGradient(0, 0, 0, 260);
+  slateGradient.addColorStop(0, 'rgba(134, 134, 139, 0.16)');
+  slateGradient.addColorStop(1, 'rgba(134, 134, 139, 0.00)');
 
   const datasets: ChartDataset<'line'>[] = [];
 
@@ -194,10 +196,10 @@ function initOrUpdateChart() {
       type: 'line' as const,
       label: 'จำนวนออเดอร์ (รายการ)',
       data: orderCounts,
-      borderColor: '#0284c7',
-      backgroundColor: orderGradient,
-      borderWidth: 2.5,
-      pointBackgroundColor: '#0284c7',
+      borderColor: '#0071e3',
+      backgroundColor: blueGradient,
+      borderWidth: 2.2,
+      pointBackgroundColor: '#0071e3',
       pointBorderColor: '#ffffff',
       pointBorderWidth: 2,
       pointRadius: 4,
@@ -213,11 +215,11 @@ function initOrUpdateChart() {
       type: 'line' as const,
       label: 'ยอดขาย (บาท)',
       data: salesAmounts,
-      borderColor: '#e05836',
-      backgroundColor: salesGradient,
-      borderWidth: 2.5,
+      borderColor: activeView.value === 'dual' ? '#86868b' : '#0071e3',
+      backgroundColor: activeView.value === 'sales' ? blueGradient : slateGradient,
+      borderWidth: 2.2,
       borderDash: activeView.value === 'dual' ? [4, 4] : [],
-      pointBackgroundColor: '#e05836',
+      pointBackgroundColor: activeView.value === 'dual' ? '#86868b' : '#0071e3',
       pointBorderColor: '#ffffff',
       pointBorderWidth: 2,
       pointRadius: 4,
@@ -249,13 +251,18 @@ function initOrUpdateChart() {
           labels: {
             usePointStyle: true,
             boxWidth: 8,
-            font: { family: 'Prompt, sans-serif', size: 12 },
+            font: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 12 },
+            color: '#1d1d1f',
           },
         },
         tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 13, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 12 },
+          backgroundColor: 'rgba(29, 29, 31, 0.94)',
+          titleFont: {
+            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+            size: 12,
+            weight: 'bold',
+          },
+          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
           padding: 10,
           cornerRadius: 8,
           callbacks: {
@@ -278,8 +285,8 @@ function initOrUpdateChart() {
             display: false,
           },
           ticks: {
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#64748b',
+            font: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
+            color: '#86868b',
           },
         },
         yOrders: {
@@ -288,18 +295,18 @@ function initOrUpdateChart() {
           position: 'left',
           beginAtZero: true,
           grid: {
-            color: '#f1f5f9',
+            color: '#f5f5f7',
           },
           ticks: {
             precision: 0,
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#64748b',
+            font: { family: 'Inter, sans-serif', size: 11 },
+            color: '#0071e3',
           },
           title: {
             display: activeView.value !== 'sales',
             text: 'จำนวนออเดอร์',
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#0284c7',
+            font: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
+            color: '#0071e3',
           },
         },
         ySales: {
@@ -312,14 +319,14 @@ function initOrUpdateChart() {
           },
           ticks: {
             callback: (val) => (typeof val === 'number' ? `฿${val}` : `฿${String(val)}`),
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#e05836',
+            font: { family: 'Inter, sans-serif', size: 11 },
+            color: '#86868b',
           },
           title: {
             display: true,
             text: 'ยอดขาย (บาท)',
-            font: { family: 'Prompt, sans-serif', size: 11 },
-            color: '#e05836',
+            font: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
+            color: '#86868b',
           },
         },
       },
@@ -360,10 +367,18 @@ onBeforeUnmount(() => {
 <style scoped>
 .analytics-card {
   background: #ffffff;
-  border-radius: var(--radius-md, 16px);
-  border: 1px solid var(--color-border, #ede5dc);
+  border-radius: 20px;
+  border: 1px solid #d2d2d7;
   padding: 20px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.text-ink {
+  color: #1d1d1f;
+}
+
+.text-muted {
+  color: #6e6e73;
 }
 
 .header-row {
@@ -371,22 +386,38 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.header-icon-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 980px;
+  background: #f0f6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .mode-toggle-group {
-  background: var(--color-surface-subtle, #f5efe9);
+  background: #f5f5f7;
   padding: 3px;
-  border-radius: 20px;
+  border-radius: 980px;
 }
 
 .peak-banner {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border: 1px solid #fed7aa;
-  border-radius: 10px;
+  background: #fafafc;
+  border: 1px solid #e8e8ed;
+  border-radius: 12px;
   padding: 10px 16px;
 }
 
-.peak-icon {
-  font-size: 1.25rem;
-  line-height: 1;
+.peak-icon-pill {
+  width: 28px;
+  height: 28px;
+  border-radius: 980px;
+  background: #f0f6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chart-wrapper {
@@ -414,27 +445,30 @@ onBeforeUnmount(() => {
 }
 
 .meal-card {
-  background: var(--color-surface-subtle, #f5efe9);
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
-  padding: 12px;
-  transition: all 0.15s ease;
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .meal-card:hover {
-  background: #ffffff;
-  border-color: var(--color-primary-tint, #ffe6dc);
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  transform: translateY(-2px);
+  border-color: #0071e3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .meal-card--highlight {
-  border-left: 3px solid var(--color-primary, #e05836);
-  background: #fff8f5;
+  border-color: #0071e3;
+  background: #fbfdff;
 }
 
 .meal-title {
   font-size: 0.86rem;
-  color: var(--color-text-primary, #2d231e);
+  color: #1d1d1f;
 }
 
 .meal-percent {
@@ -444,7 +478,7 @@ onBeforeUnmount(() => {
 .meal-progress-track {
   width: 100%;
   height: 4px;
-  background: #e2e8f0;
+  background: #e8e8ed;
   border-radius: 2px;
   overflow: hidden;
 }
@@ -456,7 +490,7 @@ onBeforeUnmount(() => {
 }
 
 .font-mono {
-  font-family: var(--app-font-mono);
+  font-family: var(--app-font-mono, 'Inter', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 </style>

@@ -5,13 +5,13 @@
       <div class="row items-center justify-between q-mb-md header-section">
         <div>
           <div class="row items-center q-gutter-sm">
-            <h5 class="q-my-none text-weight-bold page-title">ประวัติยอดขาย & บทวิเคราะห์</h5>
-            <q-badge color="primary" rounded class="q-px-sm">
+            <h4 class="q-my-none text-weight-bold page-title">ประวัติยอดขาย & บทวิเคราะห์</h4>
+            <q-badge color="primary" rounded class="q-px-sm text-caption">
               <q-icon name="insights" size="14px" class="q-mr-xs" />
               Data Analytics
             </q-badge>
           </div>
-          <p class="text-caption text-grey-7 q-mb-none q-mt-xs">
+          <p class="text-caption text-muted q-mb-none q-mt-xs">
             วิเคราะห์แนวโน้มยอดขาย ค่าเฉลี่ยรายวัน ช่วงเวลาพีค เมนูขายดี และประวัติการชำระเงิน
           </p>
         </div>
@@ -38,12 +38,12 @@
             dense
             rounded
             no-caps
-            color="grey-8"
+            color="grey-7"
             icon="refresh"
             label="รีเฟรช"
             :loading="isLoading"
             @click="refreshAll"
-            class="q-px-sm refresh-btn"
+            class="q-px-md refresh-btn"
           />
 
           <q-btn
@@ -57,7 +57,7 @@
             label="ส่งออก CSV"
             :loading="isExportingCsv"
             @click="exportBillsToCsv"
-            class="q-px-sm"
+            class="q-px-md"
           />
         </div>
       </div>
@@ -67,7 +67,7 @@
         <div class="row items-center justify-between flex-wrap q-col-gutter-sm">
           <!-- Preset Buttons -->
           <div class="row items-center q-gutter-xs flex-wrap">
-            <span class="text-caption text-weight-bold text-grey-8 q-mr-xs">ช่วงเวลา:</span>
+            <span class="text-caption text-weight-medium text-muted q-mr-xs">ช่วงเวลา:</span>
             <q-btn
               v-for="preset in datePresets"
               :key="preset.id"
@@ -86,7 +86,7 @@
 
           <!-- Day of Week Filter Dropdown -->
           <div class="row items-center q-gutter-xs day-filter-wrap">
-            <span class="text-caption text-weight-bold text-grey-8">วันในสัปดาห์:</span>
+            <span class="text-caption text-weight-medium text-muted">วันในสัปดาห์:</span>
             <q-select
               v-model="selectedDayFilter"
               :options="dayFilterOptions"
@@ -117,7 +117,7 @@
             class="date-input"
             @update:model-value="onCustomDateChange"
           />
-          <span class="text-grey-6 text-caption">ถึง</span>
+          <span class="text-muted text-caption">ถึง</span>
           <q-input
             v-model="dateTo"
             outlined
@@ -139,7 +139,7 @@
             @click="onCustomDateSearch"
             class="q-px-md"
           />
-          <span v-if="dateRangeText" class="text-caption text-grey-7 q-ml-sm gt-xs">
+          <span v-if="dateRangeText" class="text-caption text-muted q-ml-sm gt-xs">
             📅 {{ dateRangeText }}
           </span>
         </div>
@@ -155,9 +155,13 @@
         <!-- VIEW 1: ANALYTICS DASHBOARD                              -->
         <!-- ========================================================= -->
         <div v-if="activeViewTab === 'analytics'" class="analytics-tab-content">
-          <!-- 1. KPI Metric Summary Cards (6 Cards) -->
+          <!-- 1. Hero KPI Metric Summary Cards (Bento Grid) -->
           <div class="q-mb-lg">
-            <SalesKpiCards v-if="analyticsData" :kpis="analyticsData.kpis" />
+            <SalesKpiCards
+              v-if="analyticsData"
+              :kpis="analyticsData.kpis"
+              :dining-type-summary="analyticsData.diningTypeSummary"
+            />
           </div>
 
           <!-- 2. Day of Week Analysis (Averages & Ranking) -->
@@ -357,9 +361,7 @@ const isBillsLoading = ref(false);
 const isExportingCsv = ref(false);
 
 const isLoading = computed(() => {
-  return activeViewTab.value === 'analytics'
-    ? isAnalyticsLoading.value
-    : isBillsLoading.value;
+  return activeViewTab.value === 'analytics' ? isAnalyticsLoading.value : isBillsLoading.value;
 });
 
 // ─── Date Presets ───────────────────────────────────────────────────────────
@@ -375,7 +377,7 @@ const datePresets = [
   { id: 'custom' as PresetId, label: 'กำหนดเอง' },
 ];
 
-const activePreset = ref<PresetId>('30d');
+const activePreset = ref<PresetId>('today');
 
 // ─── Date Helpers ───────────────────────────────────────────────────────────
 function formatToDateInput(d: Date): string {
@@ -734,18 +736,19 @@ async function exportBillsToCsv() {
 }
 
 onMounted(() => {
-  // Default to 30 days preset and load initial tab
-  selectPreset('30d');
+  // Default to today preset and load initial tab
+  selectPreset('today');
 });
 </script>
 
 <style scoped>
 .sales-page {
-  background: var(--color-background, #fbf9f6);
+  background: #fafafc;
+  min-height: 100vh;
 }
 
 .sales-container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -755,39 +758,51 @@ onMounted(() => {
 }
 
 .page-title {
-  color: var(--color-text-primary, #2d231e);
+  color: #1d1d1f;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
-/* View Mode Tabs Pill */
+.text-muted {
+  color: #6e6e73;
+}
+
+/* View Mode Tabs Pill (Apple Segmented Control) */
 .view-mode-pill {
-  background: var(--color-surface-subtle, #f5efe9);
+  background: #f5f5f7;
   padding: 3px;
-  border-radius: 20px;
+  border-radius: 980px;
+  border: 1px solid #d2d2d7;
 }
 
 .view-mode-tabs :deep(.q-tab) {
   min-height: 36px;
-  border-radius: 18px;
+  border-radius: 980px;
   font-size: 0.85rem;
+  font-weight: 600;
   padding: 0 16px;
 }
 
 .refresh-btn {
   background: #ffffff;
+  border: 1px solid #d2d2d7;
+  border-radius: 980px;
 }
 
 /* Filter Card */
 .filter-card {
   background: #ffffff;
-  border-radius: var(--radius-md, 16px);
-  border: 1px solid var(--color-border, #ede5dc);
-  padding: 14px 18px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  border-radius: 20px;
+  border: 1px solid #d2d2d7;
+  padding: 16px 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
 }
 
 .preset-btn {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border-radius: 980px;
   transition: all 0.15s ease;
 }
 
@@ -819,8 +834,8 @@ onMounted(() => {
 
 .summary-pill {
   background: #ffffff;
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
   padding: 8px 16px;
   display: flex;
   align-items: center;
@@ -833,13 +848,13 @@ onMounted(() => {
 
 .sales-table {
   background: #ffffff;
-  border-radius: var(--radius-md, 16px);
-  border: 1px solid var(--color-border, #ede5dc);
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  border-radius: 20px;
+  border: 1px solid #d2d2d7;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
 }
 
 .font-mono {
-  font-family: var(--app-font-mono);
+  font-family: var(--app-font-mono, 'Inter', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 </style>

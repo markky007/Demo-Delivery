@@ -4,17 +4,20 @@
     <div class="row items-center justify-between q-mb-md header-row">
       <div class="header-title-box">
         <div class="row items-center q-gutter-xs">
-          <q-icon name="restaurant_menu" color="primary" size="22px" />
-          <span class="text-subtitle1 text-weight-bold">
-            ประสิทธิภาพเมนู & รายการขายช้า (Menu Analytics)
+          <div class="header-icon-pill">
+            <q-icon name="restaurant_menu" color="primary" size="18px" />
+          </div>
+          <span class="text-subtitle1 text-weight-bold text-ink">
+            ประสิทธิภาพเมนูอาหาร & การจัดการสต็อก
           </span>
         </div>
-        <div class="text-caption text-grey-7 q-mt-xs">
-          วิเคราะห์เมนูยอดนิยม เมนูที่ทำรายได้สูงสุด เมนูขายช้า และสัดส่วนหมวดหมู่อาหาร
+        <div class="text-caption text-muted q-mt-xs">
+          Menu Analytics • วิเคราะห์ 10 อันดับเมนูขายดี เมนูขายช้าเสี่ยงสต็อกค้าง สัดส่วนหมวดหมู่
+          และท็อปปิ้ง
         </div>
       </div>
 
-      <!-- Tab Switcher (Mobile Friendly Pill / Horizontal Scrollable) -->
+      <!-- Tab Switcher (Apple Segmented Pill) -->
       <div class="tab-switcher-pill">
         <q-tabs
           v-model="activeTab"
@@ -28,11 +31,11 @@
         >
           <q-tab name="best" icon="military_tech">
             <span class="gt-xs q-ml-xs">เมนูขายดี (Top 10)</span>
-            <span class="lt-sm q-ml-xs">เมนูขายดี</span>
+            <span class="lt-sm q-ml-xs">ขายดี</span>
           </q-tab>
           <q-tab name="slow" icon="warning_amber">
-            <span class="gt-xs q-ml-xs">เมนูขายช้า / เสี่ยงสต็อกค้าง</span>
-            <span class="lt-sm q-ml-xs">เมนูขายช้า</span>
+            <span class="gt-xs q-ml-xs">เมนูขายช้า / สต็อกค้าง</span>
+            <span class="lt-sm q-ml-xs">ขายช้า</span>
           </q-tab>
           <q-tab name="categories" icon="pie_chart">
             <span class="gt-xs q-ml-xs">สัดส่วนหมวดหมู่</span>
@@ -51,8 +54,8 @@
     <!-- ========================================================= -->
     <div v-if="activeTab === 'best'">
       <div v-if="topSellingItems.length === 0" class="empty-tab-box text-center q-pa-lg">
-        <q-icon name="restaurant" size="40px" color="grey-4" />
-        <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีรายการสั่งอาหารในช่วงเวลานี้</div>
+        <q-icon name="restaurant" size="36px" color="grey-4" />
+        <div class="text-caption text-muted q-mt-sm">ยังไม่มีรายการสั่งอาหารในช่วงเวลานี้</div>
       </div>
 
       <div v-else>
@@ -60,7 +63,7 @@
         <div
           class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-xs top-controls-row"
         >
-          <div class="text-caption text-grey-8 top-control-caption">
+          <div class="text-caption text-muted top-control-caption">
             แสดง 10 อันดับเมนูอาหารยอดนิยม (ไม่รวมหมวดหมู่เครื่องดื่ม)
           </div>
           <div class="top-menu-toggle-group">
@@ -72,6 +75,7 @@
               rounded
               no-caps
               size="sm"
+              class="segmented-toggle"
               :spread="$q.screen.xs"
               :options="sortOptions"
             />
@@ -102,11 +106,11 @@
                       #{{ idx + 1 }}
                     </span>
                     <div class="ellipsis col">
-                      <div class="text-weight-bold text-dark text-body2 ellipsis">
+                      <div class="text-weight-bold text-ink text-body2 ellipsis">
                         {{ item.name }}
                       </div>
-                      <div class="text-caption text-grey-6 ellipsis">
-                        {{ item.categoryName }} • พื้นฐาน {{ formatPrice(item.basePrice) }}
+                      <div class="text-caption text-muted ellipsis">
+                        {{ item.categoryName }} • {{ formatPrice(item.basePrice) }}
                       </div>
                     </div>
                   </div>
@@ -115,19 +119,19 @@
                     <div class="text-weight-bold text-primary font-mono text-body2">
                       {{ formatPrice(item.totalRevenue) }}
                     </div>
-                    <div class="text-caption text-grey-7 font-mono">
+                    <div class="text-caption text-muted font-mono">
                       <strong>{{ item.quantitySold }}</strong> จาน ({{ item.revenueShare }}%)
                     </div>
                   </div>
                 </div>
 
-                <!-- Clean, Proportionate Progress Bar -->
+                <!-- Clean Proportionate Progress Bar -->
                 <div class="item-progress-track">
                   <div
                     class="item-progress-bar"
                     :style="{
                       width: `${getProportionPercentage(item)}%`,
-                      background: getBarColor(idx),
+                      background: idx === 0 ? '#0071e3' : '#86868b',
                     }"
                   ></div>
                 </div>
@@ -144,14 +148,11 @@
     <div v-else-if="activeTab === 'slow'">
       <div class="slow-banner q-mb-md">
         <div class="row items-start no-wrap q-gutter-sm">
-          <q-icon
-            name="tips_and_updates"
-            color="amber-9"
-            size="22px"
-            class="flex-shrink-0 q-mt-xs"
-          />
-          <div class="text-caption text-grey-9">
-            <strong>คำแนะนำสำหรับเจ้าของร้าน:</strong>
+          <div class="tip-icon-pill">
+            <q-icon name="lightbulb" color="primary" size="18px" />
+          </div>
+          <div class="text-caption text-body">
+            <strong class="text-ink">คำแนะนำสำหรับร้านค้า:</strong>
             เมนูที่มียอดขายน้อยหรือไม่มีคนสั่งเลย ควรพิจารณาปรับปรุงรูปภาพเมนูให้ดึงดูดขึ้น,
             จัดเซ็ตคอมโบ้คู่กับเมนูขายดี, หรือตัดออกจากเมนูเพื่อลดต้นทุนการสต็อกวัตถุดิบ
           </div>
@@ -164,16 +165,16 @@
           <div class="sub-section-card">
             <div class="row items-center justify-between q-mb-sm">
               <div class="row items-center q-gutter-xs">
-                <q-icon name="cancel" color="negative" size="18px" />
-                <span class="text-weight-bold text-dark">ไม่มีคนสั่งเลย (0 จาน)</span>
+                <q-icon name="remove_circle_outline" color="grey-7" size="18px" />
+                <span class="text-weight-bold text-ink">ไม่มีคนสั่งเลย (0 จาน)</span>
               </div>
-              <q-badge color="negative" rounded class="q-px-xs">
+              <q-badge color="grey-3" text-color="dark" rounded class="q-px-sm">
                 {{ zeroSalesItems.length }} เมนู
               </q-badge>
             </div>
 
-            <div v-if="zeroSalesItems.length === 0" class="text-caption text-positive q-pa-sm">
-              ✨ ยอดเยี่ยม! เมนูทั้งหมดมีออเดอร์เข้ามาในช่วงเวลานี้
+            <div v-if="zeroSalesItems.length === 0" class="text-caption text-primary q-pa-sm">
+              ✨ ยอดเยี่ยม! ทุกเมนูมีออเดอร์เข้ามาในช่วงเวลานี้
             </div>
 
             <div v-else class="slow-items-list">
@@ -183,14 +184,14 @@
                 class="slow-item-row row items-center justify-between no-wrap"
               >
                 <div class="ellipsis col q-pr-sm">
-                  <div class="text-weight-medium text-dark text-body2 ellipsis">
+                  <div class="text-weight-medium text-ink text-body2 ellipsis">
                     {{ item.name }}
                   </div>
-                  <div class="text-grey-6 text-caption ellipsis">{{ item.categoryName }}</div>
+                  <div class="text-muted text-caption ellipsis">{{ item.categoryName }}</div>
                 </div>
                 <div class="text-right flex-shrink-0">
-                  <span class="text-negative text-caption text-weight-bold font-mono">0 จาน</span>
-                  <div class="text-grey-6 text-caption">{{ formatPrice(item.basePrice) }}</div>
+                  <span class="text-muted text-caption text-weight-bold font-mono">0 จาน</span>
+                  <div class="text-muted text-caption">{{ formatPrice(item.basePrice) }}</div>
                 </div>
               </div>
             </div>
@@ -202,15 +203,15 @@
           <div class="sub-section-card">
             <div class="row items-center justify-between q-mb-sm">
               <div class="row items-center q-gutter-xs">
-                <q-icon name="trending_down" color="warning" size="18px" />
-                <span class="text-weight-bold text-dark">ขายได้น้อยมาก (1-3 จาน)</span>
+                <q-icon name="trending_down" color="grey-7" size="18px" />
+                <span class="text-weight-bold text-ink">ขายได้น้อย (1-3 จาน)</span>
               </div>
-              <q-badge color="warning" text-color="dark" rounded class="q-px-xs">
+              <q-badge color="grey-3" text-color="dark" rounded class="q-px-sm">
                 {{ slowMovingItems.length }} เมนู
               </q-badge>
             </div>
 
-            <div v-if="slowMovingItems.length === 0" class="text-caption text-grey-6 q-pa-sm">
+            <div v-if="slowMovingItems.length === 0" class="text-caption text-muted q-pa-sm">
               ไม่พบเมนูที่มีการขายช้าผิดปกติ
             </div>
 
@@ -221,16 +222,16 @@
                 class="slow-item-row row items-center justify-between no-wrap"
               >
                 <div class="ellipsis col q-pr-sm">
-                  <div class="text-weight-medium text-dark text-body2 ellipsis">
+                  <div class="text-weight-medium text-ink text-body2 ellipsis">
                     {{ item.name }}
                   </div>
-                  <div class="text-grey-6 text-caption ellipsis">{{ item.categoryName }}</div>
+                  <div class="text-muted text-caption ellipsis">{{ item.categoryName }}</div>
                 </div>
                 <div class="text-right flex-shrink-0">
-                  <span class="text-warning text-caption text-weight-bold font-mono">
-                    ขายได้ {{ item.quantitySold }} จาน
+                  <span class="text-muted text-caption text-weight-bold font-mono">
+                    {{ item.quantitySold }} จาน
                   </span>
-                  <div class="text-grey-7 text-caption font-mono">
+                  <div class="text-ink text-caption font-mono">
                     {{ formatPrice(item.totalRevenue) }}
                   </div>
                 </div>
@@ -273,11 +274,11 @@
                           class="category-color-dot"
                           :style="{ backgroundColor: getCategoryColor(idx) }"
                         ></span>
-                        <span class="text-weight-bold text-dark">{{ cat.name }}</span>
+                        <span class="text-weight-bold text-ink">{{ cat.name }}</span>
                       </div>
                     </td>
                     <td class="text-right font-mono">
-                      {{ cat.totalQuantity }} <span class="text-caption text-grey-6">จาน</span>
+                      {{ cat.totalQuantity }} <span class="text-caption text-muted">จาน</span>
                     </td>
                     <td class="text-right font-mono text-weight-bold text-primary">
                       {{ formatPrice(cat.totalSales) }}
@@ -302,7 +303,7 @@
                     class="category-color-dot"
                     :style="{ backgroundColor: getCategoryColor(idx) }"
                   ></span>
-                  <span class="text-weight-bold text-dark text-body2 ellipsis">{{ cat.name }}</span>
+                  <span class="text-weight-bold text-ink text-body2 ellipsis">{{ cat.name }}</span>
                 </div>
                 <div
                   class="text-right flex-shrink-0 font-mono text-weight-bold text-primary text-body2"
@@ -321,9 +322,9 @@
                 ></div>
               </div>
 
-              <div class="row items-center justify-between text-caption text-grey-7 font-mono">
+              <div class="row items-center justify-between text-caption text-muted font-mono">
                 <span>ขายได้ {{ cat.totalQuantity }} จาน</span>
-                <span class="text-weight-bold text-dark">{{ cat.percentage }}% ของยอดขาย</span>
+                <span class="text-weight-bold text-ink">{{ cat.percentage }}% ของยอดขาย</span>
               </div>
             </div>
           </div>
@@ -336,14 +337,14 @@
     <!-- ========================================================= -->
     <div v-else-if="activeTab === 'addons'">
       <div class="row items-center justify-between q-mb-md flex-wrap q-gutter-y-xs">
-        <div class="text-caption text-grey-8">
+        <div class="text-caption text-muted">
           อันดับตัวเลือกเสริมยอดนิยม (เฉพาะหมวดหมู่เพิ่มเติม และเนื้อสัตว์เพิ่มเติม)
         </div>
       </div>
 
       <div v-if="topAddons.length === 0" class="empty-tab-box text-center q-pa-lg">
-        <q-icon name="tune" size="36px" color="grey-5" />
-        <div class="text-caption text-grey-6 q-mt-sm">ยังไม่มีรายการตัวเลือกเสริมในช่วงเวลานี้</div>
+        <q-icon name="tune" size="36px" color="grey-4" />
+        <div class="text-caption text-muted q-mt-sm">ยังไม่มีรายการตัวเลือกเสริมในช่วงเวลานี้</div>
       </div>
 
       <div v-else class="row q-col-gutter-sm">
@@ -352,25 +353,21 @@
             <div class="row items-center justify-between no-wrap q-mb-xs">
               <div class="row items-center q-gutter-xs ellipsis col">
                 <span class="addon-rank">#{{ idx + 1 }}</span>
-                <div class="text-weight-bold text-dark text-body2 ellipsis">
+                <div class="text-weight-bold text-ink text-body2 ellipsis">
                   {{ addon.name }}
                 </div>
               </div>
-              <q-badge
-                color="grey-3"
-                text-color="grey-9"
-                class="q-px-xs text-caption flex-shrink-0"
-              >
+              <q-badge color="grey-2" text-color="dark" class="q-px-xs text-caption flex-shrink-0">
                 {{ addon.groupName }}
               </q-badge>
             </div>
             <div class="row items-center justify-between text-caption q-mt-xs">
-              <span class="text-grey-7">จำนวนสั่ง:</span>
+              <span class="text-muted">จำนวนสั่ง:</span>
               <span class="font-mono text-weight-bold text-primary">{{ addon.count }} ครั้ง</span>
             </div>
             <div class="row items-center justify-between text-caption">
-              <span class="text-grey-7">รายได้เสริม:</span>
-              <span class="font-mono text-weight-bold text-positive">{{
+              <span class="text-muted">รายได้เสริม:</span>
+              <span class="font-mono text-weight-bold text-ink">{{
                 formatPrice(addon.totalRevenue)
               }}</span>
             </div>
@@ -409,8 +406,8 @@ const topMenuSortBy = ref<'quantity' | 'revenue'>('quantity');
 const sortOptions = computed(() => {
   return $q.screen.xs
     ? [
-        { label: 'เรียงตามจาน (จาน)', value: 'quantity' as const },
-        { label: 'เรียงตามยอดขาย (฿)', value: 'revenue' as const },
+        { label: 'เรียงตามจาน', value: 'quantity' as const },
+        { label: 'เรียงตามยอดขาย', value: 'revenue' as const },
       ]
     : [
         { label: 'เรียงตามจำนวนจาน (จาน)', value: 'quantity' as const },
@@ -425,28 +422,30 @@ let topMenuChartInstance: Chart | null = null;
 const categoryCanvasRef = ref<HTMLCanvasElement | null>(null);
 let categoryChartInstance: Chart | null = null;
 
+// Apple Analytical Palette for Top Menu
 const TOP_MENU_COLORS = [
-  '#e05836', // #1 Warm Terracotta (Brand)
-  '#ea580c', // #2 Orange
-  '#f59e0b', // #3 Amber
-  '#0284c7', // #4 Sky Blue
-  '#0d9488', // #5 Teal
-  '#16a34a', // #6 Green
-  '#9333ea', // #7 Purple
-  '#4f46e5', // #8 Indigo
-  '#64748b', // #9 Slate
-  '#94a3b8', // #10 Light Slate
+  '#0071e3', // #1 Action Blue
+  '#1c82eb', // #2
+  '#3993f2', // #3
+  '#56a4fa', // #4
+  '#74b5ff', // #5
+  '#91c6ff', // #6
+  '#86868b', // #7 Apple Muted Slate
+  '#a1a1a6', // #8
+  '#b0b0b5', // #9
+  '#c7c7cc', // #10
 ];
 
+// Apple Harmonious Category Colors
 const CATEGORY_COLORS = [
-  '#e05836',
-  '#0284c7',
-  '#16a34a',
-  '#d97706',
-  '#9333ea',
-  '#0d9488',
-  '#e11d48',
-  '#64748b',
+  '#0071e3', // Blue
+  '#34c759', // Green
+  '#ff9500', // Orange
+  '#af52de', // Purple
+  '#5856d6', // Indigo
+  '#5ac8fa', // Teal / Light Blue
+  '#ff2d55', // Rose
+  '#8e8e93', // Gray
 ];
 
 // Sort top items by user-selected metric (quantity or revenue)
@@ -472,12 +471,8 @@ function getProportionPercentage(item: MenuItemPerformance): number {
   return Math.min(100, Math.max(8, Math.round((val / maxItemValue.value) * 100)));
 }
 
-function getBarColor(idx: number): string {
-  return TOP_MENU_COLORS[idx] || '#64748b';
-}
-
 function getCategoryColor(idx: number): string {
-  return CATEGORY_COLORS[idx % CATEGORY_COLORS.length] || '#64748b';
+  return CATEGORY_COLORS[idx % CATEGORY_COLORS.length] || '#86868b';
 }
 
 // ─── Initialize Top Selling Menu Horizontal Bar Chart ───────────────────────
@@ -522,9 +517,13 @@ function initTopMenuChart() {
           display: false,
         },
         tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 12, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 11 },
+          backgroundColor: 'rgba(29, 29, 31, 0.94)',
+          titleFont: {
+            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+            size: 12,
+            weight: 'bold',
+          },
+          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
           padding: 10,
           cornerRadius: 8,
           callbacks: {
@@ -544,12 +543,12 @@ function initTopMenuChart() {
         x: {
           beginAtZero: true,
           grid: {
-            color: '#f1f5f9',
+            color: '#f5f5f7',
           },
           ticks: {
             precision: 0,
-            font: { family: 'Prompt, sans-serif', size: isMobile ? 9 : 10 },
-            color: '#64748b',
+            font: { family: 'Inter, sans-serif', size: isMobile ? 9 : 10 },
+            color: '#86868b',
             callback: (val) => {
               if (topMenuSortBy.value === 'revenue') {
                 return typeof val === 'number' && val >= 1000
@@ -565,8 +564,12 @@ function initTopMenuChart() {
             display: false,
           },
           ticks: {
-            font: { family: 'Prompt, sans-serif', size: isMobile ? 10 : 11, weight: 'bold' },
-            color: '#334155',
+            font: {
+              family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+              size: isMobile ? 10 : 11,
+              weight: 'bold',
+            },
+            color: '#1d1d1f',
             callback: function (val: string | number) {
               const label = this.getLabelForValue(Number(val));
               const maxLen = isMobile ? 10 : 16;
@@ -585,7 +588,7 @@ function initTopMenuChart() {
   topMenuChartInstance = new Chart(ctx, config);
 }
 
-// ─── Initialize Categories Doughnut Chart ───────────────────────────────────
+// ─── Initialize Categories Doughnut Chart (Cutout 70%) ───────────────────────
 function initCategoryChart() {
   if (!categoryCanvasRef.value) return;
   const ctx = categoryCanvasRef.value.getContext('2d');
@@ -612,21 +615,29 @@ function initCategoryChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '68%',
+      cutout: '70%',
       plugins: {
         legend: {
           position: 'bottom',
           labels: {
             usePointStyle: true,
             boxWidth: isMobile ? 6 : 8,
-            padding: isMobile ? 8 : 10,
-            font: { family: 'Prompt, sans-serif', size: isMobile ? 10 : 11 },
+            padding: isMobile ? 8 : 12,
+            font: {
+              family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+              size: isMobile ? 10 : 11,
+            },
+            color: '#1d1d1f',
           },
         },
         tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.92)',
-          titleFont: { family: 'Prompt, sans-serif', size: 12, weight: 'bold' },
-          bodyFont: { family: 'Prompt, sans-serif', size: 11 },
+          backgroundColor: 'rgba(29, 29, 31, 0.94)',
+          titleFont: {
+            family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif',
+            size: 12,
+            weight: 'bold',
+          },
+          bodyFont: { family: 'Inter, LINE Seed Sans TH, Prompt, sans-serif', size: 11 },
           padding: 10,
           cornerRadius: 8,
           callbacks: {
@@ -709,10 +720,22 @@ onBeforeUnmount(() => {
 <style scoped>
 .analytics-card {
   background: #ffffff;
-  border-radius: var(--radius-md, 16px);
-  border: 1px solid var(--color-border, #ede5dc);
+  border-radius: 20px;
+  border: 1px solid #d2d2d7;
   padding: 20px;
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.text-ink {
+  color: #1d1d1f;
+}
+
+.text-body {
+  color: #414143;
+}
+
+.text-muted {
+  color: #6e6e73;
 }
 
 .header-row {
@@ -720,10 +743,21 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.header-icon-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 980px;
+  background: #f0f6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .tab-switcher-pill {
-  background: var(--color-surface-subtle, #f5efe9);
+  background: #f5f5f7;
   padding: 3px;
-  border-radius: 20px;
+  border-radius: 980px;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -736,15 +770,15 @@ onBeforeUnmount(() => {
 
 .matrix-tabs :deep(.q-tab) {
   min-height: 36px;
-  border-radius: 18px;
+  border-radius: 980px;
   font-size: 0.84rem;
   padding: 0 14px;
 }
 
 .top-menu-toggle-group {
-  background: var(--color-surface-subtle, #f5efe9);
+  background: #f5f5f7;
   padding: 3px;
-  border-radius: 20px;
+  border-radius: 980px;
 }
 
 /* Top Chart Canvas Wrapper */
@@ -765,22 +799,25 @@ onBeforeUnmount(() => {
 }
 
 .ranked-item-card {
-  background: var(--color-surface-subtle, #f5efe9);
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 12px;
   padding: 8px 12px;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .ranked-item-card:hover {
-  background: #ffffff;
-  border-color: var(--color-primary-tint, #ffe6dc);
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  transform: translateY(-2px);
+  border-color: #0071e3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .ranked-item-card--top3 {
-  border-left: 3px solid var(--color-primary, #e05836);
-  background: #fff8f5;
+  border-left: 3px solid #0071e3;
+  background: #fbfdff;
 }
 
 .rank-badge {
@@ -794,49 +831,60 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  background: #64748b;
+  background: #86868b;
   flex-shrink: 0;
 }
 
 .rank-badge--1 {
-  background: linear-gradient(135deg, #e05836, #c2410c);
+  background: #0071e3;
 }
 
 .rank-badge--2 {
-  background: linear-gradient(135deg, #ea580c, #c2410c);
+  background: #1c82eb;
 }
 
 .rank-badge--3 {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #56a4fa;
 }
 
 .item-progress-track {
   width: 100%;
-  height: 5px;
-  background: #e2e8f0;
-  border-radius: 3px;
+  height: 4px;
+  background: #e8e8ed;
+  border-radius: 2px;
   overflow: hidden;
   margin-top: 4px;
 }
 
 .item-progress-bar {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.3s ease;
 }
 
 /* Slow / Deadstock tab */
 .slow-banner {
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
-  border-radius: var(--radius-sm, 10px);
+  background: #fafafc;
+  border: 1px solid #e8e8ed;
+  border-radius: 12px;
   padding: 10px 14px;
 }
 
+.tip-icon-pill {
+  width: 28px;
+  height: 28px;
+  border-radius: 980px;
+  background: #f0f6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .sub-section-card {
-  background: var(--color-surface-subtle, #f5efe9);
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 14px;
   padding: 14px;
 }
 
@@ -847,7 +895,7 @@ onBeforeUnmount(() => {
 
 .slow-item-row {
   padding: 8px 0;
-  border-bottom: 1px dashed var(--color-border, #ede5dc);
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .slow-item-row:last-child {
@@ -883,18 +931,18 @@ onBeforeUnmount(() => {
   text-align: left;
   padding: 10px 12px;
   font-size: 0.8rem;
-  color: var(--color-text-secondary, #7a6e65);
-  border-bottom: 1px solid var(--color-border, #ede5dc);
+  color: #6e6e73;
+  border-bottom: 1px solid #e8e8ed;
 }
 
 .analytics-table td {
   padding: 10px 12px;
   font-size: 0.86rem;
-  border-bottom: 1px solid var(--color-border-subtle, #f3ede6);
+  border-bottom: 1px solid #f5f5f7;
 }
 
 .analytics-table tr:hover td {
-  background-color: var(--color-surface-subtle, #f5efe9);
+  background-color: #fafafc;
 }
 
 /* Mobile Category Card List */
@@ -904,36 +952,39 @@ onBeforeUnmount(() => {
 }
 
 .mobile-category-card {
-  background: var(--color-surface-subtle, #f5efe9);
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 12px;
   padding: 10px 12px;
 }
 
 /* Addon Tab */
 .addon-card {
-  background: var(--color-surface-subtle, #f5efe9);
-  border: 1px solid var(--color-border, #ede5dc);
-  border-radius: var(--radius-sm, 10px);
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 14px;
   padding: 12px;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .addon-card:hover {
-  background: #ffffff;
-  border-color: var(--color-primary-tint, #ffe6dc);
-  box-shadow: var(--shadow-subtle, 0 1px 3px rgba(0, 0, 0, 0.04));
+  transform: translateY(-2px);
+  border-color: #0071e3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .addon-rank {
   font-size: 0.76rem;
   font-weight: 700;
-  color: var(--color-primary, #e05836);
+  color: #0071e3;
   flex-shrink: 0;
 }
 
 .font-mono {
-  font-family: var(--app-font-mono);
+  font-family: var(--app-font-mono, 'Inter', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 
@@ -941,7 +992,7 @@ onBeforeUnmount(() => {
 @media (max-width: 599px) {
   .analytics-card {
     padding: 14px 12px;
-    border-radius: 14px;
+    border-radius: 16px;
   }
 
   .header-row {

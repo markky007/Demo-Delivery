@@ -6,13 +6,11 @@
       <div v-if="takeawayCards.length > 0" class="takeaway-bay-section q-mb-lg">
         <div class="bay-header row items-center justify-between q-mb-sm">
           <div class="row items-center q-gutter-x-xs">
-            <q-icon name="shopping_bag" size="18px" color="orange-9" />
+            <q-icon name="shopping_bag" size="18px" class="text-orange-9" />
             <span class="bay-title">จุดบริการสั่งกลับบ้าน (Takeaway Station)</span>
-            <q-badge color="orange-9" rounded class="q-ml-xs">
-              {{ activeTakeawayCount }} ออเดอร์
-            </q-badge>
+            <span class="bay-count-badge font-tabular"> {{ activeTakeawayCount }} ออเดอร์ </span>
           </div>
-          <span class="text-caption text-grey-6">จุดรับอาหารหน้าร้าน</span>
+          <span class="text-caption text-muted">จุดรับอาหารหน้าร้าน</span>
         </div>
 
         <div class="takeaway-cards-row">
@@ -33,17 +31,17 @@
                     <q-icon name="takeout_dining" size="16px" />
                   </div>
                   <div class="ellipsis">
-                    <div class="text-weight-bold text-caption ellipsis">
+                    <div class="text-weight-bold text-caption ellipsis text-ink">
                       {{ item.session?.customer_name || item.table.name }}
                     </div>
-                    <div class="text-caption text-grey-6 font-size-10">
+                    <div class="text-caption text-muted font-size-10">
                       {{ item.session ? `เริ่ม ${item.startedAtTime}` : 'จุดสั่งกลับบ้าน' }}
                     </div>
                   </div>
                 </div>
                 <div class="text-right">
                   <div
-                    class="text-weight-bolder text-caption"
+                    class="text-weight-bolder text-caption font-tabular"
                     :class="item.isPaid ? 'text-purple-9' : 'text-primary'"
                   >
                     {{ item.session ? formatPrice(item.totalAmount) : 'พร้อมรับ' }}
@@ -55,7 +53,7 @@
                         ? 'text-purple-9 text-weight-bold'
                         : item.isReadyToPay
                           ? 'text-positive text-weight-bold'
-                          : 'text-grey-6'
+                          : 'text-muted'
                     "
                   >
                     {{ item.statusBadge.label }}
@@ -73,7 +71,7 @@
           <div class="row items-center q-gutter-x-xs">
             <q-icon name="table_restaurant" size="18px" color="primary" />
             <span class="hall-title">โซนโต๊ะอาหารภายในร้าน (Dining Hall)</span>
-            <span class="hall-count text-caption text-grey-6">
+            <span class="hall-count text-caption text-muted font-tabular">
               ({{ activeDineInCount }}/{{ dineInTables.length }} โต๊ะไม่ว่าง)
             </span>
           </div>
@@ -104,7 +102,7 @@
             <div class="table-surface">
               <!-- Top Row: Table Name & Status Badge -->
               <div class="row items-center justify-between no-wrap table-surface-header">
-                <div class="table-number-text">
+                <div class="table-number-text text-ink">
                   {{ item.table.name }}
                 </div>
 
@@ -127,11 +125,11 @@
                       <q-icon name="person" size="12px" class="q-mr-xs" />
                       <span class="ellipsis">{{ item.session.customer_name }}</span>
                     </div>
-                    <div v-else class="text-caption text-grey-6 row items-center">
+                    <div v-else class="text-caption text-muted row items-center">
                       <q-icon name="schedule" size="11px" class="q-mr-xs" />
                       <span>{{ item.startedAtTime }}</span>
                     </div>
-                    <span class="text-caption text-grey-7 text-weight-medium">
+                    <span class="text-caption text-muted font-tabular">
                       {{ item.elapsedTime }}
                     </span>
                   </div>
@@ -142,7 +140,7 @@
                       <span :class="item.kitchenTextColor" class="text-weight-bold">
                         {{ item.servedOrdersCount }}/{{ item.orderCount }} เสิร์ฟแล้ว
                       </span>
-                      <span class="text-grey-6">{{ item.totalItemCount }} จาน</span>
+                      <span class="text-muted font-tabular">{{ item.totalItemCount }} จาน</span>
                     </div>
                     <div class="table-mini-progress-bar">
                       <div
@@ -164,9 +162,9 @@
                   <!-- Clean Available Table Center -->
                   <div class="available-center-box column items-center justify-center">
                     <div class="available-icon-bubble">
-                      <q-icon name="qr_code_2" size="20px" />
+                      <q-icon name="qr_code_2" size="20px" class="text-muted" />
                     </div>
-                    <span class="available-hint-text">แตะเพื่อเปิดบิล / ดู QR</span>
+                    <span class="available-hint-text text-muted">แตะเปิดบิล / ดู QR</span>
                   </div>
                 </template>
               </div>
@@ -175,17 +173,19 @@
               <div class="row items-center justify-between no-wrap table-surface-footer">
                 <div v-if="item.session" class="table-amount-wrap">
                   <span class="currency">฿</span>
-                  <span class="amount-number">{{
+                  <span class="amount-number font-tabular">{{
                     formatPrice(item.totalAmount).replace('฿', '')
                   }}</span>
                 </div>
-                <div v-else class="table-avail-prompt text-caption text-grey-6 font-size-11">
+                <div v-else class="table-avail-prompt text-caption text-muted font-size-11">
                   พร้อมรับลูกค้า
                 </div>
 
                 <div
                   class="table-action-icon-pill"
-                  :class="item.session ? 'bg-primary-soft text-primary' : 'bg-grey-2 text-grey-7'"
+                  :class="
+                    item.session ? 'bg-primary-soft text-primary' : 'bg-surface-alt text-muted'
+                  "
                 >
                   <q-icon
                     :name="
@@ -213,10 +213,10 @@
       </div>
     </div>
 
-    <!-- Quick Table Action Sheet / Inspector Dialog -->
+    <!-- Quick Table Action Sheet / Inspector Dialog (Apple Bottom Sheet Style) -->
     <q-dialog v-model="showActionSheet" position="bottom" class="table-action-dialog">
-      <q-card v-if="selectedItem" class="action-sheet-card border-radius-top-xl q-pa-md">
-        <!-- Sheet Header Bar -->
+      <q-card v-if="selectedItem" class="action-sheet-card q-pa-md">
+        <!-- Drag Handle Indicator -->
         <div class="sheet-drag-handle q-mx-auto q-mb-sm"></div>
 
         <div class="row items-start justify-between q-mb-md">
@@ -224,37 +224,27 @@
             <div class="table-sheet-avatar" :class="selectedItem.avatarClass">
               <q-icon
                 :name="selectedItem.isTakeaway ? 'shopping_bag' : 'table_restaurant'"
-                size="24px"
+                size="22px"
               />
             </div>
             <div>
               <div class="row items-center q-gutter-x-xs">
-                <span class="text-h6 text-weight-bold">
+                <span class="text-h6 text-weight-bold text-ink">
                   {{
                     selectedItem.isTakeaway && selectedItem.session?.customer_name
                       ? `สั่งกลับบ้าน (${selectedItem.session.customer_name})`
                       : selectedItem.table.name
                   }}
                 </span>
-                <q-badge
-                  v-if="selectedItem.isTakeaway"
-                  color="orange-9"
-                  rounded
-                  class="q-px-xs text-caption"
-                >
+                <span v-if="selectedItem.isTakeaway" class="apple-tag apple-tag--orange">
                   กลับบ้าน
-                </q-badge>
-                <q-badge
-                  v-if="selectedItem.session?.customer_name"
-                  color="amber-9"
-                  rounded
-                  class="q-px-xs text-caption text-weight-bold"
-                >
+                </span>
+                <span v-if="selectedItem.session?.customer_name" class="apple-customer-pill">
                   {{ selectedItem.session.customer_name }}
-                </q-badge>
+                </span>
               </div>
 
-              <div class="text-caption text-grey-7 q-mt-xs">
+              <div class="text-caption text-muted q-mt-xs">
                 <template v-if="selectedItem.session">
                   <q-icon name="schedule" size="12px" class="q-mr-xs" />
                   <span
@@ -270,13 +260,13 @@
           </div>
 
           <!-- Status Badge -->
-          <div class="table-main-status-badge" :class="selectedItem.statusBadge.badgeClass">
+          <div class="apple-status-pill" :class="selectedItem.statusBadge.badgeClass">
             <span
               v-if="selectedItem.statusBadge.isPulse"
               class="live-status-dot"
               :class="`live-status-dot--${selectedItem.statusBadge.dotColor}`"
             ></span>
-            <q-icon :name="selectedItem.statusBadge.icon" size="14px" class="q-mr-xs" />
+            <q-icon :name="selectedItem.statusBadge.icon" size="13px" class="q-mr-xs" />
             <span>{{ selectedItem.statusBadge.label }}</span>
           </div>
         </div>
@@ -297,7 +287,7 @@
                   {{ selectedItem.kitchenText }}
                 </span>
               </div>
-              <span v-if="selectedItem.orderCount > 0" class="text-grey-7">
+              <span v-if="selectedItem.orderCount > 0" class="text-muted font-tabular">
                 {{ selectedItem.servedOrdersCount }}/{{ selectedItem.orderCount }} คิว ({{
                   selectedItem.totalItemCount
                 }}
@@ -306,9 +296,9 @@
             </div>
 
             <!-- Mini Progress Bar -->
-            <div v-if="selectedItem.orderCount > 0" class="progress-bar-track">
+            <div v-if="selectedItem.orderCount > 0" class="apple-progress-track">
               <div
-                class="progress-bar-fill"
+                class="apple-progress-fill"
                 :class="selectedItem.progressBarColorClass"
                 :style="{ width: `${selectedItem.servingPercentage}%` }"
               ></div>
@@ -319,20 +309,24 @@
           <div
             class="sheet-amount-card q-pa-sm row items-center justify-between"
             :class="{
-              'sheet-amount-card--ready-pay': selectedItem.tableStatus === 'READY_TO_PAY',
+              'sheet-amount-card--ready': selectedItem.tableStatus === 'READY_TO_PAY',
               'sheet-amount-card--paid': selectedItem.tableStatus === 'PAID',
             }"
           >
             <div>
-              <div class="text-caption text-grey-7">
+              <div class="text-caption text-muted">
                 {{ selectedItem.isPaid ? 'ยอดชำระแล้ว' : 'ยอดรวมบิลปัจจุบัน' }}
               </div>
-              <div v-if="selectedItem.isPaid" class="text-caption text-positive font-size-11">
-                <q-icon name="check_circle" size="12px" class="q-mr-xs" /> ชำระเงินเรียบร้อย
+              <div
+                v-if="selectedItem.isPaid"
+                class="text-caption text-positive font-size-11 row items-center q-mt-xs"
+              >
+                <q-icon name="check_circle" size="12px" class="q-mr-xs" />
+                <span>ชำระเงินเรียบร้อย</span>
               </div>
             </div>
             <div
-              class="text-h5 text-weight-bolder"
+              class="text-h5 text-weight-bolder font-tabular"
               :class="
                 selectedItem.isPaid
                   ? 'text-purple-9'
@@ -348,9 +342,9 @@
 
         <!-- Empty Table Body -->
         <div v-else class="sheet-empty-body q-pa-md text-center q-mb-md">
-          <q-icon name="chair_alt" size="36px" color="grey-6" class="q-mb-xs" />
-          <div class="text-subtitle2 text-weight-bold text-grey-8">โต๊ะว่าง พร้อมให้บริการ</div>
-          <div class="text-caption text-grey-6">
+          <q-icon name="chair_alt" size="32px" class="text-muted q-mb-xs" />
+          <div class="text-subtitle2 text-weight-bold text-ink">โต๊ะว่าง พร้อมให้บริการ</div>
+          <div class="text-caption text-muted">
             สแกน QR เพื่อสั่งอาหาร หรือกดเปิดหน้าสั่งอาหารให้ลูกค้าได้ทันที
           </div>
         </div>
@@ -362,19 +356,17 @@
             <q-btn
               unelevated
               no-caps
-              color="purple-8"
-              class="col action-main-btn"
+              class="col apple-pill-btn apple-pill-btn--purple"
               @click="triggerClearTable(selectedItem)"
               :loading="clearingSessionId === selectedItem.session?.id"
             >
-              <q-icon name="cleaning_services" size="18px" class="q-mr-xs" />
+              <q-icon name="cleaning_services" size="17px" class="q-mr-xs" />
               <span>เคลียร์โต๊ะ (เปิดโต๊ะใหม่)</span>
             </q-btn>
             <q-btn
-              outline
+              unelevated
               no-caps
-              color="grey-8"
-              class="action-secondary-btn"
+              class="apple-pill-btn apple-pill-btn--secondary"
               @click="triggerOpenBill(selectedItem.session?.id)"
             >
               <q-icon name="receipt" size="16px" class="q-mr-xs" />
@@ -383,15 +375,17 @@
           </div>
 
           <!-- 2. READY_TO_PAY Actions -->
-          <div v-else-if="selectedItem.tableStatus === 'READY_TO_PAY'" class="row q-gutter-sm">
+          <div
+            v-else-if="selectedItem.tableStatus === 'READY_TO_PAY'"
+            class="row q-gutter-sm items-center"
+          >
             <q-btn
               unelevated
               no-caps
-              color="positive"
-              class="col action-main-btn action-main-btn--ready-pay"
+              class="col apple-pill-btn apple-pill-btn--green"
               @click="triggerOpenBill(selectedItem.session?.id)"
             >
-              <q-icon name="payments" size="18px" class="q-mr-xs" />
+              <q-icon name="payments" size="17px" class="q-mr-xs" />
               <span>เช็กบิล / รับเงิน ({{ formatPrice(selectedItem.totalAmount) }})</span>
               <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
             </q-btn>
@@ -399,9 +393,9 @@
               flat
               round
               dense
-              color="primary"
+              color="grey-7"
               icon="swap_horiz"
-              class="action-icon-btn"
+              class="apple-icon-btn"
               @click="triggerTransferTable(selectedItem)"
             >
               <q-tooltip>ขอย้ายโต๊ะ</q-tooltip>
@@ -412,7 +406,7 @@
               dense
               color="grey-7"
               icon="qr_code_2"
-              class="action-icon-btn"
+              class="apple-icon-btn"
               @click="triggerShowQR(selectedItem.table)"
             >
               <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
@@ -420,23 +414,24 @@
           </div>
 
           <!-- 3. SEATED_NO_ORDER Actions -->
-          <div v-else-if="selectedItem.tableStatus === 'SEATED_NO_ORDER'" class="row q-gutter-sm">
+          <div
+            v-else-if="selectedItem.tableStatus === 'SEATED_NO_ORDER'"
+            class="row q-gutter-sm items-center"
+          >
             <q-btn
               unelevated
               no-caps
-              color="negative"
-              class="col action-main-btn"
+              class="col apple-pill-btn apple-pill-btn--negative"
               @click="triggerCancelSession(selectedItem)"
               :loading="cancellingSessionId === selectedItem.session?.id"
             >
-              <q-icon name="person_remove" size="18px" class="q-mr-xs" />
+              <q-icon name="person_remove" size="17px" class="q-mr-xs" />
               <span>ยกเลิกเซสชัน (คืนโต๊ะว่าง)</span>
             </q-btn>
             <q-btn
-              outline
+              unelevated
               no-caps
-              color="primary"
-              class="action-secondary-btn"
+              class="apple-pill-btn apple-pill-btn--secondary"
               @click="triggerOpenBill(selectedItem.session?.id)"
             >
               <q-icon name="receipt" size="16px" class="q-mr-xs" />
@@ -446,9 +441,9 @@
               flat
               round
               dense
-              color="primary"
+              color="grey-7"
               icon="swap_horiz"
-              class="action-icon-btn"
+              class="apple-icon-btn"
               @click="triggerTransferTable(selectedItem)"
             >
               <q-tooltip>ขอย้ายโต๊ะ</q-tooltip>
@@ -459,7 +454,7 @@
               dense
               color="grey-7"
               icon="qr_code_2"
-              class="action-icon-btn"
+              class="apple-icon-btn"
               @click="triggerShowQR(selectedItem.table)"
             >
               <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
@@ -467,15 +462,14 @@
           </div>
 
           <!-- 4. COOKING Actions -->
-          <div v-else-if="selectedItem.session" class="row q-gutter-sm">
+          <div v-else-if="selectedItem.session" class="row q-gutter-sm items-center">
             <q-btn
               unelevated
               no-caps
-              color="primary"
-              class="col action-main-btn"
+              class="col apple-pill-btn apple-pill-btn--primary"
               @click="triggerOpenBill(selectedItem.session?.id)"
             >
-              <q-icon name="receipt" size="18px" class="q-mr-xs" />
+              <q-icon name="receipt" size="17px" class="q-mr-xs" />
               <span>ดูบิล / จัดการบิล</span>
               <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
             </q-btn>
@@ -483,9 +477,9 @@
               flat
               round
               dense
-              color="primary"
+              color="grey-7"
               icon="swap_horiz"
-              class="action-icon-btn"
+              class="apple-icon-btn"
               @click="triggerTransferTable(selectedItem)"
             >
               <q-tooltip>ขอย้ายโต๊ะ</q-tooltip>
@@ -496,7 +490,7 @@
               dense
               color="grey-7"
               icon="qr_code_2"
-              class="action-icon-btn"
+              class="apple-icon-btn"
               @click="triggerShowQR(selectedItem.table)"
             >
               <q-tooltip>ดู QR ประจำโต๊ะ</q-tooltip>
@@ -506,20 +500,18 @@
           <!-- 5. AVAILABLE TABLE Actions -->
           <div v-else class="row q-gutter-sm">
             <q-btn
-              outline
+              unelevated
               no-caps
-              color="primary"
-              class="col action-secondary-btn"
+              class="col apple-pill-btn apple-pill-btn--secondary"
               @click="triggerShowQR(selectedItem.table)"
             >
-              <q-icon name="qr_code_2" size="18px" class="q-mr-xs" />
+              <q-icon name="qr_code_2" size="17px" class="q-mr-xs" />
               <span>ดู QR โต๊ะ</span>
             </q-btn>
             <q-btn
               unelevated
               no-caps
-              color="secondary"
-              class="col action-secondary-btn"
+              class="col apple-pill-btn apple-pill-btn--primary"
               @click="triggerOpenCustomerLink(selectedItem.table)"
             >
               <q-icon name="open_in_new" size="16px" class="q-mr-xs" />
@@ -626,29 +618,36 @@ function triggerOpenCustomerLink(table: TableWithQR) {
   user-select: none;
 }
 
-/* =========================================================
-   Floor Plan Surface
-   ========================================================= */
+/* Floor Plan Surface */
 .floor-plan-surface {
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-xl, 20px);
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  border-radius: 24px;
   padding: 20px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 /* Takeaway Bay */
 .takeaway-bay-section {
-  background: #fff;
-  border: 1px dashed #fdba74;
-  border-radius: var(--radius-lg, 16px);
+  background: var(--color-surface-subtle, #fafafc);
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  border-radius: 18px;
   padding: 14px 16px;
 }
 
 .bay-title {
   font-weight: 700;
   font-size: 0.88rem;
-  color: #c2410c;
+  color: var(--color-ink, #1d1d1f);
+}
+
+.bay-count-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  padding: 2px 8px;
+  border-radius: 980px;
 }
 
 .takeaway-cards-row {
@@ -658,9 +657,9 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .takeaway-seat-box {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  border-radius: var(--radius-md, 12px);
+  background: #ffffff;
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  border-radius: 14px;
   padding: 10px 12px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -668,16 +667,16 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 
 .takeaway-seat-box:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
-  border-color: #f97316;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: #b0b0b8;
 }
 
 .takeaway-icon-pill {
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-sm, 6px);
-  background: #ffedd5;
-  color: #ea580c;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -688,12 +687,14 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 .hall-title {
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-ink, #1d1d1f);
 }
 
-/* =========================================================
-   Cinema Tables Grid & Units (Chairs + Surface)
-   ========================================================= */
+.hall-count {
+  font-size: 0.8125rem;
+}
+
+/* Cinema Tables Grid & Units */
 .cinema-tables-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
@@ -714,33 +715,33 @@ function triggerOpenCustomerLink(table: TableWithQR) {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dining-unit:hover {
-  transform: translateY(-4px) scale(1.02);
+  transform: translateY(-3px) scale(1.01);
 }
 
 .dining-unit:hover .table-surface {
-  box-shadow:
-    0 12px 24px -4px rgba(0, 0, 0, 0.1),
-    0 4px 8px -2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.1);
+  border-color: #b0b0b8;
 }
 
 .dining-unit--dimmed,
 .seat-dimmed {
   opacity: 0.25;
   filter: grayscale(0.8);
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .dining-unit--selected .table-surface {
   box-shadow:
-    0 0 0 3px var(--color-primary, #e05836),
-    0 8px 20px rgba(224, 88, 54, 0.25);
+    0 0 0 2px var(--color-primary, #0071e3),
+    0 8px 20px rgba(0, 113, 227, 0.15);
+  border-color: var(--color-primary, #0071e3);
 }
 
-/* Chair Cushions (Top & Bottom) */
+/* Chair Cushions */
 .chairs-row {
   display: flex;
   justify-content: center;
@@ -749,251 +750,182 @@ function triggerOpenCustomerLink(table: TableWithQR) {
   z-index: 1;
 }
 
-.chairs-row--top {
-  margin-bottom: -5px;
-}
-.chairs-row--bottom {
-  margin-top: -5px;
-}
-
 .chair-cushion {
-  width: 34px;
+  width: 28px;
   height: 8px;
-  border-radius: 4px 4px 0 0;
-  background: #e2e8f0;
-  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: var(--color-surface-alt, #e8e8ed);
+  border: 1px solid var(--color-hairline, #d2d2d7);
   transition: all 0.2s ease;
 }
 
-.chairs-row--bottom .chair-cushion {
-  border-radius: 0 0 4px 4px;
+.chairs-row--top .chair-cushion {
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
 }
 
-/* Dining Unit Chair Colors by Status */
+.chairs-row--bottom .chair-cushion {
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+}
+
+.dining-unit--cooking .chair-cushion {
+  background: #fed7aa;
+  border-color: #fdba74;
+}
+
 .dining-unit--ready-to-pay .chair-cushion {
   background: #bbf7d0;
-  border-color: #4ade80;
-}
-.dining-unit--cooking .chair-cushion {
-  background: #fde68a;
-  border-color: #f59e0b;
-}
-.dining-unit--paid .chair-cushion {
-  background: #e9d5ff;
-  border-color: #c084fc;
-}
-.dining-unit--seated-no-order .chair-cushion {
-  background: #cffafe;
-  border-color: #22d3ee;
-}
-.dining-unit--available .chair-cushion {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  border-color: #86efac;
 }
 
-/* Table Surface Core */
+.dining-unit--paid .chair-cushion {
+  background: #ddd6fe;
+  border-color: #c4b5fd;
+}
+
+.dining-unit--seated-no-order .chair-cushion {
+  background: #cffafe;
+  border-color: #a5f3fc;
+}
+
+/* Table Surface */
 .table-surface {
-  position: relative;
   width: 100%;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  border-radius: 18px;
   padding: 10px 12px;
-  min-height: 114px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  z-index: 2;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Status Variations for Table Surface */
-.dining-unit--ready-to-pay .table-surface {
-  border-color: #22c55e;
-  background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.16);
-}
-
-.dining-unit--cooking .table-surface {
-  border-color: #f59e0b;
-  background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%);
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.15);
-}
-
-.dining-unit--paid .table-surface {
-  border-color: #a855f7;
-  background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%);
-  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.15);
-}
-
-.dining-unit--seated-no-order .table-surface {
-  border-color: #06b6d4;
-  background: linear-gradient(180deg, #ffffff 0%, #ecfeff 100%);
-  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.15);
-}
-
-.dining-unit--available .table-surface {
-  border-color: #e2e8f0;
-  background: #ffffff;
-}
-
-.dining-unit--available:hover .table-surface {
-  border-color: var(--color-primary, #e05836);
-  background: #fffbf9;
-}
-
-/* Table Surface Header */
 .table-number-text {
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: #0f172a;
-  letter-spacing: -0.2px;
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 .table-status-pill-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 980px;
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill, 9999px);
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1.2;
 }
 
-/* Table Body Area */
 .table-surface-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 6px 0;
 }
 
 .table-customer-chip {
-  max-width: 85px;
-  background: #fef3c7;
-  color: #92400e;
-  border-radius: var(--radius-pill, 9999px);
-  padding: 1px 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-}
-
-/* Mini Progress Bar */
-.table-progress-section {
-  width: 100%;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #b45309;
 }
 
 .table-mini-progress-bar {
-  height: 4px;
+  height: 3px;
   background: #e2e8f0;
-  border-radius: 2px;
+  border-radius: 980px;
   overflow: hidden;
 }
 
 .table-mini-progress-fill {
   height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  border-radius: 980px;
 }
 
-/* Available Table Center */
 .available-center-box {
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
 .available-icon-bubble {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-surface-footer, #f5f5f7);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 2px;
-  transition: all 0.2s ease;
-}
-
-.dining-unit--available:hover .available-icon-bubble {
-  background: var(--color-primary-soft, #ffedd5);
-  color: var(--color-primary, #e05836);
-  transform: scale(1.08);
 }
 
 .available-hint-text {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 0.6875rem;
 }
 
-.dining-unit--available:hover .available-hint-text {
-  color: var(--color-primary, #e05836);
+.table-surface-footer {
+  padding-top: 6px;
+  border-top: 1px solid var(--color-surface-footer, #f5f5f7);
 }
 
-/* Table Footer */
 .table-amount-wrap {
-  font-weight: 800;
-  font-size: 0.96rem;
-  color: #0f172a;
-}
-
-.dining-unit--ready-to-pay .table-amount-wrap {
-  color: #16a34a;
-}
-.dining-unit--cooking .table-amount-wrap {
-  color: #d97706;
-}
-.dining-unit--paid .table-amount-wrap {
-  color: #9333ea;
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
 }
 
 .table-amount-wrap .currency {
   font-size: 0.75rem;
-  margin-right: 1px;
+  font-weight: 600;
+  color: var(--color-primary, #0071e3);
+}
+
+.table-amount-wrap .amount-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-ink, #1d1d1f);
 }
 
 .table-action-icon-pill {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
 }
 
-.dining-unit:hover .table-action-icon-pill {
-  transform: scale(1.1);
+.bg-primary-soft {
+  background: rgba(0, 113, 227, 0.1);
 }
 
-/* =========================================================
-   Action Sheet Card & Dialog
-   ========================================================= */
+.bg-surface-alt {
+  background: var(--color-surface-alt, #e8e8ed);
+}
+
+/* Bottom Action Sheet (Apple Frosted Glass) */
 .action-sheet-card {
   width: 100%;
-  max-width: 520px;
+  max-width: 600px;
   margin: 0 auto;
-  background: #ffffff;
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15);
-}
-
-.border-radius-top-xl {
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  border-radius: 28px 28px 0 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: saturate(1.8) blur(20px);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .sheet-drag-handle {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
-  background: #cbd5e1;
+  border-radius: 980px;
+  background: #d2d2d7;
 }
 
 .table-sheet-avatar {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-md, 12px);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1001,78 +933,206 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .sheet-info-box {
-  background: var(--color-surface-subtle, #f8fafc);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 10px);
+  background: var(--color-surface-subtle, #fafafc);
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  border-radius: 14px;
 }
 
 .sheet-amount-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fff7f2 100%);
-  border: 1px solid var(--color-primary-tint, #ffedd5);
-  border-radius: var(--radius-md, 10px);
+  background: var(--color-surface-footer, #f5f5f7);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition: all 0.2s ease;
 }
 
-.sheet-amount-card--ready-pay {
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-  border-color: #bbf7d0;
+.sheet-amount-card--ready {
+  background: rgba(52, 199, 89, 0.08);
+  border-color: rgba(52, 199, 89, 0.25);
 }
 
 .sheet-amount-card--paid {
-  background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
-  border-color: #e9d5ff;
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.25);
 }
 
-.progress-bar-track {
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  overflow: hidden;
+.sheet-empty-body {
+  background: var(--color-surface-subtle, #fafafc);
+  border-radius: 16px;
+  border: 1px solid var(--color-hairline, #d2d2d7);
 }
 
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.action-main-btn {
-  font-weight: 700;
-  border-radius: var(--radius-pill, 9999px);
-  padding: 10px 16px;
-}
-
-.action-secondary-btn {
+/* Apple Status Pills & Tags */
+.apple-status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
   font-weight: 600;
-  border-radius: var(--radius-pill, 9999px);
-  padding: 8px 14px;
+  padding: 4px 10px;
+  border-radius: 980px;
 }
 
-.action-icon-btn {
-  border-radius: 50%;
-  border: 1px solid var(--color-border, #cbd5e1);
+.badge-status--available {
+  background: var(--color-surface-alt, #e8e8ed);
+  color: var(--color-muted, #6e6e73);
+}
+
+.badge-status--cooking {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.badge-status--ready-pay {
+  background: rgba(52, 199, 89, 0.14);
+  color: #15803d;
+}
+
+.badge-status--paid {
+  background: rgba(139, 92, 246, 0.12);
+  color: #6d28d9;
+}
+
+.badge-status--seated {
+  background: rgba(6, 182, 212, 0.12);
+  color: #0e7490;
 }
 
 .live-status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  display: inline-block;
-  margin-right: 4px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.live-status-dot--amber {
+  background: #f59e0b;
 }
 
 .live-status-dot--green {
-  background-color: #16a34a;
+  background: #10b981;
 }
-.live-status-dot--amber {
-  background-color: #f59e0b;
-}
+
 .live-status-dot--purple {
-  background-color: #9333ea;
+  background: #8b5cf6;
 }
+
 .live-status-dot--cyan {
-  background-color: #06b6d4;
+  background: #06b6d4;
 }
-.live-status-dot--grey {
-  background-color: #94a3b8;
+
+.apple-tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 980px;
+}
+
+.apple-tag--orange {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.apple-customer-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 980px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.apple-progress-track {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 980px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.apple-progress-fill {
+  height: 100%;
+  border-radius: 980px;
+}
+
+/* Apple Buttons */
+.apple-pill-btn {
+  border-radius: 980px !important;
+  font-size: 0.875rem;
+  font-weight: 600;
+  height: 40px;
+}
+
+.apple-pill-btn--primary {
+  background: var(--color-primary, #0071e3) !important;
+  color: #ffffff !important;
+}
+
+.apple-pill-btn--primary:hover {
+  background: #0066cc !important;
+}
+
+.apple-pill-btn--secondary {
+  background: var(--color-surface-alt, #e8e8ed) !important;
+  color: var(--color-ink, #1d1d1f) !important;
+}
+
+.apple-pill-btn--secondary:hover {
+  background: #dedee3 !important;
+}
+
+.apple-pill-btn--green {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.apple-pill-btn--green:hover {
+  background: #059669 !important;
+}
+
+.apple-pill-btn--purple {
+  background: #8b5cf6 !important;
+  color: #ffffff !important;
+}
+
+.apple-pill-btn--purple:hover {
+  background: #7c3aed !important;
+}
+
+.apple-pill-btn--negative {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+}
+
+.apple-pill-btn--negative:hover {
+  background: rgba(239, 68, 68, 0.18) !important;
+}
+
+.apple-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  background: #ffffff;
+}
+
+.font-tabular {
+  font-family: var(--app-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+.text-ink {
+  color: var(--color-ink, #1d1d1f);
+}
+
+.text-muted {
+  color: var(--color-muted, #6e6e73);
+}
+
+.font-size-10 {
+  font-size: 0.625rem;
+}
+
+.font-size-11 {
+  font-size: 0.6875rem;
 }
 </style>

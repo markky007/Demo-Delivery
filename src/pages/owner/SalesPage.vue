@@ -42,7 +42,7 @@
             icon="refresh"
             label="รีเฟรช"
             :loading="isLoading"
-            @click="loadSalesData"
+            @click="refreshAll"
             class="q-px-sm refresh-btn"
           />
 
@@ -55,6 +55,7 @@
             color="primary"
             icon="download"
             label="ส่งออก CSV"
+            :loading="isExportingCsv"
             @click="exportBillsToCsv"
             class="q-px-sm"
           />
@@ -96,7 +97,7 @@
               rounded
               options-dense
               class="day-filter-select"
-              @update:model-value="applyFilters"
+              @update:model-value="onDayFilterChange"
             >
               <template v-slot:prepend>
                 <q-icon name="filter_list" size="18px" color="primary" />
@@ -134,7 +135,8 @@
             color="primary"
             icon="search"
             label="ค้นหา"
-            @click="loadSalesData"
+            :loading="isLoading"
+            @click="onCustomDateSearch"
             class="q-px-md"
           />
           <span v-if="dateRangeText" class="text-caption text-grey-7 q-ml-sm gt-xs">
@@ -143,8 +145,8 @@
         </div>
       </div>
 
-      <!-- ─── Loading Skeleton ────────────────────────────────────── -->
-      <div v-if="isLoading" class="q-py-md">
+      <!-- ─── Loading Skeleton for Analytics ──────────────────────── -->
+      <div v-if="activeViewTab === 'analytics' && isAnalyticsLoading" class="q-py-md">
         <LoadingSkeleton type="dashboard" />
       </div>
 
@@ -196,15 +198,15 @@
           <!-- Stats Summary in Bills View -->
           <div class="stats-summary-row q-mb-md">
             <div class="summary-pill">
-              <span class="text-caption text-grey-7">ยอดรวมบิลที่แสดง:</span>
+              <span class="text-caption text-grey-7">ยอดรวมบิลทั้งหมด:</span>
               <strong class="font-mono text-primary text-body1 q-ml-xs">{{
-                formatPrice(totalSales)
+                formatPrice(totalBillsSales)
               }}</strong>
             </div>
             <div class="summary-pill">
-              <span class="text-caption text-grey-7">จำนวนบิล:</span>
+              <span class="text-caption text-grey-7">จำนวนบิลทั้งหมด:</span>
               <strong class="font-mono text-dark text-body1 q-ml-xs"
-                >{{ filteredBills.length }} บิล</strong
+                >{{ billsPagination.rowsNumber }} บิล</strong
               >
             </div>
             <q-space />
@@ -216,28 +218,31 @@
               rounded
               placeholder="ค้นหาโต๊ะ, ชื่อลูกค้า, รหัสบิล..."
               class="table-search-input"
+              debounce="350"
+              @update:model-value="onSearchInput"
             >
               <template v-slot:prepend>
                 <q-icon name="search" size="18px" color="grey-6" />
               </template>
               <template v-if="searchQuery" v-slot:append>
-                <q-icon name="close" size="16px" class="cursor-pointer" @click="searchQuery = ''" />
+                <q-icon name="close" size="16px" class="cursor-pointer" @click="clearSearch" />
               </template>
             </q-input>
           </div>
 
           <!-- Bills Table -->
           <q-table
-            :rows="filteredBills"
+            :rows="displayBills"
             :columns="columns"
             row-key="id"
             flat
             bordered
             class="sales-table"
             no-data-label="ไม่พบประวัติยอดขายในช่วงเวลานี้"
-            :filter="searchQuery"
+            :loading="isBillsLoading"
+            v-model:pagination="billsPagination"
             :rows-per-page-options="[10, 20, 50, 100]"
-            :pagination="{ rowsPerPage: 20 }"
+            @request="onBillsTableRequest"
           >
             <template v-slot:body-cell-id="props">
               <q-td :props="props">
@@ -323,16 +328,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { fetchBillWithDetails } from 'src/services/billService';
 import {
-  fetchSalesDataForPeriod,
-  filterDataByDayOfWeek,
-  computeSalesAnalytics,
-  type RawBillData,
-  type RawOrderData,
-  type RawOrderItemData,
-  type RawMenuItemData,
+  fetchFullSalesAnalytics,
+  fetchBillsPaginated,
+  fetchBillsForExport,
+  type BillDisplayRow,
   type FullSalesAnalytics,
 } from 'src/services/salesAnalyticsService';
 import { formatPrice, formatDateTime, formatDate } from 'src/utils/formatters';
@@ -344,26 +346,24 @@ import SalesKpiCards from 'src/components/analytics/SalesKpiCards.vue';
 import DayOfWeekSalesChart from 'src/components/analytics/DayOfWeekSalesChart.vue';
 import HourlyTrafficChart from 'src/components/analytics/HourlyTrafficChart.vue';
 import MenuPerformanceMatrix from 'src/components/analytics/MenuPerformanceMatrix.vue';
-import type { QTableColumn } from 'quasar';
+import type { QTableColumn, QTableProps } from 'quasar';
 import type { Bill, OrderWithItems } from 'src/types/database';
-
-interface BillDisplayRow {
-  id: string;
-  table_session_id: string;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  paid_at: string | null;
-  table_name: string;
-}
 
 const { notifyError, notifySuccess } = useNotify();
 
 const activeViewTab = ref<'analytics' | 'bills'>('analytics');
-const isLoading = ref(true);
+const isAnalyticsLoading = ref(false);
+const isBillsLoading = ref(false);
+const isExportingCsv = ref(false);
+
+const isLoading = computed(() => {
+  return activeViewTab.value === 'analytics'
+    ? isAnalyticsLoading.value
+    : isBillsLoading.value;
+});
 
 // ─── Date Presets ───────────────────────────────────────────────────────────
-type PresetId = 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'custom';
+type PresetId = 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'all' | 'custom';
 
 const datePresets = [
   { id: 'today' as PresetId, label: 'วันนี้' },
@@ -371,6 +371,7 @@ const datePresets = [
   { id: '30d' as PresetId, label: '30 วันล่าสุด' },
   { id: 'this_month' as PresetId, label: 'เดือนนี้' },
   { id: 'last_month' as PresetId, label: 'เดือนที่แล้ว' },
+  { id: 'all' as PresetId, label: 'ทั้งหมด' },
   { id: 'custom' as PresetId, label: 'กำหนดเอง' },
 ];
 
@@ -414,16 +415,23 @@ const dayFilterOptions = [
   { label: 'เฉพาะปลายสัปดาห์ (ศุกร์ - เสาร์)', value: 'weekends' },
 ];
 
-// ─── Raw Data Cache ─────────────────────────────────────────────────────────
-const rawBills = ref<RawBillData[]>([]);
-const rawOrders = ref<RawOrderData[]>([]);
-const rawOrderItems = ref<RawOrderItemData[]>([]);
-const rawMenuItems = ref<RawMenuItemData[]>([]);
+// ─── In-Memory Cache for Analytics ──────────────────────────────────────────
+const analyticsCache = new Map<string, FullSalesAnalytics>();
 
 // ─── Processed Analytics & Bills ────────────────────────────────────────────
 const analyticsData = ref<FullSalesAnalytics | null>(null);
 const displayBills = ref<BillDisplayRow[]>([]);
 const searchQuery = ref('');
+
+// Server-side bills pagination state
+const billsPagination = ref({
+  sortBy: 'paid_at',
+  descending: true,
+  page: 1,
+  rowsPerPage: 20,
+  rowsNumber: 0,
+});
+const totalBillsSales = ref(0);
 
 const dateRangeText = computed(() => {
   if (!dateFrom.value || !dateTo.value) return '';
@@ -431,14 +439,6 @@ const dateRangeText = computed(() => {
     return formatDate(dateFrom.value);
   }
   return `${formatDate(dateFrom.value)} - ${formatDate(dateTo.value)}`;
-});
-
-const filteredBills = computed(() => {
-  return displayBills.value;
-});
-
-const totalSales = computed(() => {
-  return filteredBills.value.reduce((sum, b) => sum + (b.total_amount || 0), 0);
 });
 
 // ─── Table Columns ──────────────────────────────────────────────────────────
@@ -512,95 +512,140 @@ function selectPreset(preset: PresetId) {
     const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
     dateFrom.value = formatToDateInput(firstDay);
     dateTo.value = formatToDateInput(lastDay);
+  } else if (preset === 'all') {
+    dateFrom.value = '2023-01-01';
+    dateTo.value = formatToDateInput(now);
   }
 
-  void loadSalesData();
+  void loadCurrentTabData();
 }
 
 function onCustomDateChange() {
   activePreset.value = 'custom';
 }
 
-// ─── Data Fetching & Processing ─────────────────────────────────────────────
-async function loadSalesData() {
-  isLoading.value = true;
+function onCustomDateSearch() {
+  analyticsCache.clear();
+  void loadCurrentTabData(true);
+}
 
+function onDayFilterChange() {
+  analyticsCache.clear();
+  void loadCurrentTabData(true);
+}
+
+// ─── Data Loading Orchestrator ──────────────────────────────────────────────
+async function loadCurrentTabData(forceRefresh = false) {
+  if (activeViewTab.value === 'analytics') {
+    await loadAnalyticsData(forceRefresh);
+  } else {
+    billsPagination.value.page = 1;
+    await loadBillsData();
+  }
+}
+
+async function refreshAll() {
+  analyticsCache.clear();
+  if (activeViewTab.value === 'analytics') {
+    await loadAnalyticsData(true);
+  } else {
+    await loadBillsData();
+  }
+}
+
+// ─── Analytics Fetching ─────────────────────────────────────────────────────
+async function loadAnalyticsData(force = false) {
+  const fromDate = parseLocalDate(dateFrom.value || todayStr, false);
+  const toDate = parseLocalDate(dateTo.value || todayStr, true);
+  const cacheKey = `${dateFrom.value}_${dateTo.value}_${selectedDayFilter.value}`;
+
+  if (!force && analyticsCache.has(cacheKey)) {
+    analyticsData.value = analyticsCache.get(cacheKey)!;
+    return;
+  }
+
+  isAnalyticsLoading.value = true;
+  try {
+    const data = await fetchFullSalesAnalytics(fromDate, toDate, selectedDayFilter.value);
+    analyticsData.value = data;
+    analyticsCache.set(cacheKey, data);
+  } catch (err) {
+    console.error('Error loading sales analytics:', err);
+    notifyError({
+      title: 'โหลดบทวิเคราะห์ไม่สำเร็จ',
+      message: 'ไม่สามารถดึงข้อมูลสรุปยอดขายจากเซิร์ฟเวอร์ได้ โปรดลองใหม่อีกครั้ง',
+    });
+  } finally {
+    isAnalyticsLoading.value = false;
+  }
+}
+
+// ─── Bills Table Fetching (Server-Side Pagination) ──────────────────────────
+async function loadBillsData() {
+  isBillsLoading.value = true;
   try {
     const fromDate = parseLocalDate(dateFrom.value || todayStr, false);
     const toDate = parseLocalDate(dateTo.value || todayStr, true);
 
-    const { bills, orders, orderItems, allMenuItems } = await fetchSalesDataForPeriod(
-      fromDate,
-      toDate,
-    );
+    const result = await fetchBillsPaginated({
+      page: billsPagination.value.page,
+      rowsPerPage: billsPagination.value.rowsPerPage,
+      sortBy: billsPagination.value.sortBy,
+      descending: billsPagination.value.descending,
+      dateFrom: fromDate,
+      dateTo: toDate,
+      search: searchQuery.value,
+      dayFilter: selectedDayFilter.value,
+    });
 
-    rawBills.value = bills;
-    rawOrders.value = orders;
-    rawOrderItems.value = orderItems;
-    rawMenuItems.value = allMenuItems;
-
-    applyFilters();
+    displayBills.value = result.rows;
+    billsPagination.value.rowsNumber = result.totalCount;
+    totalBillsSales.value = result.totalSalesSum;
   } catch (err) {
-    console.error('Error loading sales data:', err);
+    console.error('Error loading paginated bills:', err);
     notifyError({
-      title: 'โหลดประวัติยอดขายไม่สำเร็จ',
-      message: 'ไม่สามารถดึงข้อมูลสรุปยอดขายจากเซิร์ฟเวอร์ได้ โปรดลองใหม่อีกครั้ง',
+      title: 'โหลดประวัติบิลไม่สำเร็จ',
+      message: 'ไม่สามารถดึงข้อมูลรายการบิลได้ โปรดลองใหม่อีกครั้ง',
     });
   } finally {
-    isLoading.value = false;
+    isBillsLoading.value = false;
   }
 }
 
-function applyFilters() {
-  const fromDate = parseLocalDate(dateFrom.value || todayStr, false);
-  const toDate = parseLocalDate(dateTo.value || todayStr, true);
+async function onBillsTableRequest(props: Parameters<NonNullable<QTableProps['onRequest']>>[0]) {
+  const { page, rowsPerPage, sortBy, descending } = props.pagination;
+  billsPagination.value.page = page;
+  billsPagination.value.rowsPerPage = rowsPerPage;
+  billsPagination.value.sortBy = sortBy || 'paid_at';
+  billsPagination.value.descending = descending;
 
-  // Apply Day of Week filter
-  const {
-    filteredBills: fBills,
-    filteredOrders: fOrders,
-    filteredOrderItems: fOrderItems,
-  } = filterDataByDayOfWeek(
-    rawBills.value,
-    rawOrders.value,
-    rawOrderItems.value,
-    selectedDayFilter.value,
-  );
-
-  // Compute Full Analytics
-  analyticsData.value = computeSalesAnalytics(
-    fBills,
-    fOrders,
-    fOrderItems,
-    rawMenuItems.value,
-    fromDate,
-    toDate,
-  );
-
-  // Map display bills with table name
-  displayBills.value = fBills.map((b) => {
-    const rawTableName = b.table_session?.table?.name ?? 'โต๊ะ';
-    const custName = b.table_session?.customer_name;
-    let displayName = rawTableName;
-    if (
-      custName &&
-      (rawTableName.includes('กลับบ้าน') || rawTableName.toLowerCase().includes('takeaway'))
-    ) {
-      displayName = `สั่งกลับบ้าน (${custName})`;
-    } else if (custName) {
-      displayName = `${rawTableName} (${custName})`;
-    }
-    return {
-      id: b.id,
-      table_session_id: b.table_session_id,
-      total_amount: b.total_amount,
-      status: b.status,
-      created_at: b.created_at,
-      paid_at: b.paid_at,
-      table_name: displayName,
-    };
-  });
+  await loadBillsData();
 }
+
+function onSearchInput() {
+  billsPagination.value.page = 1;
+  void loadBillsData();
+}
+
+function clearSearch() {
+  searchQuery.value = '';
+  billsPagination.value.page = 1;
+  void loadBillsData();
+}
+
+// ─── Tab Switch Watcher ─────────────────────────────────────────────────────
+watch(activeViewTab, (newTab) => {
+  if (newTab === 'analytics') {
+    const cacheKey = `${dateFrom.value}_${dateTo.value}_${selectedDayFilter.value}`;
+    if (!analyticsData.value || !analyticsCache.has(cacheKey)) {
+      void loadAnalyticsData();
+    }
+  } else if (newTab === 'bills') {
+    if (displayBills.value.length === 0) {
+      void loadBillsData();
+    }
+  }
+});
 
 // ─── Receipt Modal ──────────────────────────────────────────────────────────
 async function openReceiptDialog(billId: string) {
@@ -630,48 +675,66 @@ async function openReceiptDialog(billId: string) {
   }
 }
 
-// ─── CSV Export Function ────────────────────────────────────────────────────
-function exportBillsToCsv() {
-  if (filteredBills.value.length === 0) {
-    notifyError({
-      title: 'ไม่มีข้อมูลสำหรับส่งออก',
-      message: 'ไม่มีรายการบิลในช่วงเวลาหรือตัวกรองที่เลือกในขณะนี้',
+// ─── CSV Export Function (On-Demand Fetch) ──────────────────────────────────
+async function exportBillsToCsv() {
+  if (isExportingCsv.value) return;
+  isExportingCsv.value = true;
+
+  try {
+    const fromDate = parseLocalDate(dateFrom.value || todayStr, false);
+    const toDate = parseLocalDate(dateTo.value || todayStr, true);
+
+    const exportRows = await fetchBillsForExport(fromDate, toDate, selectedDayFilter.value);
+
+    if (exportRows.length === 0) {
+      notifyError({
+        title: 'ไม่มีข้อมูลสำหรับส่งออก',
+        message: 'ไม่มีรายการบิลในช่วงเวลาหรือตัวกรองที่เลือกในขณะนี้',
+      });
+      return;
+    }
+
+    const headers = ['ลำดับ', 'รหัสบิล', 'โต๊ะ/ลูกค้า', 'ยอดเงิน (บาท)', 'สถานะ', 'วันเวลาที่ชำระ'];
+    const rows = exportRows.map((b, idx) => [
+      idx + 1,
+      b.id,
+      `"${b.table_name.replace(/"/g, '""')}"`,
+      b.total_amount,
+      'ชำระเงินแล้ว',
+      b.paid_at ? `"${formatDateTime(b.paid_at)}"` : '-',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+
+    // Add UTF-8 BOM so Excel opens Thai fonts properly
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `sales_history_${dateFrom.value}_to_${dateTo.value}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    notifySuccess({
+      title: 'ส่งออกไฟล์สำเร็จ 📊',
+      message: `ดาวน์โหลดไฟล์ sales_history_${dateFrom.value}_to_${dateTo.value}.csv เรียบร้อยแล้ว`,
+      caption: `จำนวนทั้งหมด ${exportRows.length} บิล`,
     });
-    return;
+  } catch (err) {
+    console.error('Export CSV error:', err);
+    notifyError({
+      title: 'ส่งออกไฟล์ไม่สำเร็จ',
+      message: 'เกิดข้อผิดพลาดในการดึงข้อมูลสำหรับส่งออก CSV',
+    });
+  } finally {
+    isExportingCsv.value = false;
   }
-
-  const headers = ['ลำดับ', 'รหัสบิล', 'โต๊ะ/ลูกค้า', 'ยอดเงิน (บาท)', 'สถานะ', 'วันเวลาที่ชำระ'];
-  const rows = filteredBills.value.map((b, idx) => [
-    idx + 1,
-    b.id,
-    `"${b.table_name.replace(/"/g, '""')}"`,
-    b.total_amount,
-    'ชำระเงินแล้ว',
-    b.paid_at ? `"${formatDateTime(b.paid_at)}"` : '-',
-  ]);
-
-  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-
-  // Add UTF-8 BOM so Excel opens Thai fonts properly
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `sales_history_${dateFrom.value}_to_${dateTo.value}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-
-  notifySuccess({
-    title: 'ส่งออกไฟล์สำเร็จ 📊',
-    message: `ดาวน์โหลดไฟล์ sales_history_${dateFrom.value}_to_${dateTo.value}.csv เรียบร้อยแล้ว`,
-    caption: `จำนวนทั้งหมด ${filteredBills.value.length} บิล`,
-  });
 }
 
 onMounted(() => {
-  // Default to 30 days preset
+  // Default to 30 days preset and load initial tab
   selectPreset('30d');
 });
 </script>

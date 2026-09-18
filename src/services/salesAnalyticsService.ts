@@ -83,6 +83,33 @@ export interface RawMenuItemData {
   } | null;
 }
 
+export interface BillDisplayRow {
+  id: string;
+  table_session_id: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  paid_at: string | null;
+  table_name: string;
+}
+
+export interface FetchBillsParams {
+  page: number;
+  rowsPerPage: number;
+  sortBy?: string;
+  descending?: boolean;
+  dateFrom?: Date;
+  dateTo?: Date;
+  search?: string;
+  dayFilter?: string;
+}
+
+export interface PaginatedBillsResult {
+  rows: BillDisplayRow[];
+  totalCount: number;
+  totalSalesSum: number;
+}
+
 // ─── Processed Analytics Interfaces ─────────────────────────────────────────
 
 export interface DayOfWeekDataPoint {
@@ -391,6 +418,243 @@ export async function fetchSalesDataForPeriod(
     orderItems,
     allMenuItems: menuItemsRes,
   };
+}
+
+/**
+ * Format table display name with customer name if applicable.
+ */
+export function mapBillDisplayName(rawTableName?: string | null, custName?: string | null): string {
+  const tableName = rawTableName || 'โต๊ะ';
+  if (
+    custName &&
+    (tableName.includes('กลับบ้าน') || tableName.toLowerCase().includes('takeaway'))
+  ) {
+    return `สั่งกลับบ้าน (${custName})`;
+  } else if (custName) {
+    return `${tableName} (${custName})`;
+  }
+  return tableName;
+}
+
+/**
+ * High-performance Sales Analytics Fetcher.
+ * Primary: Invokes PostgreSQL RPC 'get_sales_analytics' for instant server-side aggregation.
+ * Fallback: Seamlessly falls back to client-side compute if RPC is unavailable.
+ */
+export async function fetchFullSalesAnalytics(
+  startDate: Date,
+  endDate: Date,
+  dayFilter = 'all',
+): Promise<FullSalesAnalytics> {
+  try {
+    const { data, error } = await supabase.rpc('get_sales_analytics', {
+      p_start_date: startDate.toISOString(),
+      p_end_date: endDate.toISOString(),
+      p_day_filter: dayFilter,
+    });
+
+    if (!error && data) {
+      return data as FullSalesAnalytics;
+    }
+    if (error) {
+      console.warn('RPC get_sales_analytics unavailable or failed, falling back to client computation:', error.message);
+    }
+  } catch (err) {
+    console.warn('Error invoking get_sales_analytics RPC, using client fallback:', err);
+  }
+
+  // Graceful Fallback: Fetch raw rows & compute on client
+  const { bills, orders, orderItems, allMenuItems } = await fetchSalesDataForPeriod(
+    startDate,
+    endDate,
+  );
+  const { filteredBills, filteredOrders, filteredOrderItems } = filterDataByDayOfWeek(
+    bills,
+    orders,
+    orderItems,
+    dayFilter,
+  );
+  return computeSalesAnalytics(
+    filteredBills,
+    filteredOrders,
+    filteredOrderItems,
+    allMenuItems,
+    startDate,
+    endDate,
+  );
+}
+
+/**
+ * Fetch paginated bills with server-side pagination, search, and sorting.
+ * Primary: Uses PostgreSQL RPC 'get_paginated_bills' if available.
+ * Fallback: Queries Supabase table directly with range().
+ */
+export async function fetchBillsPaginated(params: FetchBillsParams): Promise<PaginatedBillsResult> {
+  const {
+    page = 1,
+    rowsPerPage = 20,
+    sortBy = 'paid_at',
+    descending = true,
+    dateFrom,
+    dateTo,
+    search = '',
+    dayFilter = 'all',
+  } = params;
+
+  try {
+    const { data, error } = await supabase.rpc('get_paginated_bills', {
+      p_start_date: dateFrom ? dateFrom.toISOString() : null,
+      p_end_date: dateTo ? dateTo.toISOString() : null,
+      p_day_filter: dayFilter,
+      p_search: search.trim() || null,
+      p_page: page,
+      p_page_size: rowsPerPage,
+      p_sort_by: sortBy,
+      p_descending: descending,
+    });
+
+    if (!error && data && Array.isArray((data as { rows: unknown }).rows)) {
+      const res = data as { rows: BillDisplayRow[]; totalCount: number; totalSalesSum: number };
+      return {
+        rows: res.rows,
+        totalCount: res.totalCount || 0,
+        totalSalesSum: res.totalSalesSum || 0,
+      };
+    }
+    if (error) {
+      console.warn('RPC get_paginated_bills unavailable, falling back to table query:', error.message);
+    }
+  } catch (err) {
+    console.warn('Error invoking get_paginated_bills RPC, using fallback:', err);
+  }
+
+  // Fallback: Query directly using Supabase table client
+  const limit = Math.max(1, rowsPerPage);
+  const from = (Math.max(1, page) - 1) * limit;
+  const to = from + limit - 1;
+
+  let query = supabase
+    .from('bills')
+    .select(
+      `
+      id,
+      table_session_id,
+      total_amount,
+      status,
+      created_at,
+      paid_at,
+      table_session:table_sessions (
+        customer_name,
+        table:tables(id, name)
+      )
+    `,
+      { count: 'exact' },
+    )
+    .eq('status', 'PAID');
+
+  if (dateFrom) {
+    query = query.gte('paid_at', dateFrom.toISOString());
+  }
+  if (dateTo) {
+    query = query.lte('paid_at', dateTo.toISOString());
+  }
+
+  const sortCol = sortBy === 'total_amount' ? 'total_amount' : 'paid_at';
+  query = query.order(sortCol, { ascending: !descending });
+
+  const { data, count, error } = await query.range(from, to);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rawBills = (data as RawBillData[]) || [];
+  const rows: BillDisplayRow[] = rawBills.map((b) => ({
+    id: b.id,
+    table_session_id: b.table_session_id,
+    total_amount: b.total_amount,
+    status: b.status,
+    created_at: b.created_at,
+    paid_at: b.paid_at,
+    table_name: mapBillDisplayName(
+      b.table_session?.table?.name,
+      b.table_session?.customer_name,
+    ),
+  }));
+
+  const totalSalesSum = rows.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+
+  return {
+    rows,
+    totalCount: count ?? rows.length,
+    totalSalesSum,
+  };
+}
+
+/**
+ * Fetch bills specifically for CSV export without saving in persistent memory.
+ */
+export async function fetchBillsForExport(
+  startDate?: Date,
+  endDate?: Date,
+  dayFilter = 'all',
+): Promise<BillDisplayRow[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_paginated_bills', {
+      p_start_date: startDate ? startDate.toISOString() : null,
+      p_end_date: endDate ? endDate.toISOString() : null,
+      p_day_filter: dayFilter,
+      p_search: null,
+      p_page: 1,
+      p_page_size: 10000,
+      p_sort_by: 'paid_at',
+      p_descending: true,
+    });
+
+    if (!error && data && Array.isArray((data as { rows: unknown }).rows)) {
+      return (data as { rows: BillDisplayRow[] }).rows;
+    }
+  } catch (err) {
+    console.warn('Error using RPC for CSV export, using fallback:', err);
+  }
+
+  // Fallback: Query bills directly
+  let query = supabase
+    .from('bills')
+    .select(
+      `
+      id,
+      table_session_id,
+      total_amount,
+      status,
+      created_at,
+      paid_at,
+      table_session:table_sessions (
+        customer_name,
+        table:tables(id, name)
+      )
+    `,
+    )
+    .eq('status', 'PAID')
+    .order('paid_at', { ascending: false });
+
+  if (startDate) query = query.gte('paid_at', startDate.toISOString());
+  if (endDate) query = query.lte('paid_at', endDate.toISOString());
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return ((data as RawBillData[]) || []).map((b) => ({
+    id: b.id,
+    table_session_id: b.table_session_id,
+    total_amount: b.total_amount,
+    status: b.status,
+    created_at: b.created_at,
+    paid_at: b.paid_at,
+    table_name: mapBillDisplayName(
+      b.table_session?.table?.name,
+      b.table_session?.customer_name,
+    ),
+  }));
 }
 
 // ─── Analytics Engine ───────────────────────────────────────────────────────

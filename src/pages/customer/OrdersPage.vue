@@ -436,16 +436,19 @@ onUnmounted(() => {
 
 .session-total-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 16px;
-  box-shadow: var(--shadow-subtle);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-hairline);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
 }
 
 .add-more-btn {
-  padding: 6px 16px;
+  padding: 6px 18px;
   font-weight: 600;
   font-size: 0.88rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
 }
 
 .section-header {
@@ -454,26 +457,26 @@ onUnmounted(() => {
 }
 
 .section-title {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: 0.98rem;
   color: var(--color-text-primary);
 }
 
 .order-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  padding: 14px 16px;
+  padding: 16px;
   cursor: pointer;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-card);
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .order-card:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .order-card:active {
@@ -481,28 +484,30 @@ onUnmounted(() => {
 }
 
 .order-card--history {
-  background: var(--color-surface-subtle);
-  border-color: transparent;
+  background: var(--color-surface-footer);
+  border-color: var(--color-hairline);
 }
 
 .order-number {
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-weight: 800;
+  font-size: 1.15rem;
   color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .order-items-count {
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 }
 
 .order-items-list {
   background: var(--color-surface-subtle);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 10px 14px;
 }
 
 .order-item-row:not(:last-child) {
-  border-bottom: 1px dashed var(--color-border);
+  border-bottom: 1px dashed var(--color-hairline);
   padding-bottom: 6px;
   margin-bottom: 4px;
 }
@@ -510,26 +515,27 @@ onUnmounted(() => {
 .order-opt-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   background: #ffffff;
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  padding: 1px 6px;
-  border-radius: 4px;
+  border: 1px solid var(--color-hairline);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
   margin-right: 4px;
   margin-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .order-opt-chip--takeaway {
-  background: #ffedd5;
-  color: #ea580c;
+  background: #fff7ed;
+  color: #b64400;
   font-weight: 600;
   border: 1px solid #fed7aa;
 }
 
 .order-note-text {
   font-size: 0.78rem;
-  color: var(--color-primary);
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   margin-top: 2px;
@@ -537,9 +543,9 @@ onUnmounted(() => {
 
 /* Queue Status Box */
 .order-queue-status-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background: var(--color-surface-footer);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
   padding: 8px 12px;
 }
 
@@ -548,23 +554,27 @@ onUnmounted(() => {
   align-items: center;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border: 1px solid transparent;
 }
 
 .queue-rank--queued {
   background: var(--color-status-queued-bg);
   color: var(--color-status-queued);
+  border-color: rgba(0, 113, 227, 0.18);
 }
 
 .queue-rank--preparing {
   background: var(--color-status-preparing-bg);
   color: var(--color-status-preparing);
+  border-color: rgba(180, 83, 9, 0.2);
 }
 
 .queue-rank--prepared {
   background: var(--color-status-prepared-bg);
   color: var(--color-status-prepared);
+  border-color: rgba(21, 128, 61, 0.2);
 }
 
 .queues-ahead-text {
@@ -582,7 +592,7 @@ onUnmounted(() => {
 .pulse-dot {
   width: 7px;
   height: 7px;
-  background-color: #22c55e;
+  background-color: #16a34a;
   border-radius: 50%;
   display: inline-block;
   animation: pulse-green 2s infinite;
@@ -591,15 +601,15 @@ onUnmounted(() => {
 @keyframes pulse-green {
   0% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
   }
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 5px rgba(22, 163, 74, 0);
   }
   100% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
   }
 }
 </style>

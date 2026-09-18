@@ -1,45 +1,55 @@
 <template>
   <div class="random-menu-container">
-    <!-- ─── Hero Section Banner ─────────────────────────── -->
-    <div class="hero-banner">
-      <div class="hero-background-decorations" aria-hidden="true">
-        <span class="floating-emoji e-1">🍜</span>
-        <span class="floating-emoji e-2">🍱</span>
-        <span class="floating-emoji e-3">🥟</span>
-        <span class="floating-emoji e-4">✨</span>
-        <span class="floating-emoji e-5">🎲</span>
-        <span class="floating-emoji e-6">🔥</span>
-      </div>
+    <!-- ─── Hero Section Banner (Compact Apple Luminous) ─── -->
+    <div class="hero-banner" role="button" tabindex="0" @click="startRandomizer">
+      <!-- Ambient Luminous Glow -->
+      <div class="ambient-glow" aria-hidden="true"></div>
 
-      <div class="hero-content">
-        <div class="hero-badge">
-          <q-icon name="auto_awesome" size="14px" class="q-mr-xs" />
-          <span>คิดไม่ออกใช่ไหม? ให้เราช่วยเลือก</span>
+      <div class="hero-top-row">
+        <!-- Content Column -->
+        <div class="hero-text-col">
+          <div class="hero-badge">
+            <span class="badge-sparkle">✨</span>
+            <span>คิดไม่ออก? ให้เราช่วยเลือก</span>
+          </div>
+
+          <h3 class="hero-title">สุ่มเมนูเด็ดวันนี้</h3>
+
+          <p class="hero-desc">แตะเพื่อสุ่มจานโปรดพร้อมเสิร์ฟความอร่อยทันที!</p>
         </div>
 
-        <h2 class="hero-title">สุ่มเมนูเด็ดวันนี้ <span class="dice-bounce">🎲</span></h2>
-
-        <p class="hero-desc">
-          เลือกไม่ถูก ไม่รู้จะกินอะไรดี กดสุ่มเมนูจานโปรดพร้อมเสิร์ฟความอร่อยได้ทันที!
-        </p>
-
-        <div class="hero-actions">
-          <button
-            class="spin-trigger-btn"
-            :disabled="availableItems.length === 0"
-            @click="startRandomizer"
-          >
-            <span class="spin-btn-icon">🎲</span>
-            <span class="spin-btn-text">สุ่มเมนูอาหารเลย!</span>
-            <span class="spin-btn-shine"></span>
-          </button>
-
-          <div class="hero-meta-tag">
-            <q-icon name="restaurant_menu" size="14px" class="q-mr-xs" />
-            <span
-              >มี <strong>{{ availableItems.length }}</strong> เมนูพร้อมสุ่ม</span
-            >
+        <!-- 3D Interactive Lucky Orb Visual (Compact) -->
+        <div class="hero-visual" aria-hidden="true">
+          <div class="visual-orb">
+            <div class="orb-ring ring-1"></div>
+            <div class="orb-ring ring-2"></div>
+            <div class="orb-core">
+              <span class="core-dice">🎲</span>
+              <span class="micro-badge mb-1">🍜</span>
+              <span class="micro-badge mb-2">✨</span>
+            </div>
+            <div class="visual-glow"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Action Row: Side-by-side Button & Live Badge -->
+      <div class="hero-actions-row" @click.stop>
+        <button
+          class="spin-trigger-btn"
+          :disabled="availableItems.length === 0"
+          @click="startRandomizer"
+        >
+          <span class="spin-btn-icon">🎲</span>
+          <span class="spin-btn-text">สุ่มเมนูอาหารเลย!</span>
+          <span class="spin-btn-shine"></span>
+        </button>
+
+        <div class="hero-live-badge">
+          <span class="live-dot"></span>
+          <span
+            >มี <strong>{{ availableItems.length }}</strong> เมนูพร้อมสุ่ม</span
+          >
         </div>
       </div>
     </div>
@@ -59,9 +69,9 @@
         <div class="spin-header">
           <div class="spin-status-badge">
             <q-spinner-orbit v-if="spinPhase !== 'winner'" color="primary" size="20px" />
-            <q-icon v-else name="celebration" color="amber-8" size="22px" class="bounce-anim" />
-            <span class="q-ml-sm text-weight-bold">
-              {{ spinPhase === 'winner' ? '🎉 ได้เมนูนี้แล้ว!' : '🎲 กำลังสุ่มเมนูเด็ด...' }}
+            <q-icon v-else name="auto_awesome" color="primary" size="20px" class="bounce-anim" />
+            <span class="q-ml-sm">
+              {{ spinPhase === 'winner' ? 'ได้เมนูนี้แล้ว!' : 'กำลังสุ่มเมนูเด็ด...' }}
             </span>
           </div>
         </div>
@@ -77,7 +87,7 @@
                 class="slot-image"
               />
               <div v-else class="slot-image-placeholder">
-                <q-icon name="restaurant" size="56px" color="orange-4" />
+                <q-icon name="restaurant" size="52px" color="grey-4" />
               </div>
 
               <div v-if="spinPhase === 'winner'" class="winner-glow-ring"></div>
@@ -93,8 +103,8 @@
           </div>
         </div>
 
-        <div class="spin-footer-hint text-caption text-grey-7 q-mt-md">
-          <template v-if="spinPhase === 'spinning'"> ค้นหาเมนูที่ใช่สำหรับคุณ... </template>
+        <div class="spin-footer-hint text-caption q-mt-md">
+          <template v-if="spinPhase === 'spinning'"> กำลังค้นหาเมนูที่ใช่สำหรับคุณ... </template>
           <template v-else-if="spinPhase === 'slowing'">
             ใกล้จะหยุดแล้ว เตรียมอร่อยได้เลย!
           </template>
@@ -113,16 +123,21 @@
       class="result-dialog"
     >
       <q-card v-if="selectedItemWithOptions" class="result-card">
-        <!-- Dialog Top Bar -->
+        <!-- Dialog Top Bar with Sheet Grabber -->
         <div class="dialog-header-sticky">
-          <div class="row items-center justify-between">
-            <div class="row items-center">
+          <div class="sheet-grabber-bar" aria-hidden="true">
+            <span class="grabber-pill"></span>
+          </div>
+          <div class="row items-center justify-between no-wrap">
+            <div class="row items-center no-wrap ellipsis">
               <div class="congrats-icon-box q-mr-sm">
-                <span>🎉</span>
+                <span>✨</span>
               </div>
-              <div>
-                <div class="text-weight-bold text-subtitle1 text-primary">เมนูที่คุณสุ่มได้!</div>
-                <div class="text-caption text-grey-7">เลือกตัวเลือกและเพิ่มลงตะกร้าได้เลย</div>
+              <div class="ellipsis">
+                <div class="result-header-title">เมนูที่คุณสุ่มได้</div>
+                <div class="result-header-subtitle">
+                  เลือกตัวเลือกตามต้องการแล้วเพิ่มลงตะกร้าได้ทันที
+                </div>
               </div>
             </div>
             <q-btn
@@ -130,7 +145,7 @@
               round
               dense
               icon="close"
-              color="grey-7"
+              class="close-dialog-btn q-ml-sm"
               @click="closeResultDialog"
               aria-label="ปิด"
             />
@@ -151,15 +166,15 @@
                 <q-icon name="restaurant" size="48px" color="grey-4" />
               </div>
               <div class="lucky-tag">
-                <q-icon name="stars" size="14px" class="q-mr-xs" />
+                <q-icon name="auto_awesome" size="13px" class="q-mr-xs" />
                 <span>เมนูนำโชคของคุณ</span>
               </div>
             </div>
 
             <div class="dish-details q-pa-md">
               <div class="row justify-between items-start no-wrap">
-                <div class="dish-title text-weight-bolder">{{ selectedItemWithOptions.name }}</div>
-                <div class="dish-price text-primary text-weight-bold q-ml-sm">
+                <div class="dish-title">{{ selectedItemWithOptions.name }}</div>
+                <div class="dish-price q-ml-sm">
                   {{ formatPrice(selectedItemWithOptions.base_price) }}
                 </div>
               </div>
@@ -431,14 +446,8 @@
           <div class="row q-col-gutter-sm items-center">
             <!-- Spin Again Button -->
             <div class="col-4">
-              <q-btn
-                outline
-                color="primary"
-                no-caps
-                class="full-width spin-again-btn"
-                @click="reSpin"
-              >
-                <q-icon name="casino" size="18px" class="q-mr-xs" />
+              <q-btn unelevated no-caps class="full-width spin-again-btn" @click="reSpin">
+                <q-icon name="refresh" size="18px" class="q-mr-xs" />
                 <span class="text-weight-bold">สุ่มใหม่</span>
               </q-btn>
             </div>
@@ -446,7 +455,6 @@
             <!-- Add to Cart Button -->
             <div class="col-8">
               <q-btn
-                color="primary"
                 unelevated
                 no-caps
                 class="full-width add-cart-btn"
@@ -455,7 +463,7 @@
               >
                 <div class="row items-center justify-between full-width no-wrap q-px-xs">
                   <span class="text-weight-bold">เพิ่มลงตะกร้า</span>
-                  <span class="text-weight-bold">{{ formatPrice(itemTotal) }}</span>
+                  <span class="add-cart-price">{{ formatPrice(itemTotal) }}</span>
                 </div>
               </q-btn>
             </div>
@@ -596,7 +604,7 @@ function triggerConfetti() {
     opacity: number;
   }> = [];
 
-  const colors = ['#E05836', '#FF9F1C', '#2EC4B6', '#FFBF69', '#E71D36', '#F38151', '#FFD166'];
+  const colors = ['#0071E3', '#34C759', '#FF9500', '#5856D6', '#AF52DE', '#FF2D55', '#5AC8FA'];
 
   for (let i = 0; i < 45; i++) {
     particles.push({
@@ -935,175 +943,299 @@ onUnmounted(() => {
   width: 100%;
 }
 
-/* ─── Hero Banner ────────────────────────────────── */
+/* ─── Hero Banner (Compact Apple Luminous) ───────── */
 .hero-banner {
   position: relative;
-  background: linear-gradient(135deg, #ff6b4a 0%, #e05836 45%, #b93717 100%);
-  border-radius: var(--radius-lg);
-  color: #ffffff;
-  padding: 24px 20px 20px;
-  margin: 14px 16px 8px;
+  background:
+    radial-gradient(
+      120% 120% at 100% 0%,
+      rgba(0, 113, 227, 0.12) 0%,
+      rgba(255, 149, 0, 0.08) 40%,
+      rgba(255, 255, 255, 0) 75%
+    ),
+    #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 113, 227, 0.16);
+  color: var(--color-text-primary);
+  padding: 14px 16px 13px;
+  margin: 10px 16px 6px;
   overflow: hidden;
   box-shadow:
-    0 10px 30px -6px rgba(224, 88, 54, 0.35),
-    0 4px 12px -2px rgba(45, 35, 30, 0.1);
+    0 6px 18px -3px rgba(0, 113, 227, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 
-/* Floating emojis background decoration */
-.hero-background-decorations {
+.hero-banner:hover {
+  border-color: rgba(0, 113, 227, 0.28);
+  box-shadow:
+    0 8px 24px -4px rgba(0, 113, 227, 0.12),
+    0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.ambient-glow {
   position: absolute;
-  inset: 0;
+  top: -25px;
+  right: -25px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle,
+    rgba(0, 113, 227, 0.2) 0%,
+    rgba(255, 149, 0, 0.15) 50%,
+    transparent 75%
+  );
+  filter: blur(25px);
   pointer-events: none;
-  overflow: hidden;
+  z-index: 1;
 }
 
-.floating-emoji {
-  position: absolute;
-  font-size: 24px;
-  opacity: 0.18;
-  filter: blur(0.3px);
-  user-select: none;
-  animation: floatEmoji 6s ease-in-out infinite alternate;
-}
-
-.e-1 {
-  top: 10%;
-  left: 8%;
-  animation-duration: 5s;
-}
-.e-2 {
-  bottom: 15%;
-  left: 20%;
-  animation-duration: 7s;
-}
-.e-3 {
-  top: 18%;
-  right: 12%;
-  animation-duration: 6.5s;
-}
-.e-4 {
-  bottom: 20%;
-  right: 22%;
-  animation-duration: 4.5s;
-}
-.e-5 {
-  top: 48%;
-  right: 6%;
-  font-size: 28px;
-  opacity: 0.22;
-  animation-duration: 5.5s;
-}
-.e-6 {
-  bottom: 8%;
-  right: 42%;
-  animation-duration: 8s;
-}
-
-@keyframes floatEmoji {
-  0% {
-    transform: translateY(0) rotate(0deg);
-  }
-  100% {
-    transform: translateY(-12px) rotate(14deg);
-  }
-}
-
-.hero-content {
+.hero-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   position: relative;
   z-index: 2;
+}
+
+.hero-text-col {
+  flex: 1;
+  min-width: 0;
 }
 
 .hero-badge {
   display: inline-flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 4px 12px;
+  gap: 4px;
+  background: rgba(0, 113, 227, 0.08);
+  padding: 3px 9px;
   border-radius: var(--radius-pill);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  margin-bottom: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  letter-spacing: 0;
+  margin-bottom: 3px;
+  border: 1px solid rgba(0, 113, 227, 0.16);
+  color: var(--color-primary);
+}
+
+.badge-sparkle {
+  font-size: 0.78rem;
 }
 
 .hero-title {
-  font-size: 1.55rem;
-  font-weight: 800;
+  font-size: 1.15rem;
+  font-weight: 700;
   line-height: 1.25;
-  margin: 0 0 6px;
+  margin: 0;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-desc {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Compact 3D Lucky Orb Visual ───────────────── */
+.hero-visual {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  justify-content: center;
+  user-select: none;
 }
 
-.dice-bounce {
+.visual-orb {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ring-1 {
+  border: 1.5px solid transparent;
+  border-top-color: rgba(0, 113, 227, 0.65);
+  border-bottom-color: rgba(255, 149, 0, 0.65);
+  animation: rotateRing 8s linear infinite;
+}
+
+.ring-2 {
+  inset: 3px;
+  border: 1px dashed rgba(0, 113, 227, 0.35);
+  animation: rotateRingRev 12s linear infinite;
+}
+
+@keyframes rotateRing {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateRingRev {
+  0% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.orb-core {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffffff 0%, #f0f5ff 100%);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  box-shadow:
+    0 4px 14px rgba(0, 113, 227, 0.16),
+    inset 0 1px 4px rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: orbFloat 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes orbFloat {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-2px);
+  }
+}
+
+.core-dice {
+  font-size: 1.45rem;
+  line-height: 1;
   display: inline-block;
-  animation: diceWiggle 3s ease-in-out infinite;
+  animation: dicePlay 4s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
 }
 
-@keyframes diceWiggle {
+@keyframes dicePlay {
   0%,
   100% {
     transform: rotate(0deg) scale(1);
   }
-  10%,
-  20% {
-    transform: rotate(-15deg) scale(1.15);
+  15% {
+    transform: rotate(-14deg) scale(1.1);
   }
-  30%,
-  40% {
-    transform: rotate(15deg) scale(1.15);
+  30% {
+    transform: rotate(14deg) scale(1.1);
   }
-  50% {
+  45% {
     transform: rotate(0deg) scale(1);
   }
 }
 
-.hero-desc {
-  font-size: 0.88rem;
-  line-height: 1.4;
-  opacity: 0.92;
-  margin: 0 0 16px;
-  max-width: 90%;
+.micro-badge {
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--color-hairline);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
 }
 
-.hero-actions {
+.mb-1 {
+  top: -4px;
+  right: -3px;
+}
+
+.mb-2 {
+  bottom: -2px;
+  left: -4px;
+}
+
+.visual-glow {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(0, 113, 227, 0.28) 0%,
+    rgba(255, 149, 0, 0.15) 60%,
+    transparent 80%
+  );
+  filter: blur(8px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ─── Inline Action Row (Side-by-side) ───────────── */
+.hero-actions-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  margin-top: 10px;
+  position: relative;
+  z-index: 2;
 }
 
 .spin-trigger-btn {
+  flex: 1;
+  min-width: 0;
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  color: var(--color-primary);
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0077ed 0%, #0062cc 100%);
+  color: #ffffff;
   border: none;
   outline: none;
   font-family: var(--app-font-family);
-  font-size: 1rem;
-  font-weight: 700;
-  padding: 10px 22px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: var(--radius-pill);
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.28);
   overflow: hidden;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
 }
 
 .spin-trigger-btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 18px rgba(0, 113, 227, 0.38);
 }
 
 .spin-trigger-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.98);
+  transform: scale(0.98);
 }
 
 .spin-trigger-btn:disabled {
@@ -1112,7 +1244,11 @@ onUnmounted(() => {
 }
 
 .spin-btn-icon {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
+}
+
+.spin-btn-text {
+  letter-spacing: -0.01em;
 }
 
 .spin-btn-shine {
@@ -1124,7 +1260,7 @@ onUnmounted(() => {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0.4) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   transform: rotate(25deg);
@@ -1141,27 +1277,59 @@ onUnmounted(() => {
   }
 }
 
-.hero-meta-tag {
+.hero-live-badge {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.15);
-  padding: 6px 12px;
+  gap: 6px;
+  background: rgba(52, 199, 89, 0.08);
+  border: 1px solid rgba(52, 199, 89, 0.22);
+  color: #1e7e34;
+  height: 38px;
+  padding: 0 12px;
   border-radius: var(--radius-pill);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  backdrop-filter: blur(4px);
+  user-select: none;
+  white-space: nowrap;
 }
 
-/* ─── Spin Dialog ────────────────────────────────── */
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34c759;
+  box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7);
+  animation: livePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(52, 199, 89, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0);
+  }
+}
+
+/* ─── Spin Dialog (Apple Minimalist Overlay) ─────── */
+.spin-dialog :deep(.q-dialog__inner) {
+  padding: 16px;
+}
+
 .spin-card {
   position: relative;
   background: #ffffff;
   border-radius: var(--radius-xl);
-  padding: 24px 20px 20px;
-  width: 90vw;
+  border: 1px solid var(--color-hairline);
+  padding: 28px 20px 22px;
+  width: 92vw;
   max-width: 380px;
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(45, 35, 30, 0.25);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
 }
 
 .confetti-canvas {
@@ -1177,10 +1345,12 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   background: var(--color-surface-subtle);
-  padding: 6px 16px;
+  padding: 6px 18px;
   border-radius: var(--radius-pill);
-  font-size: 0.95rem;
-  border: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-hairline);
 }
 
 .bounce-anim {
@@ -1192,35 +1362,36 @@ onUnmounted(() => {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.25);
+    transform: scale(1.2);
   }
 }
 
 .slot-reel-wrapper {
   margin-top: 18px;
-  background: var(--color-background);
-  border: 2px solid var(--color-border);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 20px 16px 16px;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
 }
 
 .slot-reel--winner {
-  border-color: #f59e0b;
-  box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 28px rgba(0, 113, 227, 0.22);
   transform: scale(1.02);
 }
 
 .slot-image-box {
   position: relative;
-  width: 130px;
-  height: 130px;
-  margin: 0 auto 12px;
-  border-radius: var(--radius-md);
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 14px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-hairline);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .slot-image {
@@ -1235,80 +1406,138 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff8f5;
+  background: var(--color-surface-subtle);
 }
 
 .winner-glow-ring {
   position: absolute;
   inset: 0;
-  border: 3px solid #f59e0b;
-  border-radius: var(--radius-md);
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-lg);
   animation: pulseGlow 1.2s infinite;
 }
 
 @keyframes pulseGlow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.5);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 8px rgba(0, 113, 227, 0);
   }
 }
 
 .slot-item-name {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 600;
   color: var(--color-text-primary);
   min-height: 28px;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .name-reveal {
   color: var(--color-primary);
-  transform: scale(1.06);
+  transform: scale(1.04);
   transition: transform 0.25s ease;
 }
 
 .slot-item-price {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-primary);
   margin-top: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ─── Result Options Dialog ──────────────────────── */
+.spin-footer-hint {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+/* ─── Result Options Dialog (Apple Sheet) ────────── */
+.result-dialog :deep(.q-dialog__inner) {
+  padding-bottom: 0 !important;
+}
+
 .result-card {
   max-width: 600px;
+  width: 100%;
   margin: 0 auto;
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   background: var(--color-background);
+  border-top: 1px solid var(--color-hairline);
+  border-left: 1px solid var(--color-hairline);
+  border-right: 1px solid var(--color-hairline);
   display: flex;
   flex-direction: column;
-  height: 90vh;
-  max-height: 90vh;
+  height: 88vh;
+  max-height: 88vh;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.sheet-grabber-bar {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+.grabber-pill {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: #d2d2d7;
 }
 
 .dialog-header-sticky {
   position: sticky;
   top: 0;
-  z-index: 10;
-  background: #ffffff;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  padding: 10px 18px 12px;
+  border-bottom: 1px solid var(--color-hairline);
 }
 
 .congrats-icon-box {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: #fff3ed;
+  border-radius: var(--radius-pill);
+  background: #f5f5f7;
+  border: 1px solid var(--color-hairline);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+}
+
+.result-header-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.25;
+}
+
+.result-header-subtitle {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.close-dialog-btn {
+  background: #f5f5f7;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-hairline);
+  width: 32px;
+  height: 32px;
+  transition: all 0.15s ease;
+}
+
+.close-dialog-btn:hover {
+  background: #e8e8ed;
 }
 
 .result-content-scroll {
@@ -1318,16 +1547,17 @@ onUnmounted(() => {
 
 .result-dish-card {
   background: #ffffff;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-subtle);
+  margin-top: 6px;
 }
 
 .dish-img-wrapper {
   position: relative;
   width: 100%;
-  height: 180px;
+  height: 200px;
   background: var(--color-surface-subtle);
   overflow: hidden;
 }
@@ -1344,46 +1574,59 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--color-surface-subtle);
 }
 
 .lucky-tag {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
   display: inline-flex;
   align-items: center;
-  background: rgba(224, 88, 54, 0.92);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 113, 227, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #ffffff;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-pill);
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+}
+
+.dish-details {
+  padding: 16px 18px;
 }
 
 .dish-title {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: var(--color-text-primary);
   line-height: 1.3;
 }
 
 .dish-price {
   font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .dish-desc {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-top: 4px;
 }
 
 /* Option Groups */
 .option-group-card {
   background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-subtle);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -1391,9 +1634,9 @@ onUnmounted(() => {
 }
 
 .option-group-card--error {
-  border: 1.5px solid #ef4444 !important;
+  border: 1.5px solid #dc2626 !important;
   background-color: #fffaf9 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
   animation: shake-error 0.35s ease-in-out;
 }
 
@@ -1419,36 +1662,37 @@ onUnmounted(() => {
   font-size: 0.82rem;
   font-weight: 600;
   background: #fee2e2;
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
 }
 
 .option-group-name {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 0.98rem;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .group-tag {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
-  font-weight: 600;
 }
 
 .group-tag--required {
-  background: #fee2e2;
-  color: #dc2626;
+  background: #fff7ed;
+  color: #b64400;
+  border: 1px solid #fed7aa;
 }
 
 .group-tag--optional {
-  background: var(--color-surface-subtle);
-  color: var(--color-text-secondary);
+  background: var(--color-surface-footer);
+  color: var(--color-text-muted);
 }
 
 .group-tag--takeaway-locked {
   background: #fff7ed;
-  color: #ea580c;
+  color: #b64400;
   border: 1px solid #fed7aa;
   font-weight: 600;
   display: inline-flex;
@@ -1460,7 +1704,7 @@ onUnmounted(() => {
   align-items: center;
   font-size: 0.68rem;
   font-weight: 700;
-  color: #ea580c;
+  color: #b64400;
   background: #fff7ed;
   border: 1px solid #fed7aa;
   padding: 1px 6px;
@@ -1468,13 +1712,13 @@ onUnmounted(() => {
 }
 
 .option-group-card--takeaway-locked {
-  border-left: 3.5px solid #f97316 !important;
+  border-left: 3.5px solid #b64400 !important;
   background: #fffdfa;
 }
 
 .option-row--locked {
   background: #fff7ed !important;
-  border-color: #fdba74 !important;
+  border-color: #fed7aa !important;
   cursor: default !important;
 }
 
@@ -1486,72 +1730,144 @@ onUnmounted(() => {
 .options-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .option-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
   background: var(--color-surface-subtle);
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .option-row:hover:not(.option-row--disabled) {
-  border-color: var(--color-primary-tint);
   background: #ffffff;
+  border-color: var(--color-hairline);
 }
 
 .option-row--selected {
-  border-color: var(--color-primary);
-  background: #fff8f5;
+  background: var(--color-primary-soft) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .option-row--disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+.option-row :deep(.q-radio),
+.option-row :deep(.q-checkbox) {
+  pointer-events: none;
+}
+
 .option-name {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--color-text-primary);
 }
 
+.opt-sold-out-chip {
+  background: var(--color-status-soldout-bg);
+  color: var(--color-status-soldout);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+}
+
+.group-unavailable-alert {
+  display: flex;
+  align-items: center;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 .option-price-adjust {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.special-input :deep(.q-field__control) {
+  border-radius: var(--radius-md);
 }
 
 .quantity-section {
   background: #ffffff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-subtle);
 }
 
 /* Sticky Footer */
 .result-sticky-footer {
   position: sticky;
   bottom: 0;
-  background: #ffffff;
-  border-top: 1px solid var(--color-border);
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
-  z-index: 10;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--color-hairline);
+  padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
+  z-index: 20;
 }
 
 .spin-again-btn {
-  height: 44px;
+  height: 48px;
   border-radius: var(--radius-pill);
+  background: #f5f5f7 !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-hairline) !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.spin-again-btn:hover {
+  background: #e8e8ed !important;
+}
+
+.spin-again-btn:active {
+  transform: scale(0.98);
 }
 
 .add-cart-btn {
-  height: 44px;
+  height: 48px;
   border-radius: var(--radius-pill);
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  font-size: 0.98rem;
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.32);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.add-cart-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover) !important;
+  box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
+}
+
+.add-cart-btn:active {
+  transform: scale(0.98);
+}
+
+.add-cart-price {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .pointer-events-none {

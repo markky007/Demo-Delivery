@@ -323,15 +323,15 @@ async function confirmOrder() {
 
 .cart-heading {
   font-size: 1.05rem;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .cart-context-banner {
-  background: #ffffff;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  padding: 8px 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  background: var(--color-surface-footer);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-hairline);
+  padding: 8px 14px;
 }
 
 .clear-cart-btn {
@@ -341,16 +341,16 @@ async function confirmOrder() {
 
 .cart-item-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  padding: 14px;
-  box-shadow: 0 2px 8px rgba(45, 35, 30, 0.04);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
   transition: transform 0.15s ease;
 }
 
 .cart-item-thumb {
-  width: 68px;
-  height: 68px;
+  width: 64px;
+  height: 64px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--color-surface-subtle);
@@ -358,6 +358,7 @@ async function confirmOrder() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: 1px solid var(--color-hairline);
 }
 
 .cart-item-thumb img {
@@ -367,7 +368,7 @@ async function confirmOrder() {
 }
 
 .cart-item-name {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.98rem;
   color: var(--color-text-primary);
   line-height: 1.3;
@@ -380,26 +381,29 @@ async function confirmOrder() {
 }
 
 .option-chip {
-  background: var(--color-surface-subtle);
+  background: var(--color-surface-footer);
   color: var(--color-text-secondary);
-  font-size: 0.76rem;
+  border: 1px solid var(--color-hairline);
+  font-size: 0.74rem;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
 }
 
 .option-chip--takeaway {
-  background: #ffedd5;
-  color: #ea580c;
+  background: #fff7ed;
+  color: #b64400;
   font-weight: 600;
   border: 1px solid #fed7aa;
 }
 
 .cart-item-note {
-  font-size: 0.8rem;
-  color: #c2410c;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
-  background: #fff7ed;
+  background: var(--color-surface-footer);
+  border: 1px solid var(--color-hairline);
   padding: 3px 8px;
   border-radius: var(--radius-xs);
   width: fit-content;
@@ -407,20 +411,21 @@ async function confirmOrder() {
 
 .cart-item-subtotal {
   font-weight: 800;
-  color: var(--color-primary);
-  font-size: 1.1rem;
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .cart-summary-card {
   background: #ffffff;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  padding: 16px;
-  box-shadow: 0 4px 16px rgba(45, 35, 30, 0.05);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
 }
 
 .summary-card-header {
-  border-bottom: 1px dashed var(--color-border);
+  border-bottom: 1px dashed var(--color-hairline);
   padding-bottom: 8px;
 }
 
@@ -429,10 +434,10 @@ async function confirmOrder() {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--color-hairline);
   padding: 12px 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 50;
@@ -441,11 +446,18 @@ async function confirmOrder() {
 }
 
 .confirm-btn {
-  border-radius: var(--radius-xl);
-  height: 54px;
+  border-radius: var(--radius-pill);
+  height: 52px;
   font-size: 1.05rem;
-  box-shadow: 0 8px 24px rgba(224, 88, 54, 0.35);
-  transition: transform 0.15s ease;
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.32);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover) !important;
+  box-shadow: 0 8px 26px rgba(0, 113, 227, 0.4);
 }
 
 .confirm-btn:active {

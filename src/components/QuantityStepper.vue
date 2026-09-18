@@ -66,25 +66,27 @@ function increase() {
 .quantity-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  background: var(--color-surface-subtle);
-  padding: 4px 6px;
+  gap: 8px;
+  background: var(--color-surface-footer);
+  padding: 3px 5px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-hairline);
 }
 
 .quantity-stepper--dense {
-  gap: 6px;
+  gap: 4px;
   padding: 2px 4px;
 }
 
 .stepper-btn {
   background: #ffffff;
   color: var(--color-text-primary);
-  box-shadow: 0 1px 3px rgba(45, 35, 30, 0.08);
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: 1px solid var(--color-hairline);
+  transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
 .quantity-stepper--dense .stepper-btn {
@@ -96,25 +98,28 @@ function increase() {
 .stepper-btn--add {
   background: var(--color-primary);
   color: #ffffff;
+  border-color: var(--color-primary);
 }
 
 .stepper-btn:hover:not(:disabled) {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .stepper-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .quantity-value {
-  font-size: 1.15rem;
-  min-width: 32px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-width: 28px;
   text-align: center;
   color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .quantity-stepper--dense .quantity-value {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   min-width: 20px;
 }
 </style>

@@ -32,13 +32,13 @@
       >
         <q-icon
           :name="isTakeaway ? 'shopping_bag' : 'table_restaurant'"
-          size="20px"
+          size="18px"
           class="q-mr-xs"
         />
         <span>{{ isTakeaway ? 'สั่งกลับบ้าน (Takeaway)' : sessionStore.tableName }}</span>
       </div>
 
-      <p class="welcome-tagline text-grey-7 q-mb-md">
+      <p class="welcome-tagline q-mb-lg">
         {{
           isTakeaway
             ? 'ระบุชื่อของคุณเพื่อเปิดรายการสั่งกลับบ้านและรับอาหาร'
@@ -49,8 +49,8 @@
       <!-- Customer Name Input for Takeaway -->
       <div v-if="isTakeaway" class="welcome-name-container full-width q-mb-lg text-left">
         <label class="welcome-input-label q-mb-xs block">
-          <q-icon name="badge" size="18px" class="q-mr-xs text-orange-9" />
-          <span class="text-weight-bold text-grey-9">ชื่อลูกค้า / ผู้สั่งอาหาร</span>
+          <q-icon name="badge" size="18px" class="q-mr-xs text-grey-8" />
+          <span class="text-weight-bold text-dark">ชื่อลูกค้า / ผู้สั่งอาหาร</span>
           <span class="text-negative text-weight-bold q-ml-xs">*</span>
         </label>
         <q-input
@@ -80,8 +80,8 @@
         v-if="hasActiveGuestSession && isTakeaway"
         class="active-session-hint q-mb-md full-width"
       >
-        <q-icon name="history" size="18px" color="orange-9" class="q-mr-xs" />
-        <span class="text-caption text-orange-9">
+        <q-icon name="history" size="18px" class="q-mr-xs text-primary" />
+        <span class="text-caption">
           คุณมีรายการสั่งในชื่อ <strong>{{ activeSessionCustomerName }}</strong> กำลังดำเนินการอยู่
         </span>
       </div>
@@ -300,31 +300,32 @@ async function startOrdering() {
 <style scoped>
 .welcome-page {
   min-height: 100vh;
-  background: radial-gradient(circle at top, #ffffff 0%, var(--color-background) 100%);
+  background-color: var(--color-background);
 }
 
 .welcome-card {
   width: 100%;
   max-width: 440px;
-  background: #ffffff;
+  background: var(--color-surface);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-hairline);
   box-shadow: var(--shadow-card);
+  padding: 40px 28px;
 }
 
 .welcome-icon-wrap {
-  width: 96px;
-  height: 96px;
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius-xl);
-  background: var(--color-primary-soft);
+  background: var(--color-surface-footer);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .welcome-logo-wrap {
-  width: 140px;
-  max-width: 160px;
+  width: 130px;
+  max-width: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,41 +343,46 @@ async function startOrdering() {
 
 .welcome-restaurant-name {
   font-size: 1.65rem;
+  font-weight: 600;
   color: var(--color-text-primary);
-  line-height: 1.3;
+  line-height: 1.25;
+  letter-spacing: 0;
 }
 
 .welcome-table-badge {
   display: inline-flex;
   align-items: center;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  padding: 8px 24px;
+  background: var(--color-surface-footer);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-hairline);
+  padding: 6px 18px;
   border-radius: var(--radius-pill);
   font-weight: 600;
-  font-size: 1.15rem;
+  font-size: 1rem;
 }
 
 .welcome-table-badge--takeaway {
-  background: #ffedd5;
-  color: #ea580c;
-  border: 1.5px solid #fed7aa;
+  background: #fff7ed;
+  color: #b64400;
+  border-color: #fed7aa;
 }
 
 .welcome-tagline {
   font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
 .welcome-name-container {
-  background: #fdfbf7;
+  background: var(--color-surface-subtle);
   padding: 16px;
   border-radius: var(--radius-lg);
-  border: 1px dashed #fed7aa;
+  border: 1px solid var(--color-border);
 }
 
 .welcome-input-label {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .welcome-name-input :deep(.q-field__control) {
@@ -384,20 +390,33 @@ async function startOrdering() {
 }
 
 .active-session-hint {
-  background: #fff7ed;
+  background: var(--color-surface-footer);
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  border: 1px solid #ffedd5;
+  border: 1px solid var(--color-hairline);
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .welcome-start-btn {
-  border-radius: var(--radius-lg);
-  height: 54px;
+  border-radius: var(--radius-pill);
+  height: 52px;
   font-size: 1.05rem;
   font-weight: 600;
-  box-shadow: var(--shadow-md);
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.welcome-start-btn:hover {
+  background: var(--color-primary-hover) !important;
+  box-shadow: 0 8px 24px rgba(0, 113, 227, 0.38);
+}
+
+.welcome-start-btn:active {
+  transform: scale(0.98);
 }
 </style>

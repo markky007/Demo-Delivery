@@ -1,6 +1,6 @@
 <template>
   <q-layout view="hHh lpR fFf" class="customer-layout">
-    <!-- Minimal warm header for customer - shows table context -->
+    <!-- Apple Minimalist Fixed Blurred Header -->
     <q-header class="customer-header" :class="{ 'customer-header--scrolled': isScrolled }">
       <q-toolbar class="customer-toolbar">
         <q-btn
@@ -27,7 +27,7 @@
           >
             <q-icon
               :name="isTakeawayName(tableName) ? 'shopping_bag' : 'table_restaurant'"
-              size="16px"
+              size="14px"
               class="q-mr-xs"
             />
             <span>{{ displayTableName }}</span>
@@ -59,7 +59,7 @@
       </router-view>
     </q-page-container>
 
-    <!-- Floating Sticky Cart Summary Bar -->
+    <!-- Floating Sticky Cart Summary Bar (Apple Pill CTA) -->
     <div v-if="showCartBar" class="floating-cart-wrapper">
       <q-btn
         class="floating-cart-btn full-width"
@@ -72,7 +72,7 @@
         <div class="row items-center justify-between full-width q-px-sm">
           <div class="row items-center">
             <div
-              class="cart-count-badge q-mr-sm"
+              class="cart-count-badge q-mr-sm tabular-nums"
               :class="{ 'animate-badge-bounce': isCartBouncing }"
             >
               {{ cartStore.itemCount }}
@@ -83,7 +83,7 @@
             </div>
           </div>
           <div class="row items-center">
-            <span class="cart-total-price">{{ formatPrice(cartStore.totalAmount) }}</span>
+            <span class="cart-total-price tabular-nums">{{ formatPrice(cartStore.totalAmount) }}</span>
             <q-icon name="arrow_forward" size="18px" class="q-ml-xs cart-arrow-icon" />
           </div>
         </div>
@@ -261,53 +261,67 @@ onUnmounted(() => {
 .customer-layout {
   background-color: var(--color-background);
   min-height: 100vh;
+  color: var(--color-text-primary);
 }
 
+/* 44px Fixed Translucent Blurred Navigation Bar */
 .customer-header {
-  background: rgba(251, 249, 246, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid transparent;
-  transition: all 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .customer-header--scrolled {
-  background: rgba(255, 255, 255, 0.96);
-  border-bottom-color: var(--color-border);
-  box-shadow: var(--shadow-subtle);
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom-color: var(--color-hairline);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .customer-toolbar {
-  min-height: 54px;
-  padding: 0 12px;
-  max-width: 720px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 14px;
+  max-width: 680px;
   margin: 0 auto;
   width: 100%;
 }
 
 .header-action-btn {
-  width: 38px;
-  height: 38px;
-  background: rgba(45, 35, 30, 0.05);
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  background: var(--color-surface-footer);
+  color: var(--color-ink) !important;
   border-radius: var(--radius-pill);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.header-action-btn:hover {
+  background: var(--color-surface-alt);
+}
+
+.header-action-btn:active {
+  transform: scale(0.95);
 }
 
 .header-logo-badge {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .header-logo-icon {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
 }
 
 .header-placeholder {
-  width: 38px;
+  width: 34px;
 }
 
 .customer-title {
@@ -318,37 +332,39 @@ onUnmounted(() => {
 }
 
 .customer-page-name {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-ink);
   line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .customer-table-pill {
   display: inline-flex;
   align-items: center;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 0.78rem;
+  background: var(--color-surface-footer);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-hairline);
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 2px 10px;
+  padding: 1px 8px;
   border-radius: var(--radius-pill);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .customer-table-pill--takeaway {
-  background: #ffedd5;
-  color: #ea580c;
-  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #b64400;
+  border-color: #fed7aa;
 }
 
 .customer-page-container {
-  max-width: 720px;
+  max-width: 680px;
   margin: 0 auto;
   width: 100%;
 }
 
-/* Floating Sticky Cart Summary */
+/* Floating Sticky Cart Summary (Apple Pill CTA) */
 .floating-cart-wrapper {
   position: fixed;
   bottom: 0;
@@ -357,61 +373,60 @@ onUnmounted(() => {
   padding: 12px 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 100;
-  max-width: 560px;
+  max-width: 520px;
   margin: 0 auto;
   pointer-events: none;
 }
 
 .floating-cart-btn {
   pointer-events: auto;
-  border-radius: var(--radius-xl);
-  height: 58px;
-  box-shadow: 0 8px 28px rgba(224, 88, 54, 0.35);
+  border-radius: var(--radius-pill);
+  height: 52px;
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.32);
   font-weight: 600;
-  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  transition:
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.2s ease;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.floating-cart-btn:hover {
+  background: var(--color-primary-hover) !important;
+  box-shadow: 0 8px 26px rgba(0, 113, 227, 0.4);
 }
 
 .floating-cart-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
 .floating-cart-btn--bouncing {
-  animation: cartBtnPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cartBtnPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes cartBtnPop {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(1.04) translateY(-3px);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  40% { transform: scale(1.03) translateY(-2px); }
+  100% { transform: scale(1); }
 }
 
 .cart-count-badge {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
-  min-width: 28px;
-  height: 28px;
+  min-width: 26px;
+  height: 26px;
   padding: 0 6px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 800;
   border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .cart-btn-label {
-  font-size: 0.96rem;
-  font-weight: 700;
+  font-size: 0.94rem;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -423,9 +438,9 @@ onUnmounted(() => {
 }
 
 .cart-total-price {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .cart-arrow-icon {
@@ -439,24 +454,22 @@ onUnmounted(() => {
 /* Page transitions */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
 .page-fade-enter-from {
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(3px);
 }
 
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-3px);
 }
 
 @keyframes slideUp {
   from {
-    transform: translateY(20px);
+    transform: translateY(16px);
     opacity: 0;
   }
   to {

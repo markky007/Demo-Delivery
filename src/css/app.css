@@ -119,6 +119,102 @@
   --touch-target-min: 44px;
 }
 
+/* ─── Apple Design System (Customer Scope) ────────────────────────── */
+.customer-layout,
+.customer-theme-root,
+.device-screen {
+  /* Colors */
+  --color-primary: #0071e3;
+  --color-primary-hover: #0066cc;
+  --color-primary-active: #005bb5;
+  --color-primary-link: #0066cc;
+  --color-primary-on-dark: #2997ff;
+  --color-primary-soft: rgba(0, 113, 227, 0.08);
+  --color-primary-tint: rgba(0, 113, 227, 0.16);
+
+  --color-ink: #1d1d1f;
+  --color-ink-strong: #000000;
+  --color-body: #414143;
+  --color-muted: #6e6e73;
+  --color-muted-light: #86868b;
+  --color-hairline: #d2d2d7;
+  --color-accent-warm: #b64400;
+
+  --color-background: #fafafc;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-subtle: #fafafc;
+  --color-surface-footer: #f5f5f7;
+  --color-surface-alt: #e8e8ed;
+
+  --color-border: #e8e8ed;
+  --color-border-subtle: #f5f5f7;
+  --color-border-focus: #0071e3;
+
+  --color-text-primary: #1d1d1f;
+  --color-text-secondary: #414143;
+  --color-text-muted: #6e6e73;
+  --color-text-inverse: #ffffff;
+
+  /* Corner Radius Ladder */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-pill: 980px;
+
+  /* Shadows (Depth through tone + soft 8% shadow) */
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card: 2px 4px 12px 0px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 4px 8px 24px 0px rgba(0, 0, 0, 0.12);
+  --shadow-float: 0 12px 36px -4px rgba(0, 0, 0, 0.14);
+
+  /* Status Colors */
+  --color-status-queued: #0071e3;
+  --color-status-queued-bg: #ebf5ff;
+  --color-status-preparing: #b45309;
+  --color-status-preparing-bg: #fef3c7;
+  --color-status-prepared: #15803d;
+  --color-status-prepared-bg: #dcfce7;
+  --color-status-served: #475569;
+  --color-status-served-bg: #f1f5f9;
+  --color-status-soldout: #dc2626;
+  --color-status-soldout-bg: #fee2e2;
+}
+
+/* Customer Scope Quasar overrides */
+.customer-layout .q-btn,
+.customer-theme-root .q-btn,
+.device-screen .q-btn {
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.customer-layout .q-card,
+.customer-theme-root .q-card,
+.device-screen .q-card {
+  border-radius: var(--radius-xl);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.customer-layout .q-field--outlined .q-field__control,
+.customer-theme-root .q-field--outlined .q-field__control,
+.device-screen .q-field--outlined .q-field__control {
+  border-radius: var(--radius-md);
+  border-color: var(--color-hairline);
+}
+
+.customer-layout .q-field--outlined.q-field--focused .q-field__control,
+.customer-theme-root .q-field--outlined.q-field--focused .q-field__control,
+.device-screen .q-field--outlined.q-field--focused .q-field__control {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+
 /* ─── Global Reset & Body ───────────────────────── */
 * {
   box-sizing: border-box;

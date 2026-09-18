@@ -1699,7 +1699,7 @@ async function submitMockOrder() {
 }
 
 .mock-header-btn:hover {
-  background: rgba(45, 35, 30, 0.12);
+  background: var(--color-surface-alt);
 }
 
 .mock-logo-wrap {
@@ -1726,8 +1726,9 @@ async function submitMockOrder() {
 .mock-table-pill {
   display: inline-flex;
   align-items: center;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--color-surface-footer);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-hairline);
   font-size: 0.72rem;
   font-weight: 600;
   padding: 1px 8px;
@@ -1736,8 +1737,8 @@ async function submitMockOrder() {
 }
 
 .mock-table-pill--takeaway {
-  background: #ffedd5;
-  color: #ea580c;
+  background: #fff7ed;
+  color: #b64400;
   border: 1px solid #fed7aa;
 }
 
@@ -1757,8 +1758,8 @@ async function submitMockOrder() {
   width: 100%;
   max-width: 340px;
   background: #ffffff;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-hairline);
   box-shadow: var(--shadow-card);
 }
 
@@ -1773,8 +1774,10 @@ async function submitMockOrder() {
 
 .welcome-btn {
   height: 44px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-weight: 600;
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
 }
 
 /* Menu View */
@@ -1782,10 +1785,10 @@ async function submitMockOrder() {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(251, 249, 246, 0.96);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--color-hairline);
   padding: 6px 10px;
 }
 
@@ -1801,31 +1804,31 @@ async function submitMockOrder() {
 }
 
 .mock-category-pill {
-  border: 1px solid var(--color-border);
-  background: #ffffff;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface-footer);
   color: var(--color-text-secondary);
   padding: 4px 14px;
   border-radius: var(--radius-pill);
   font-family: var(--app-font-family);
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .mock-category-pill--active {
-  background: var(--color-primary);
-  color: #ffffff;
-  border-color: var(--color-primary);
+  background: var(--color-ink) !important;
+  color: #ffffff !important;
+  border-color: var(--color-ink) !important;
   font-weight: 600;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--color-border);
+  background: var(--color-surface-footer);
+  border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
   padding: 0 10px;
   height: 32px;

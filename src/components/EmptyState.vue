@@ -47,17 +47,24 @@ defineEmits<{
 }
 
 .empty-icon-circle {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-pill);
-  background: var(--color-primary-soft);
+  background: var(--color-surface-footer);
+  color: var(--color-muted);
+  border: 1px solid var(--color-hairline);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.empty-icon-circle :deep(.q-icon) {
+  color: var(--color-muted) !important;
+}
+
 .empty-title {
   font-size: 1.15rem;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 
@@ -65,12 +72,15 @@ defineEmits<{
   font-size: 0.9rem;
   max-width: 320px;
   line-height: 1.5;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .empty-btn {
-  padding: 8px 24px;
+  padding: 8px 20px;
   font-weight: 600;
   border-radius: var(--radius-pill);
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
 }
 </style>

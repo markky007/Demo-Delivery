@@ -75,3 +75,11 @@ export interface TableCardItem {
   avatarClass: string;
   isTakeaway: boolean;
 }
+
+export interface TransferSourceTable {
+  table: { id: string; name: string };
+  isTakeaway?: boolean;
+  session?: { customer_name?: string | null } | null;
+  orderCount: number;
+  totalAmount: number;
+}

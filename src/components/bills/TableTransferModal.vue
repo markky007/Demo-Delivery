@@ -367,7 +367,7 @@
 <script setup lang="ts">
 import { formatPrice } from 'src/utils/formatters';
 import type { TableWithQR } from 'src/types/database';
-import type { TableCardItem } from 'src/types/tableCard';
+import type { TableCardItem, TransferSourceTable } from 'src/types/tableCard';
 
 export interface TargetTableOption {
   table: TableWithQR;
@@ -380,7 +380,7 @@ export interface TargetTableOption {
 
 defineProps<{
   modelValue: boolean;
-  tableToTransfer: TableCardItem | null;
+  tableToTransfer: TableCardItem | TransferSourceTable | null;
   allTargetTables: TargetTableOption[];
   filteredTargetTables: TargetTableOption[];
   selectedTargetTableId: string | null;

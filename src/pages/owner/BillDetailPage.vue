@@ -1,5 +1,5 @@
 <template>
-  <q-page class="bill-detail-page q-pa-md">
+  <q-page class="bill-detail-page q-pa-md q-pa-md-lg">
     <!-- Loading Skeleton -->
     <div v-if="isLoading" class="bill-detail-container">
       <LoadingSkeleton type="bill-detail" />
@@ -7,958 +7,115 @@
 
     <template v-else-if="session">
       <div class="bill-detail-container">
-        <!-- Top Navigation & Header -->
-        <div class="top-nav-bar row items-center justify-between q-mb-md no-print">
-          <div class="row items-center no-wrap">
-            <q-btn
-              flat
-              round
-              dense
-              icon="arrow_back"
-              color="grey-8"
-              to="/owner/bills"
-              aria-label="กลับหน้ารายการบิล"
-              class="q-mr-sm"
+        <!-- 1. Apple Header Navigation & Table Meta -->
+        <BillDetailHeader
+          :table-name="tableName"
+          :session-status="session.status"
+          :bill-id="bill?.id"
+          :total-items-count="totalItemsCount"
+          :order-count="orders.length"
+          :can-transfer="session.status === 'ACTIVE'"
+          @transfer="openTransferModal"
+          @print="printReceipt"
+          @copy="handleCopySummary"
+        />
+
+        <!-- 2. Apple 2-Column Responsive Layout (iPad / Tablet & Desktop) -->
+        <div class="bill-detail-layout">
+          <!-- Left Column: Apple Digital Statement / Receipt Slip View -->
+          <div class="bill-detail-main">
+            <ReceiptSlip
+              ref="receiptSlipRef"
+              :bill="bill"
+              :table-name="tableName"
+              :orders="orders"
+              :show-actions="true"
+              :allow-edit-price="session.status === 'ACTIVE' && bill?.status !== 'PAID'"
+              @edit-price="handleOpenEditPriceModal"
             />
-            <div>
-              <div class="row items-center no-wrap">
-                <span class="text-h6 text-weight-bolder text-grey-9 table-title-header ellipsis">{{
-                  tableName
-                }}</span>
-                <StatusBadge
-                  :status="session.status"
-                  mode="raw"
-                  :custom-label="session.status === 'ACTIVE' ? 'กำลังนั่งทาน' : 'ปิดโต๊ะแล้ว'"
-                  class="q-ml-sm"
-                />
-              </div>
-              <div class="text-caption text-grey-6 font-mono">
-                บิล #{{ bill?.id ? bill.id.slice(0, 8) : '—' }} • {{ totalItemsCount }} รายการ
-              </div>
-            </div>
           </div>
 
-          <div class="row items-center q-gutter-sm">
-            <q-btn
-              v-if="session.status === 'ACTIVE'"
-              outline
-              rounded
-              no-caps
-              size="sm"
-              icon="swap_horiz"
-              label="ขอย้ายโต๊ะ"
-              color="primary"
-              @click="openTransferModal"
-              class="q-px-sm"
+          <!-- Right Column (Sticky on iPad/Desktop): Payment Hero Card & Quick Drinks -->
+          <div class="bill-detail-sidebar no-print">
+            <!-- 2.1 Apple Payment Hero Action Card -->
+            <BillPaymentCard
+              :session="session"
+              :bill="bill"
+              :table-name="tableName"
+              :bill-total="billTotal"
+              :total-items-count="totalItemsCount"
+              :orders="orders"
+              :all-served="allServed"
+              :is-processing="isProcessing"
+              @mark-paid="handleMarkPaid"
+              @close-session="handleCloseSession"
+              @cancel-empty-session="handleCancelEmptySession"
             />
-            <q-btn
-              outline
-              rounded
-              no-caps
-              size="sm"
-              icon="print"
-              label="พิมพ์ใบเสร็จ"
-              @click="printReceipt"
-              class="q-px-sm"
+
+            <!-- 2.2 Quick Add Drinks Section (Active Unpaid Session Only) -->
+            <BillQuickDrinks
+              v-if="session.status === 'ACTIVE' && (!bill || bill.status !== 'PAID')"
+              :is-adding-drink="isAddingDrink"
+              @add-drink="addDrinkItem"
             />
           </div>
         </div>
 
-        <!-- 2-Column Responsive Layout for iPad / Tablet & Desktop -->
-        <div class="bill-detail-layout">
-          <!-- Left Column: Receipt Slip View -->
-          <div class="bill-detail-main">
-            <div class="receipt-wrapper">
-              <ReceiptSlip
-                :bill="bill"
-                :table-name="tableName"
-                :orders="orders"
-                :show-actions="true"
-                :allow-edit-price="session.status === 'ACTIVE' && bill?.status !== 'PAID'"
-                @edit-price="handleOpenEditPriceModal"
-              />
-            </div>
-          </div>
-
-          <!-- Right Column (Sticky on iPad/Desktop): Payment & Quick Controls -->
-          <div class="bill-detail-sidebar no-print">
-            <!-- 1. Payment Action Card -->
-            <div class="payment-action-card q-pa-md">
-              <div class="row items-center justify-between q-mb-sm">
-                <div class="row items-center">
-                  <div class="payment-card-icon-wrap q-mr-sm">
-                    <q-icon name="payments" size="20px" color="primary" />
-                  </div>
-                  <div>
-                    <div class="text-subtitle2 text-weight-bold text-grey-9">สรุปยอดชำระเงิน</div>
-                    <div class="text-caption text-grey-6">{{ tableName }}</div>
-                  </div>
-                </div>
-                <StatusBadge
-                  :status="session.status"
-                  mode="raw"
-                  :custom-label="session.status === 'ACTIVE' ? 'เปิดโต๊ะอยู่' : 'ปิดโต๊ะแล้ว'"
-                />
-              </div>
-
-              <!-- Price Box -->
-              <div class="payment-price-box q-pa-md q-mb-md text-center">
-                <div class="text-caption text-grey-7 text-weight-medium">
-                  ยอดรวมสุทธิที่ต้องชำระ
-                </div>
-                <div class="text-h4 text-weight-bolder text-primary font-mono q-my-xs">
-                  {{ formatPrice(billTotal) }}
-                </div>
-                <div class="row items-center justify-center text-caption text-grey-6 q-gutter-x-sm">
-                  <span>{{ totalItemsCount }} รายการ</span>
-                  <span>•</span>
-                  <span>{{ orders.length }} ออเดอร์</span>
-                </div>
-              </div>
-
-              <!-- Control Actions for ACTIVE session -->
-              <div v-if="session.status === 'ACTIVE'" class="column q-gutter-y-sm">
-                <!-- Case 1: No orders placed -->
-                <div
-                  v-if="orders.length === 0"
-                  class="empty-orders-action-card q-pa-sm text-center"
-                >
-                  <div class="text-caption text-grey-8 q-mb-xs">
-                    ยังไม่มีรายการสั่งอาหาร สามารถยกเลิกการเปิดโต๊ะได้
-                  </div>
-                  <q-btn
-                    unelevated
-                    no-caps
-                    rounded
-                    color="negative"
-                    size="md"
-                    icon="person_remove"
-                    label="ยกเลิกการเปิดโต๊ะ"
-                    :loading="isProcessing"
-                    @click="handleCancelEmptySession"
-                    class="full-width"
-                  />
-                </div>
-
-                <!-- Case 2: Food not all served yet -->
-                <div v-else-if="!allServed" class="not-served-warning q-pa-sm">
-                  <div class="row items-center">
-                    <q-icon name="warning" size="18px" class="q-mr-xs text-amber-9" />
-                    <span class="text-weight-bold text-caption text-amber-10"
-                      >ยังมีอาหารที่ยังไม่ได้เสิร์ฟ</span
-                    >
-                  </div>
-                  <p class="q-mb-none text-caption text-grey-8 q-mt-xs">
-                    ต้องเสิร์ฟอาหารให้ครบทุกรายการก่อน จึงจะสามารถรับชำระเงินและปิดโต๊ะได้
-                  </p>
-                </div>
-
-                <!-- Case 3: Orders exist and ready to pay -->
-                <q-btn
-                  v-if="orders.length > 0 && (!bill || bill.status !== 'PAID')"
-                  color="primary"
-                  unelevated
-                  no-caps
-                  size="lg"
-                  class="full-width action-button pay-btn-prominent"
-                  :disable="!allServed"
-                  @click="handleMarkPaid"
-                  :loading="isProcessing"
-                >
-                  <div class="row items-center justify-center no-wrap full-width">
-                    <q-icon name="payments" size="24px" class="q-mr-sm" />
-                    <span class="text-weight-bold text-subtitle1">รับชำระเงินเรียบร้อย</span>
-                  </div>
-                </q-btn>
-
-                <!-- Case 4: Already paid, ready to close session -->
-                <div v-if="bill?.status === 'PAID'" class="column q-gutter-y-sm">
-                  <div class="paid-status-box q-pa-sm text-center">
-                    <div class="row items-center justify-center text-positive text-weight-bold">
-                      <q-icon name="check_circle" size="18px" class="q-mr-xs" />
-                      <span>ชำระเงินเรียบร้อยแล้ว</span>
-                    </div>
-                  </div>
-                  <q-btn
-                    color="purple-8"
-                    unelevated
-                    no-caps
-                    size="lg"
-                    class="full-width action-button"
-                    @click="handleCloseSession"
-                    :loading="isProcessing"
-                  >
-                    <q-icon name="task_alt" class="q-mr-sm" />
-                    <span>ปิดโต๊ะ / จบบิลนี้</span>
-                  </q-btn>
-                </div>
-              </div>
-
-              <!-- When session is CLOSED -->
-              <div
-                v-else-if="session.status === 'CLOSED'"
-                class="closed-banner q-pa-sm text-center"
-              >
-                <q-icon name="task_alt" size="24px" color="positive" class="q-mb-xs" />
-                <div class="text-weight-bold text-caption">โต๊ะนี้ปิดบิลเรียบร้อยแล้ว</div>
+        <!-- 3. Mobile Floating Quick-Action Bar (Small screens only) -->
+        <div
+          v-if="session.status === 'ACTIVE' && (!bill || bill.status !== 'PAID') && orders.length > 0"
+          class="mobile-floating-bar lt-md no-print"
+        >
+          <div class="row items-center justify-between no-wrap">
+            <div>
+              <div class="text-caption text-muted">ยอดรวมทั้งสิ้น</div>
+              <div class="mobile-bar-total font-mono text-weight-bold">
+                {{ formatPrice(billTotal) }}
               </div>
             </div>
-
-            <!-- 2. Quick Add Drinks Section (ACTIVE session only) -->
-            <div
-              v-if="session.status === 'ACTIVE' && (!bill || bill.status !== 'PAID')"
-              class="quick-add-card q-pa-md"
+            <q-btn
+              unelevated
+              no-caps
+              :disable="!allServed"
+              :loading="isProcessing"
+              @click="handleMarkPaid"
+              class="apple-pill-btn apple-pill-btn--primary"
             >
-              <div class="row items-center justify-between q-mb-sm">
-                <div class="row items-center">
-                  <q-icon name="local_bar" size="18px" color="primary" class="q-mr-xs" />
-                  <span class="text-weight-bold text-subtitle2">เพิ่มเครื่องดื่มท้ายบิล</span>
-                </div>
-                <span class="text-caption text-grey-6 font-size-11">บวกเข้าบิลทันที</span>
-              </div>
-
-              <div class="column q-gutter-y-xs">
-                <!-- Soft drink -->
-                <div class="drink-item-row row items-center justify-between q-pa-xs">
-                  <div class="row items-center no-wrap col ellipsis q-mr-xs">
-                    <div class="drink-icon-wrap drink-icon-wrap--can q-mr-sm">🥤</div>
-                    <div class="ellipsis">
-                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">
-                        น้ำอัดลมกระป๋อง
-                      </div>
-                      <div class="text-caption text-primary text-weight-bold font-mono">
-                        {{ formatPrice(20) }}
-                      </div>
-                    </div>
-                  </div>
-                  <q-btn
-                    unelevated
-                    rounded
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    icon="add"
-                    label="เพิ่ม 1 กป."
-                    :loading="isAddingDrink === 'can'"
-                    @click="addDrinkItem('น้ำอัดลมกระป๋อง', 20, 'can')"
-                    class="q-px-sm"
-                  />
-                </div>
-
-                <!-- Plain water -->
-                <div class="drink-item-row row items-center justify-between q-pa-xs">
-                  <div class="row items-center no-wrap col ellipsis q-mr-xs">
-                    <div class="drink-icon-wrap drink-icon-wrap--plain q-mr-sm">🫗</div>
-                    <div class="ellipsis">
-                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำเปล่า</div>
-                      <div class="text-caption text-primary text-weight-bold font-mono">
-                        {{ formatPrice(10) }}
-                      </div>
-                    </div>
-                  </div>
-                  <q-btn
-                    unelevated
-                    rounded
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    icon="add"
-                    label="เพิ่ม 1 ขวด"
-                    :loading="isAddingDrink === 'plain'"
-                    @click="addDrinkItem('น้ำเปล่า', 10, 'plain')"
-                    class="q-px-sm"
-                  />
-                </div>
-
-                <!-- Bottled water -->
-                <div class="drink-item-row row items-center justify-between q-pa-xs">
-                  <div class="row items-center no-wrap col ellipsis q-mr-xs">
-                    <div class="drink-icon-wrap drink-icon-wrap--water q-mr-sm">💧</div>
-                    <div class="ellipsis">
-                      <div class="text-weight-bold text-body2 text-grey-9 ellipsis">น้ำขวด</div>
-                      <div class="text-caption text-primary text-weight-bold font-mono">
-                        {{ formatPrice(25) }}
-                      </div>
-                    </div>
-                  </div>
-                  <q-btn
-                    unelevated
-                    rounded
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    icon="add"
-                    label="เพิ่ม 1 ขวด"
-                    :loading="isAddingDrink === 'water'"
-                    @click="addDrinkItem('น้ำขวด', 25, 'water')"
-                    class="q-px-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. Table Quick Actions -->
-            <div class="quick-actions-bar row q-gutter-sm">
-              <q-btn
-                v-if="session.status === 'ACTIVE'"
-                outline
-                rounded
-                no-caps
-                size="md"
-                icon="swap_horiz"
-                label="ขอย้ายโต๊ะ"
-                color="grey-8"
-                @click="openTransferModal"
-                class="col"
-              />
-              <q-btn
-                outline
-                rounded
-                no-caps
-                size="md"
-                icon="print"
-                label="พิมพ์ใบเสร็จ"
-                color="grey-8"
-                @click="printReceipt"
-                class="col"
-              />
-            </div>
+              <q-icon name="payments" size="18px" class="q-mr-xs" />
+              <span>{{ allServed ? 'รับชำระเงิน' : 'รอเสิร์ฟครบ' }}</span>
+            </q-btn>
           </div>
         </div>
       </div>
 
-      <!-- Transfer & Merge Table Modal Dialog -->
-      <q-dialog v-model="showTransferModal">
-        <q-card
-          style="min-width: 380px; max-width: 520px; width: 100%"
-          class="q-pa-md border-radius-lg transfer-dialog-card no-print"
-        >
-          <q-card-section class="q-pb-xs">
-            <div class="row items-center no-wrap q-mb-sm">
-              <div
-                class="transfer-modal-icon-wrap q-mr-sm"
-                :class="{ 'bg-amber-1 text-amber-9': selectedTargetIsOccupied }"
-              >
-                <q-icon
-                  :name="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'"
-                  size="24px"
-                  :color="selectedTargetIsOccupied ? 'amber-9' : 'primary'"
-                />
-              </div>
-              <div>
-                <div class="text-h6 text-weight-bold">
-                  {{ selectedTargetIsOccupied ? 'รวมโต๊ะอาหาร (Table Merge)' : 'ขอย้ายโต๊ะอาหาร' }}
-                </div>
-                <div class="text-caption text-grey-7">
-                  {{
-                    selectedTargetIsOccupied
-                      ? 'รวมออเดอร์และยอดบิลเข้ากับโต๊ะที่มีลูกค้านั่งอยู่แล้ว'
-                      : 'โอนย้ายออเดอร์และบิลทั้งหมดไปยังโต๊ะใหม่ หรือสั่งกลับบ้าน'
-                  }}
-                </div>
-              </div>
-            </div>
+      <!-- 4. Apple Modal Dialogs -->
+      <!-- 4.1 Edit Dish Price Modal Dialog -->
+      <BillEditPriceModal
+        v-model="showEditPriceModal"
+        :editing-item="editingItem"
+        :is-saving-price="isSavingPrice"
+        @confirm-update="handleConfirmUpdatePrice"
+      />
 
-            <!-- Current Table Info Card -->
-            <div class="transfer-source-card q-pa-sm q-my-sm">
-              <div class="row items-center justify-between">
-                <div class="row items-center">
-                  <q-icon name="table_restaurant" size="18px" class="q-mr-xs text-primary" />
-                  <span class="text-weight-bold text-body2">{{ tableName }}</span>
-                </div>
-                <span class="text-caption text-grey-7">
-                  {{ orders.length }} ออเดอร์ • {{ formatPrice(billTotal) }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Target Table Selection -->
-            <div class="q-mt-md">
-              <div class="row items-center justify-between q-mb-xs">
-                <div class="text-caption text-weight-bold text-grey-8">
-                  เลือกโต๊ะปลายทางที่ต้องการย้ายหรือรวม:
-                </div>
-                <div class="row q-gutter-xs">
-                  <q-chip
-                    clickable
-                    dense
-                    size="sm"
-                    :color="transferFilter === 'all' ? 'primary' : 'grey-3'"
-                    :text-color="transferFilter === 'all' ? 'white' : 'grey-8'"
-                    @click="transferFilter = 'all'"
-                  >
-                    ทั้งหมด ({{ allTargetTables.length }})
-                  </q-chip>
-                  <q-chip
-                    clickable
-                    dense
-                    size="sm"
-                    :color="transferFilter === 'empty' ? 'positive' : 'grey-3'"
-                    :text-color="transferFilter === 'empty' ? 'white' : 'grey-8'"
-                    @click="transferFilter = 'empty'"
-                  >
-                    โต๊ะว่าง ({{ allTargetTables.filter((t) => !t.isOccupied).length }})
-                  </q-chip>
-                  <q-chip
-                    clickable
-                    dense
-                    size="sm"
-                    :color="transferFilter === 'occupied' ? 'amber-9' : 'grey-3'"
-                    :text-color="transferFilter === 'occupied' ? 'white' : 'grey-8'"
-                    @click="transferFilter = 'occupied'"
-                  >
-                    มีลูกค้า/รวมโต๊ะ ({{ allTargetTables.filter((t) => t.isOccupied).length }})
-                  </q-chip>
-                </div>
-              </div>
-
-              <!-- When No Empty Tables Available -->
-              <div
-                v-if="filteredTargetTables.length === 0"
-                class="no-available-tables-box q-pa-md text-center q-my-sm"
-              >
-                <q-icon name="info" size="28px" color="grey-6" class="q-mb-xs" />
-                <div class="text-weight-bold text-grey-8">ไม่พบโต๊ะในหมวดหมู่นี้</div>
-                <div class="text-caption text-grey-6 q-mt-xs">
-                  ลองเลือกตัวกรอง "ทั้งหมด" เพื่อดูโต๊ะทั้งหมดในร้าน
-                </div>
-              </div>
-
-              <!-- Available Tables Grid -->
-              <div v-else class="available-tables-grid q-mt-xs">
-                <div
-                  v-for="targetTbl in filteredTargetTables"
-                  :key="targetTbl.table.id"
-                  class="target-table-item"
-                  :class="{
-                    'target-table-item--selected': selectedTargetTableId === targetTbl.table.id,
-                    'target-table-item--takeaway': targetTbl.isTakeaway,
-                    'target-table-item--occupied': targetTbl.isOccupied,
-                  }"
-                  @click="handleSelectTargetTable(targetTbl)"
-                >
-                  <div class="row items-center justify-between no-wrap">
-                    <div class="row items-center ellipsis q-mr-xs">
-                      <q-icon
-                        :name="
-                          targetTbl.isTakeaway
-                            ? 'shopping_bag'
-                            : targetTbl.isOccupied
-                              ? 'group'
-                              : 'table_restaurant'
-                        "
-                        size="18px"
-                        class="target-table-icon q-mr-xs"
-                        :class="{
-                          'text-orange-9': targetTbl.isTakeaway,
-                          'text-amber-9': targetTbl.isOccupied,
-                        }"
-                      />
-                      <span class="target-table-name text-weight-bold ellipsis">{{
-                        targetTbl.table.name
-                      }}</span>
-                    </div>
-
-                    <div>
-                      <q-icon
-                        v-if="selectedTargetTableId === targetTbl.table.id"
-                        name="check_circle"
-                        size="18px"
-                        :color="targetTbl.isOccupied ? 'amber-9' : 'primary'"
-                      />
-                      <span v-else-if="targetTbl.isTakeaway" class="target-table-takeaway-badge">
-                        สั่งกลับบ้าน
-                      </span>
-                      <span v-else-if="targetTbl.isOccupied" class="target-table-occupied-badge">
-                        รวมโต๊ะ
-                      </span>
-                      <span v-else class="target-table-free-badge">ว่าง</span>
-                    </div>
-                  </div>
-
-                  <!-- Details under table name if occupied -->
-                  <div
-                    v-if="targetTbl.isOccupied"
-                    class="text-caption font-size-10 text-amber-10 q-mt-xs ellipsis"
-                  >
-                    {{ targetTbl.orderCount }} ออเดอร์ • {{ formatPrice(targetTbl.totalAmount) }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Customer Name Input when Target is Takeaway -->
-              <div
-                v-if="selectedTargetIsTakeaway"
-                class="q-mt-sm bg-orange-1 q-pa-sm border-radius-md"
-                style="border: 1px dashed #fdba74"
-              >
-                <div class="text-caption text-weight-bold text-orange-10 q-mb-xs row items-center">
-                  <q-icon name="person" size="16px" class="q-mr-xs" />
-                  <span>ชื่อลูกค้าสำหรับสั่งกลับบ้าน (ระบุหรือไม่ก็ได้):</span>
-                </div>
-                <q-input
-                  v-model="transferCustomerName"
-                  outlined
-                  dense
-                  :placeholder="`เช่น คุณสมชาย (ถ้าไม่ระบุ ระบบจะใช้ 'ลูกค้าจาก ${tableName || 'โต๊ะเดิม'}')`"
-                  bg-color="white"
-                  class="text-caption"
-                />
-              </div>
-
-              <!-- Occupied Merge Preview Box -->
-              <div
-                v-if="selectedTargetIsOccupied && selectedTargetTable && session"
-                class="merge-preview-card q-pa-sm q-mt-md"
-              >
-                <div class="row items-center text-amber-10 text-weight-bold text-caption q-mb-xs">
-                  <q-icon name="merge_type" size="16px" class="q-mr-xs" />
-                  <span>สรุปข้อมูลการรวมโต๊ะ (Merge Preview)</span>
-                </div>
-
-                <div class="merge-summary-table q-my-xs">
-                  <div class="row items-center justify-between text-caption text-grey-8">
-                    <span>{{ tableName }} (โต๊ะต้นทาง):</span>
-                    <span class="text-weight-bold">
-                      {{ orders.length }} ออเดอร์ • {{ formatPrice(billTotal) }}
-                    </span>
-                  </div>
-                  <div class="row items-center justify-between text-caption text-grey-8 q-mt-xs">
-                    <span>{{ selectedTargetTable.table.name }} (โต๊ะปลายทาง):</span>
-                    <span class="text-weight-bold">
-                      {{ selectedTargetTable.orderCount }} ออเดอร์ •
-                      {{ formatPrice(selectedTargetTable.totalAmount) }}
-                    </span>
-                  </div>
-                  <q-separator class="q-my-xs" />
-                  <div
-                    class="row items-center justify-between text-caption text-weight-bolder text-amber-10"
-                  >
-                    <span>รวมทั้งหมดที่ {{ selectedTargetTable.table.name }}:</span>
-                    <span>
-                      {{ orders.length + selectedTargetTable.orderCount }} ออเดอร์ •
-                      {{ formatPrice(billTotal + selectedTargetTable.totalAmount) }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="text-caption font-size-11 text-grey-7 q-mt-xs">
-                  💡 เมื่อรวมโต๊ะ ออเดอร์ทั้งหมดจะถูกโอนไปที่
-                  <strong>{{ selectedTargetTable.table.name }}</strong> และ
-                  <strong>{{ tableName }}</strong> จะถูกเคลียร์กลับเป็น
-                  <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที
-                </div>
-              </div>
-
-              <!-- Notice Info Box -->
-              <div
-                v-else-if="
-                  selectedTargetTableId && !selectedTargetIsTakeaway && !selectedTargetIsOccupied
-                "
-                class="transfer-hint-box q-pa-sm q-mt-md"
-              >
-                <div class="row items-start no-wrap">
-                  <q-icon name="info" size="16px" color="primary" class="q-mr-xs q-mt-xs" />
-                  <div class="text-caption text-grey-8 font-size-11">
-                    เมื่อกดยืนยัน รายการอาหารและยอดเงินจะย้ายไปที่
-                    <strong class="text-primary">{{
-                      allTables.find((t) => t.id === selectedTargetTableId)?.name
-                    }}</strong>
-                    ทันที และโต๊ะเดิมจะกลับไปเป็นสถานะ <strong>"โต๊ะว่าง"</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-
-          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-md">
-            <q-btn
-              unelevated
-              no-caps
-              rounded
-              :color="selectedTargetIsOccupied ? 'deep-orange-8' : 'primary'"
-              :icon="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'"
-              :label="
-                selectedTargetTableId
-                  ? selectedTargetIsOccupied
-                    ? `ดำเนินการรวมโต๊ะเข้ากับ ${selectedTargetTable?.table.name}`
-                    : `ยืนยันย้ายไป ${selectedTargetTable?.table.name || 'โต๊ะใหม่'}`
-                  : 'กรุณาเลือกโต๊ะปลายทาง'
-              "
-              :disabled="!selectedTargetTableId || allTargetTables.length === 0"
-              :loading="isTransferring"
-              @click="promptConfirmTransferOrMerge"
-              class="full-width font-weight-600"
-            />
-            <q-btn
-              flat
-              no-caps
-              rounded
-              color="grey-7"
-              label="ยกเลิก"
-              v-close-popup
-              class="full-width"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
-      <!-- Safety Confirmation Dialog to Prevent Accidental Moves/Merges -->
-      <q-dialog v-model="showMergeConfirmDialog" persistent>
-        <q-card
-          style="min-width: 360px; max-width: 440px; width: 100%"
-          class="q-pa-md border-radius-lg no-print"
-        >
-          <q-card-section class="text-center q-pb-none">
-            <div
-              class="confirm-icon-wrap q-mx-auto q-mb-sm"
-              :class="
-                selectedTargetIsOccupied
-                  ? 'bg-amber-1 text-amber-9'
-                  : 'bg-primary-soft text-primary'
-              "
-            >
-              <q-icon :name="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'" size="32px" />
-            </div>
-            <div class="text-h6 text-weight-bold">
-              {{ selectedTargetIsOccupied ? 'ยืนยันการรวมโต๊ะอาหาร ⚠️' : 'ยืนยันการย้ายโต๊ะอาหาร' }}
-            </div>
-            <div class="text-caption text-grey-7 q-mt-xs">
-              {{
-                selectedTargetIsOccupied
-                  ? 'กรุณาตรวจสอบข้อมูลก่อนรวมโต๊ะ รายการนี้ไม่สามารถยกเลิกอัตโนมัติได้'
-                  : 'ต้องการย้ายรายการไปยังโต๊ะใหม่หรือไม่'
-              }}
-            </div>
-          </q-card-section>
-
-          <q-card-section class="q-pt-md">
-            <!-- Visual comparison -->
-            <div
-              v-if="selectedTargetIsOccupied && selectedTargetTable && session"
-              class="merge-confirm-card q-pa-sm q-mb-md"
-            >
-              <div class="row items-center justify-between text-caption q-mb-xs">
-                <span class="text-grey-7">โต๊ะต้นทาง (จะเคลียร์ว่าง):</span>
-                <span class="text-weight-bold text-negative">
-                  {{ tableName }} ({{ orders.length }} รายการ • {{ formatPrice(billTotal) }})
-                </span>
-              </div>
-              <div class="row items-center justify-between text-caption q-mb-xs">
-                <span class="text-grey-7">โต๊ะปลายทาง (โต๊ะรวม):</span>
-                <span class="text-weight-bold text-primary">
-                  {{ selectedTargetTable.table.name }} ({{ selectedTargetTable.orderCount }} รายการ
-                  • {{ formatPrice(selectedTargetTable.totalAmount) }})
-                </span>
-              </div>
-              <q-separator class="q-my-xs" />
-              <div
-                class="row items-center justify-between text-body2 text-weight-bolder text-amber-10"
-              >
-                <span>ยอดเงินรวมบิลใหม่:</span>
-                <span>{{ formatPrice(billTotal + selectedTargetTable.totalAmount) }}</span>
-              </div>
-              <div class="text-caption text-grey-6 text-right font-size-11 q-mt-xs">
-                รวมทั้งหมด {{ orders.length + selectedTargetTable.orderCount }} ออเดอร์
-              </div>
-            </div>
-
-            <div
-              class="confirm-warning-box q-pa-sm"
-              :class="
-                selectedTargetIsOccupied ? 'bg-amber-1 text-amber-10' : 'bg-blue-1 text-primary'
-              "
-            >
-              <div class="row items-start no-wrap">
-                <q-icon
-                  :name="selectedTargetIsOccupied ? 'warning' : 'info'"
-                  size="18px"
-                  class="q-mr-xs q-mt-xs"
-                />
-                <div class="text-caption font-size-12">
-                  <template v-if="selectedTargetIsOccupied">
-                    เมื่อยืนยัน ออเดอร์ทั้งหมดจะถูกรวมเข้ากับ
-                    <strong>{{ selectedTargetTable?.table.name }}</strong> และ
-                    <strong>{{ tableName }}</strong> จะถูกเคลียร์กลับเป็น
-                    <strong class="text-positive">"โต๊ะว่าง"</strong> ทันที
-                    กรุณาตรวจสอบให้แน่ใจว่าลูกค้าย้ายมานั่งร่วมกันจริง
-                  </template>
-                  <template v-else>
-                    ออเดอร์ทั้งหมดจะย้ายไปที่
-                    <strong>{{ selectedTargetTable?.table.name }}</strong> และ
-                    <strong>{{ tableName }}</strong> จะกลับเป็นโต๊ะว่าง
-                  </template>
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-
-          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-sm">
-            <q-btn
-              unelevated
-              no-caps
-              rounded
-              :color="selectedTargetIsOccupied ? 'deep-orange-8' : 'primary'"
-              :icon="selectedTargetIsOccupied ? 'merge_type' : 'swap_horiz'"
-              :label="selectedTargetIsOccupied ? 'ยืนยันรวมโต๊ะ' : 'ยืนยันย้ายโต๊ะ'"
-              :loading="isTransferring"
-              @click="executeTransferOrMerge"
-              class="full-width font-weight-600"
-            />
-            <q-btn
-              flat
-              no-caps
-              rounded
-              color="grey-7"
-              label="ยกเลิก / ตรวจสอบอีกครั้ง"
-              v-close-popup
-              :disable="isTransferring"
-              class="full-width"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
-      <!-- Edit Order Item Price Modal Dialog -->
-      <q-dialog v-model="showEditPriceModal">
-        <q-card
-          style="min-width: 360px; max-width: 480px"
-          class="q-pa-md border-radius-lg edit-price-dialog-card no-print"
-        >
-          <q-card-section class="q-pb-xs">
-            <div class="row items-center no-wrap q-mb-sm">
-              <div class="edit-price-modal-icon-wrap q-mr-sm">
-                <q-icon name="price_change" size="24px" color="primary" />
-              </div>
-              <div>
-                <div class="text-h6 text-weight-bold">แก้ไขราคาอาหาร</div>
-                <div class="text-caption text-grey-7">
-                  ปรับราคาต่อหน่วยตามหมายเหตุพิเศษหรือตัวเลือกเพิ่มเติม
-                </div>
-              </div>
-            </div>
-
-            <!-- Item Header & Details -->
-            <div v-if="editingItem" class="edit-item-summary-card q-pa-sm q-my-sm">
-              <div class="row items-center justify-between">
-                <div>
-                  <div class="text-weight-bold text-body1 text-primary">
-                    {{ editingItem.snapshot_name }}
-                  </div>
-                  <div class="text-caption text-grey-7">
-                    จำนวน {{ editingItem.quantity }} จาน • ราคาเดิม
-                    {{ formatPrice(editingItem.snapshot_base_price) }}/จาน
-                  </div>
-                </div>
-                <div class="text-right">
-                  <span class="text-caption text-grey-6">ยอดรวมเดิม</span>
-                  <div class="text-weight-bold text-body2 font-mono">
-                    {{ formatPrice(editingItem.subtotal) }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Customer Special Instruction Note Highlight -->
-              <div
-                v-if="editingItem.special_instruction"
-                class="customer-note-highlight-box q-pa-xs q-mt-sm"
-              >
-                <div class="row items-start no-wrap">
-                  <q-icon name="comment" size="16px" color="amber-9" class="q-mr-xs q-mt-xs" />
-                  <div class="text-caption text-amber-10 font-weight-500">
-                    <strong>หมายเหตุจากลูกค้า:</strong> {{ editingItem.special_instruction }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Base Price Input & Quick Adjustments -->
-            <div class="q-mt-md">
-              <label class="text-caption text-weight-bold text-grey-8 q-mb-xs block">
-                ราคาตั้งต้นต่อหน่วยใหม่ (฿/จาน):
-              </label>
-              <q-input
-                v-model.number="newBasePrice"
-                type="number"
-                outlined
-                dense
-                min="0"
-                prefix="฿"
-                class="font-mono text-weight-bold text-h6"
-                placeholder="ระบุราคาใหม่ต่อจาน"
-              >
-                <template #append>
-                  <span class="text-caption text-grey-6">/ จาน</span>
-                </template>
-              </q-input>
-
-              <!-- Quick Add Buttons -->
-              <div class="q-mt-xs">
-                <div class="text-caption text-grey-7 q-mb-xs">เพิ่ม/ลดราคาด่วน:</div>
-                <div class="row q-gutter-xs wrap">
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    outline
-                    label="+10"
-                    @click="quickAdjustPrice(10)"
-                    class="q-px-sm"
-                  />
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    outline
-                    label="+15"
-                    @click="quickAdjustPrice(15)"
-                    class="q-px-sm"
-                  />
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    outline
-                    label="+20"
-                    @click="quickAdjustPrice(20)"
-                    class="q-px-sm"
-                  />
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    outline
-                    label="+30"
-                    @click="quickAdjustPrice(30)"
-                    class="q-px-sm"
-                  />
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    outline
-                    label="+50"
-                    @click="quickAdjustPrice(50)"
-                    class="q-px-sm"
-                  />
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    size="sm"
-                    color="primary"
-                    outline
-                    label="+100"
-                    @click="quickAdjustPrice(100)"
-                    class="q-px-sm"
-                  />
-                  <q-btn
-                    flat
-                    dense
-                    no-caps
-                    size="sm"
-                    color="grey-7"
-                    label="คืนค่าเดิม"
-                    icon="restore"
-                    @click="resetPriceToOriginal"
-                    class="q-px-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Optional Note update -->
-            <div class="q-mt-md">
-              <label class="text-caption text-weight-bold text-grey-8 q-mb-xs block">
-                หมายเหตุประกอบการปรับราคา (ถ้ามี):
-              </label>
-              <q-input
-                v-model="editInstruction"
-                outlined
-                dense
-                placeholder="เช่น เพิ่มหมูกรอบพิเศษ +20"
-                class="text-caption"
-              />
-            </div>
-
-            <!-- Live Calculation Preview -->
-            <div v-if="editingItem" class="price-preview-calc-card q-pa-sm q-mt-md">
-              <div class="row justify-between text-caption text-grey-8 q-mb-xs">
-                <span>ราคาตั้งต้นใหม่:</span>
-                <span class="font-mono font-weight-600"
-                  >{{ formatPrice(newBasePrice || 0) }} / จาน</span
-                >
-              </div>
-              <div
-                v-if="itemOptionsTotal > 0"
-                class="row justify-between text-caption text-grey-8 q-mb-xs"
-              >
-                <span>ตัวเลือกเสริม (Options):</span>
-                <span class="font-mono font-weight-600"
-                  >+{{ formatPrice(itemOptionsTotal) }} / จาน</span
-                >
-              </div>
-              <div class="row justify-between text-caption text-grey-8 q-mb-xs">
-                <span>ราคารวมต่อหน่วย ({{ editingItem.quantity }} จาน):</span>
-                <span class="font-mono font-weight-600"
-                  >{{ formatPrice(previewUnitTotal) }} × {{ editingItem.quantity }}</span
-                >
-              </div>
-              <q-separator class="q-my-xs" />
-              <div class="row justify-between items-center text-subtitle2 q-pt-xs">
-                <span class="text-weight-bold">ยอดรวมรายการใหม่:</span>
-                <div class="text-right">
-                  <span class="text-weight-bolder text-primary font-mono text-subtitle1">
-                    {{ formatPrice(previewSubtotal) }}
-                  </span>
-                  <span
-                    v-if="priceDiff !== 0"
-                    class="text-caption q-ml-xs font-mono font-weight-600"
-                    :class="priceDiff > 0 ? 'text-positive' : 'text-negative'"
-                  >
-                    ({{ priceDiff > 0 ? '+' : '' }}{{ formatPrice(priceDiff) }})
-                  </span>
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-
-          <q-card-actions align="stretch" class="column q-gutter-y-xs q-mt-md">
-            <q-btn
-              unelevated
-              no-caps
-              rounded
-              color="primary"
-              :label="`ยืนยันปรับราคาเป็น ${formatPrice(previewSubtotal)}`"
-              :loading="isSavingPrice"
-              @click="handleConfirmUpdatePrice"
-              class="full-width font-weight-600"
-            />
-            <q-btn
-              flat
-              no-caps
-              rounded
-              color="grey-7"
-              label="ยกเลิก"
-              v-close-popup
-              class="full-width"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
+      <!-- 4.2 Shared Table Transfer & Merge Modal Dialog (Apple Design) -->
+      <TableTransferModal
+        v-model="showTransferModal"
+        :table-to-transfer="currentTransferSource"
+        :all-target-tables="allTargetTables"
+        :filtered-target-tables="filteredTargetTables"
+        :selected-target-table-id="selectedTargetTableId"
+        :selected-target-table="selectedTargetTable"
+        :selected-target-is-occupied="selectedTargetIsOccupied"
+        :selected-target-is-takeaway="selectedTargetIsTakeaway"
+        v-model:transfer-customer-name="transferCustomerName"
+        v-model:transfer-filter="transferFilter"
+        :is-transferring="isTransferring"
+        :show-merge-confirm-dialog="showMergeConfirmDialog"
+        @select-target="handleSelectTargetTable"
+        @confirm-transfer="promptConfirmTransferOrMerge"
+        @execute-transfer="executeTransferOrMerge"
+        @close-confirm-dialog="showMergeConfirmDialog = false"
+      />
     </template>
   </q-page>
 </template>
@@ -978,9 +135,16 @@ import { closeTableSession, transferTableSession } from 'src/services/sessionSer
 import { fetchTables, isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import { OrderStatus } from 'src/types/enums';
-import StatusBadge from 'src/components/StatusBadge.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import ReceiptSlip from 'src/components/ReceiptSlip.vue';
+import BillDetailHeader from 'src/components/bills/BillDetailHeader.vue';
+import BillPaymentCard from 'src/components/bills/BillPaymentCard.vue';
+import BillQuickDrinks from 'src/components/bills/BillQuickDrinks.vue';
+import BillEditPriceModal from 'src/components/bills/BillEditPriceModal.vue';
+import TableTransferModal, {
+  type TargetTableOption,
+} from 'src/components/bills/TableTransferModal.vue';
+import type { TransferSourceTable } from 'src/types/tableCard';
 import type {
   TableSession,
   Bill,
@@ -993,6 +157,8 @@ const route = useRoute();
 const router = useRouter();
 const { notifySuccess, notifyError } = useNotify();
 
+const receiptSlipRef = ref<InstanceType<typeof ReceiptSlip> | null>(null);
+
 const session = ref<TableSession | null>(null);
 const orders = ref<OrderWithItems[]>([]);
 const bill = ref<Bill | null>(null);
@@ -1004,22 +170,7 @@ const isAddingDrink = ref<string | null>(null);
 // Edit Order Item Price State
 const showEditPriceModal = ref(false);
 const editingItem = ref<OrderItemWithOptions | null>(null);
-const editingOrder = ref<OrderWithItems | null>(null);
-const newBasePrice = ref<number>(0);
-const editInstruction = ref<string>('');
 const isSavingPrice = ref(false);
-
-const itemOptionsTotal = computed(() => {
-  if (!editingItem.value?.options) return 0;
-  return editingItem.value.options.reduce(
-    (sum, opt) => sum + (opt.snapshot_price_adjustment || 0),
-    0,
-  );
-});
-
-const previewUnitTotal = computed(() => (newBasePrice.value || 0) + itemOptionsTotal.value);
-const previewSubtotal = computed(() => previewUnitTotal.value * (editingItem.value?.quantity || 1));
-const priceDiff = computed(() => previewSubtotal.value - (editingItem.value?.subtotal || 0));
 
 // Transfer & Merge Table Modal State
 const showTransferModal = ref(false);
@@ -1039,17 +190,37 @@ const transferCustomerName = ref('');
 const transferFilter = ref<'all' | 'empty' | 'occupied'>('all');
 const isTransferring = ref(false);
 
-export interface DetailTargetTableOption {
-  table: TableWithQR;
-  isTakeaway: boolean;
-  isOccupied: boolean;
-  session: SessionWithOrdersAndBill | null;
-  orderCount: number;
-  totalAmount: number;
-  customerName?: string | null | undefined;
-}
+const billTotal = computed(() => {
+  if (bill.value?.total_amount !== undefined && bill.value?.total_amount !== null) {
+    return bill.value.total_amount;
+  }
+  return orders.value.reduce((sum, o) => sum + o.total_amount, 0);
+});
 
-const allTargetTables = computed<DetailTargetTableOption[]>(() => {
+const totalItemsCount = computed(() => {
+  return orders.value.reduce((sum, o) => {
+    return sum + (o.items?.reduce((s, i) => s + i.quantity, 0) || 0);
+  }, 0);
+});
+
+const allServed = computed(
+  () => orders.value.length > 0 && orders.value.every((o) => o.status === OrderStatus.SERVED),
+);
+
+// Source table representation for TableTransferModal
+const currentTransferSource = computed<TransferSourceTable | null>(() => {
+  if (!session.value) return null;
+  return {
+    table: { id: session.value.table_id, name: tableName.value },
+    isTakeaway: isTakeawayName(tableName.value),
+    session: session.value,
+    orderCount: orders.value.length,
+    totalAmount: billTotal.value,
+  };
+});
+
+// Target tables computation for TableTransferModal
+const allTargetTables = computed<TargetTableOption[]>(() => {
   if (!session.value) return [];
   const currentTableId = session.value.table_id;
   const isCurrentTakeaway = isTakeawayName(tableName.value);
@@ -1076,7 +247,6 @@ const allTargetTables = computed<DetailTargetTableOption[]>(() => {
         table: t,
         isTakeaway: isTargetTakeaway,
         isOccupied,
-        session: activeSession,
         orderCount,
         totalAmount,
         customerName: activeSession?.customer_name,
@@ -1108,23 +278,6 @@ const selectedTargetIsTakeaway = computed(() => {
   const target = allTables.value.find((t) => t.id === selectedTargetTableId.value);
   return target ? isTakeawayName(target.name) : false;
 });
-
-const billTotal = computed(() => {
-  if (bill.value?.total_amount !== undefined && bill.value?.total_amount !== null) {
-    return bill.value.total_amount;
-  }
-  return orders.value.reduce((sum, o) => sum + o.total_amount, 0);
-});
-
-const totalItemsCount = computed(() => {
-  return orders.value.reduce((sum, o) => {
-    return sum + (o.items?.reduce((s, i) => s + i.quantity, 0) || 0);
-  }, 0);
-});
-
-const allServed = computed(
-  () => orders.value.length > 0 && orders.value.every((o) => o.status === OrderStatus.SERVED),
-);
 
 onMounted(async () => {
   await loadData();
@@ -1180,7 +333,7 @@ async function addDrinkItem(name: string, price: number, type: string) {
   isAddingDrink.value = type;
   try {
     await ownerAddQuickItem(session.value.id, name, price, 1);
-    notifySuccess(`เพิ่ม "${name}" (฿${price}) เข้าบิลเรียบร้อยแล้ว`, {
+    notifySuccess(`เพิ่ม "${name}" (${formatPrice(price)}) เข้าบิลเรียบร้อยแล้ว`, {
       title: 'เพิ่มรายการสำเร็จ ➕',
       caption: 'บันทึกรายการด่วนลงในบิลเรียบร้อย',
     });
@@ -1218,7 +371,7 @@ async function openTransferModal() {
   }
 }
 
-function handleSelectTargetTable(targetTbl: DetailTargetTableOption) {
+function handleSelectTargetTable(targetTbl: TargetTableOption) {
   selectedTargetTableId.value = targetTbl.table.id;
   if (targetTbl.isOccupied) {
     const srcName = session.value?.customer_name;
@@ -1291,6 +444,10 @@ function printReceipt() {
   window.print();
 }
 
+function handleCopySummary() {
+  receiptSlipRef.value?.copyReceiptSummary();
+}
+
 async function handleMarkPaid() {
   if (!bill.value) return;
   isProcessing.value = true;
@@ -1349,34 +506,25 @@ async function handleCancelEmptySession() {
 
 function handleOpenEditPriceModal(payload: { item: OrderItemWithOptions; order: OrderWithItems }) {
   editingItem.value = payload.item;
-  editingOrder.value = payload.order;
-  newBasePrice.value = payload.item.snapshot_base_price;
-  editInstruction.value = payload.item.special_instruction || '';
   showEditPriceModal.value = true;
 }
 
-function quickAdjustPrice(amount: number) {
-  newBasePrice.value = Math.max(0, (newBasePrice.value || 0) + amount);
-}
-
-function resetPriceToOriginal() {
-  if (editingItem.value) {
-    newBasePrice.value = editingItem.value.snapshot_base_price;
-  }
-}
-
-async function handleConfirmUpdatePrice() {
-  if (!editingItem.value) return;
+async function handleConfirmUpdatePrice(payload: {
+  itemId: string;
+  newBasePrice: number;
+  newSubtotal: number;
+  instruction: string;
+}) {
   isSavingPrice.value = true;
   try {
     await ownerUpdateOrderItemPrice(
-      editingItem.value.id,
-      newBasePrice.value,
-      previewSubtotal.value,
-      editInstruction.value,
+      payload.itemId,
+      payload.newBasePrice,
+      payload.newSubtotal,
+      payload.instruction,
     );
     notifySuccess(
-      `ปรับราคา "${editingItem.value.snapshot_name}" เป็น ${formatPrice(previewSubtotal.value)} เรียบร้อยแล้ว`,
+      `ปรับราคาอาหารเป็น ${formatPrice(payload.newSubtotal)} เรียบร้อยแล้ว`,
       {
         title: 'ปรับราคาสำเร็จ 🏷️',
         caption: 'ยอดรวมของรายการและบิลถูกคำนวณใหม่แล้ว',
@@ -1384,7 +532,6 @@ async function handleConfirmUpdatePrice() {
     );
     showEditPriceModal.value = false;
     editingItem.value = null;
-    editingOrder.value = null;
     await loadData();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'ไม่สามารถปรับราคาอาหารได้';
@@ -1399,376 +546,94 @@ async function handleConfirmUpdatePrice() {
 
 <style scoped>
 .bill-detail-page {
-  background: var(--color-background);
+  background: var(--color-background, #fafafc);
   min-height: 100vh;
+  font-family: var(--app-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
 .bill-detail-container {
   width: 100%;
-  max-width: 1040px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
-.table-title-header {
-  font-size: 1.25rem;
-  line-height: 1.3;
-}
-
-/* 2-Column Responsive Layout */
+/* Apple 2-Column Responsive Layout */
 .bill-detail-layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 24px;
 }
 
 @media (min-width: 768px) {
   .bill-detail-layout {
-    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 380px);
-    gap: 24px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(340px, 380px);
+    gap: 32px;
     align-items: start;
   }
 
   .bill-detail-sidebar {
     position: sticky;
-    top: 16px;
+    top: 24px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
   }
 }
 
 @media (max-width: 767px) {
   .bill-detail-container {
-    max-width: 540px;
+    max-width: 520px;
+    padding-bottom: 72px; /* Space for mobile floating bar */
   }
 
   .bill-detail-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
   }
 }
 
-.payment-action-card {
-  background: #ffffff;
-  border-radius: var(--radius-lg, 12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+/* Mobile Quick-Pay Sticky Bar */
+.mobile-floating-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid var(--color-hairline, #d2d2d7);
+  border-radius: 980px;
+  padding: 10px 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  z-index: 100;
 }
 
-.payment-card-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--color-primary-soft, #fef2f2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.payment-price-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-md, 8px);
-}
-
-.pay-btn-prominent {
-  background: linear-gradient(135deg, var(--color-primary, #e11d48) 0%, #be123c 100%);
-  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
-  transition: all 0.2s ease;
-}
-
-.pay-btn-prominent:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(225, 29, 72, 0.45);
-}
-
-.paid-status-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: var(--radius-sm, 6px);
-}
-
-.empty-orders-action-card {
-  background: #ffffff;
-  border: 1px solid #cffafe;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-subtle);
-}
-
-.quick-add-card {
-  background: #ffffff;
-  border-radius: var(--radius-lg, 12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
-}
-
-.drink-item-row {
-  background: var(--color-surface-subtle, #f9fafb);
-  border: 1px solid var(--color-border-subtle, #f3f4f6);
-  border-radius: var(--radius-md, 8px);
-  padding: 8px 10px;
-  transition: all 0.15s ease;
-}
-
-.drink-item-row:hover {
-  background: #ffffff;
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-subtle);
-}
-
-.drink-icon-wrap {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
-}
-
-.drink-icon-wrap--can {
-  background: #fee2e2;
-}
-
-.drink-icon-wrap--plain {
-  background: #ecfdf5;
-}
-
-.drink-icon-wrap--water {
-  background: #e0f2fe;
-}
-
-.font-size-11 {
-  font-size: 11px;
+.mobile-bar-total {
+  font-size: 1.125rem;
+  color: var(--color-primary, #0071e3);
+  line-height: 1.2;
 }
 
 .font-mono {
-  font-family: var(--app-font-mono);
+  font-family: var(--app-font-mono, monospace);
   font-variant-numeric: tabular-nums;
 }
 
-.not-served-warning {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  border-radius: var(--radius-md);
+.text-muted {
+  color: var(--color-muted, #6e6e73);
 }
 
-.action-button {
-  border-radius: var(--radius-md);
-  height: 52px;
+.apple-pill-btn {
+  border-radius: 980px !important;
   font-weight: 600;
-  box-shadow: var(--shadow-md);
+  height: 38px;
+  padding: 0 18px;
 }
 
-.closed-banner {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: var(--radius-md);
-  color: #166534;
-}
-
-/* ─── Transfer Dialog Styles ─── */
-.transfer-dialog-card {
-  background: #ffffff;
-}
-
-.transfer-modal-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  background: var(--color-primary-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.transfer-source-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.no-available-tables-box {
-  background: #fffbeb;
-  border: 1px dashed #fcd34d;
-  border-radius: var(--radius-md);
-}
-
-.available-tables-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 8px;
-  max-height: 220px;
-  overflow-y: auto;
-  padding: 2px;
-}
-
-.target-table-item {
-  background: #ffffff;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.target-table-item:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  transform: translateY(-1px);
-}
-
-.target-table-item--selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  box-shadow: 0 0 0 1px var(--color-primary);
-}
-
-.target-table-icon {
-  color: var(--color-text-secondary);
-}
-
-.target-table-item--selected .target-table-icon {
-  color: var(--color-primary);
-}
-
-.target-table-name {
-  font-size: 0.85rem;
-  color: var(--color-text-primary);
-}
-
-.target-table-item--selected .target-table-name {
-  color: var(--color-primary);
-}
-
-.target-table-free-badge {
-  font-size: 10px;
-  font-weight: 600;
-  color: #15803d;
-  background: #dcfce7;
-  padding: 2px 6px;
-  border-radius: 999px;
-}
-
-.target-table-takeaway-badge {
-  font-size: 10px;
-  font-weight: 600;
-  color: #c2410c;
-  background: #ffedd5;
-  padding: 2px 6px;
-  border-radius: 999px;
-}
-
-.target-table-item--takeaway {
-  border-color: #fed7aa;
-}
-
-.target-table-item--takeaway:hover {
-  border-color: #f97316;
-  background: #fff7ed;
-}
-
-.target-table-item--takeaway.target-table-item--selected {
-  border-color: #ea580c;
-  background: #ffedd5;
-  box-shadow: 0 0 0 1px #ea580c;
-}
-
-.transfer-hint-box {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: var(--radius-md);
-}
-
-.font-weight-600 {
-  font-weight: 600;
-}
-
-/* ─── Edit Price Modal Styles ─── */
-.edit-price-dialog-card {
-  background: #ffffff;
-}
-
-.edit-price-modal-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  background: var(--color-primary-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.edit-item-summary-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.customer-note-highlight-box {
-  background: #fffbeb;
-  border: 1px dashed #fcd34d;
-  border-radius: var(--radius-sm);
-}
-
-.price-preview-calc-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-md);
-}
-
-.target-table-occupied-badge {
-  font-size: 10px;
-  font-weight: 600;
-  color: #b45309;
-  background: #fef3c7;
-  padding: 2px 6px;
-  border-radius: 999px;
-}
-
-.target-table-item--occupied {
-  border-color: #fde68a;
-  background: #fffdf5;
-}
-
-.target-table-item--occupied:hover {
-  border-color: #f59e0b;
-  background: #fffbeb;
-}
-
-.target-table-item--occupied.target-table-item--selected {
-  border-color: #d97706;
-  background: #fef3c7;
-  box-shadow: 0 0 0 1px #d97706;
-}
-
-.merge-preview-card {
-  background: #fffbeb;
-  border: 1.5px dashed #fcd34d;
-  border-radius: var(--radius-md);
-}
-
-.merge-confirm-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-md);
-}
-
-.confirm-warning-box {
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.confirm-icon-wrap {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.apple-pill-btn--primary {
+  background: var(--color-primary, #0071e3) !important;
+  color: #ffffff !important;
 }
 
 @media print {

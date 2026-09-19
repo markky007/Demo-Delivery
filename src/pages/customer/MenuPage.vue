@@ -144,6 +144,11 @@
         </div>
       </div>
     </template>
+    <!-- Food Customization Bottom Sheet Modal (Delivery App Style) -->
+    <ProductDetailModal
+      v-model="showProductDetailModal"
+      :item-id="selectedItemId"
+    />
   </q-page>
 </template>
 
@@ -157,6 +162,7 @@ import { formatPrice } from 'src/utils/formatters';
 import EmptyState from 'src/components/EmptyState.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import RandomMenuGame from 'src/components/RandomMenuGame.vue';
+import ProductDetailModal from 'src/components/customer/ProductDetailModal.vue';
 import type { MenuItem } from 'src/types/database';
 
 const router = useRouter();
@@ -168,6 +174,8 @@ const sessionStore = useSessionStore();
 const activeCategory = ref('');
 const searchInput = ref('');
 const searchQuery = ref('');
+const showProductDetailModal = ref(false);
+const selectedItemId = ref<string | null>(null);
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const isSearching = computed(() => searchQuery.value.trim().length > 0);
@@ -281,8 +289,8 @@ const currentItems = computed(() => {
 });
 
 function openItem(item: MenuItem) {
-  const publicToken = route.params.publicToken as string;
-  void router.push(`/t/${publicToken}/menu/${item.id}`);
+  selectedItemId.value = item.id;
+  showProductDetailModal.value = true;
 }
 </script>
 

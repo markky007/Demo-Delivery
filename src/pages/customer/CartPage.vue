@@ -43,7 +43,7 @@
             icon="delete_outline"
             label="ล้างทั้งหมด"
             class="clear-cart-btn"
-            @click="cartStore.clearCart()"
+            @click="showClearCartConfirm = true"
           />
         </div>
 
@@ -120,6 +120,20 @@
           </div>
         </div>
 
+        <!-- Quick Add More Items Link (Delivery standard) -->
+        <div class="q-mt-sm text-center">
+          <q-btn
+            flat
+            no-caps
+            rounded
+            color="primary"
+            icon="add"
+            label="สั่งอาหารเพิ่ม"
+            :to="`/t/${publicToken}/menu`"
+            class="add-more-link-btn"
+          />
+        </div>
+
         <!-- Summary Receipt Card -->
         <div class="cart-summary-card q-mt-md">
           <div class="summary-card-header row items-center justify-between q-mb-sm">
@@ -135,19 +149,19 @@
 
           <div class="row justify-between items-center text-body2 text-grey-8 q-mb-xs">
             <span>จำนวนอาหารทั้งหมด</span>
-            <span class="text-weight-medium">{{ cartStore.itemCount }} จาน</span>
+            <span class="text-weight-medium tabular-nums">{{ cartStore.itemCount }} จาน</span>
           </div>
 
           <div class="row justify-between items-center text-body2 text-grey-8 q-mb-xs">
             <span>ค่าอาหารรวม</span>
-            <span class="text-weight-medium">{{ formatPrice(cartStore.totalAmount) }}</span>
+            <span class="text-weight-medium tabular-nums">{{ formatPrice(cartStore.totalAmount) }}</span>
           </div>
 
           <q-separator class="q-my-sm" />
 
           <div class="row justify-between items-center">
             <span class="text-subtitle1 text-weight-bold text-dark">ยอดรวมสุทธิ</span>
-            <span class="text-h6 text-weight-bold text-primary">{{
+            <span class="text-h6 text-weight-bold text-primary tabular-nums">{{
               formatPrice(cartStore.totalAmount)
             }}</span>
           </div>
@@ -161,17 +175,62 @@
             no-caps
             size="lg"
             class="full-width confirm-btn"
-            @click="confirmOrder"
+            @click="openConfirmModal"
             :loading="isSubmitting"
           >
             <div class="row items-center justify-between full-width q-px-sm">
-              <span class="text-weight-bold">ยืนยันการสั่งอาหาร</span>
-              <span class="text-weight-bold text-h6">{{ formatPrice(cartStore.totalAmount) }}</span>
+              <span class="text-weight-bold">ตรวจสอบและสั่งอาหาร</span>
+              <span class="text-weight-bold text-h6 tabular-nums">{{ formatPrice(cartStore.totalAmount) }}</span>
             </div>
           </q-btn>
         </div>
       </div>
     </template>
+
+    <!-- Confirm Order Modal (Bottom Sheet Dialog) -->
+    <ConfirmOrderModal
+      v-model="showConfirmModal"
+      :table-name="sessionStore.tableName || ''"
+      :customer-name="sessionStore.customerName || ''"
+      :is-takeaway="isTakeawayName(sessionStore.tableName)"
+      :item-count="cartStore.itemCount"
+      :total-amount="cartStore.totalAmount"
+      :is-submitting="isSubmitting"
+      @confirm="executeOrderSubmission"
+    />
+
+    <!-- Clear Cart Confirmation Dialog -->
+    <q-dialog v-model="showClearCartConfirm" position="bottom" maximized-mobile>
+      <div class="clear-cart-modal-card q-pa-lg text-center">
+        <div class="clear-cart-icon q-mx-auto q-mb-md">
+          <q-icon name="delete_outline" size="28px" color="negative" />
+        </div>
+        <h6 class="q-my-none text-weight-bold text-dark">ต้องการล้างตะกร้าหรือไม่?</h6>
+        <p class="text-caption text-grey-7 q-mt-xs q-mb-lg">
+          รายการอาหารทั้งหมด {{ cartStore.itemCount }} รายการจะถูกลบออกจากตะกร้าของคุณ
+        </p>
+        <div class="column q-gutter-y-sm">
+          <q-btn
+            unelevated
+            no-caps
+            rounded
+            color="negative"
+            label="ล้างรายการทั้งหมด"
+            class="full-width q-py-sm"
+            @click="handleClearCart"
+          />
+          <q-btn
+            flat
+            no-caps
+            rounded
+            color="dark"
+            label="ยกเลิก"
+            class="full-width"
+            v-close-popup
+          />
+        </div>
+      </div>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -192,6 +251,7 @@ import {
 import { getCurrentPosition, calculateDistanceMeters, formatDistance } from 'src/utils/geoUtils';
 import EmptyState from 'src/components/EmptyState.vue';
 import QuantityStepper from 'src/components/QuantityStepper.vue';
+import ConfirmOrderModal from 'src/components/customer/ConfirmOrderModal.vue';
 import type { CreateOrderItemPayload } from 'src/types/cart';
 
 const route = useRoute();
@@ -202,13 +262,35 @@ const { notifySuccess, notifyError, notifyWarning } = useNotify();
 
 const publicToken = computed(() => route.params.publicToken as string);
 const isSubmitting = ref(false);
+const showConfirmModal = ref(false);
+const showClearCartConfirm = ref(false);
 
-async function confirmOrder() {
+function openConfirmModal() {
   if (!sessionStore.tableSession || !sessionStore.guestSession) {
     notifyError('ไม่พบข้อมูลเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง', {
       title: 'ไม่พบเซสชันโต๊ะ',
       caption: 'กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้งเพื่อเริ่มสั่งอาหาร',
     });
+    return;
+  }
+  showConfirmModal.value = true;
+}
+
+function handleClearCart() {
+  cartStore.clearCart();
+  showClearCartConfirm.value = false;
+  notifySuccess('ล้างรายการอาหารในตะกร้าเรียบร้อยแล้ว', {
+    timeout: 2000,
+  });
+}
+
+async function executeOrderSubmission() {
+  if (!sessionStore.tableSession || !sessionStore.guestSession) {
+    notifyError('ไม่พบข้อมูลเซสชัน กรุณาสแกน QR Code ใหม่อีกครั้ง', {
+      title: 'ไม่พบเซสชันโต๊ะ',
+      caption: 'กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้งเพื่อเริ่มสั่งอาหาร',
+    });
+    showConfirmModal.value = false;
     return;
   }
 
@@ -279,6 +361,7 @@ async function confirmOrder() {
     const qNum = createdOrder?.queue_number ? formatQueueNumber(createdOrder.queue_number) : '';
 
     cartStore.clearCart();
+    showConfirmModal.value = false;
     notifySuccess(`${itemCount} รายการอาหาร • ยอดรวม ${formatPrice(orderTotal)}`, {
       title: qNum ? `🎉 ส่งออเดอร์สำเร็จ • คิว ${qNum}` : '🎉 ส่งออเดอร์สำเร็จ',
       caption: 'ระบบได้ส่งรายการไปยังครัวเรียบร้อยแล้ว สามารถติดตามสถานะได้แบบเรียลไทม์',
@@ -337,6 +420,31 @@ async function confirmOrder() {
 .clear-cart-btn {
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.add-more-link-btn {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 6px 16px;
+}
+
+/* Clear Cart Modal */
+.clear-cart-modal-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.clear-cart-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  background: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cart-item-card {

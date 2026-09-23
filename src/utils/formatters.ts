@@ -271,6 +271,11 @@ export function getOptionDisplayInfo(rawName?: string | null): OptionDisplayInfo
  * Sums up their quantities and subtotals.
  * Returns a new array of cloned items without mutating the original input items.
  */
+export type ConsolidatedItem<T> = T & {
+  item_ids: string[];
+  is_completed: boolean;
+};
+
 export function consolidateOrderItems<
   T extends {
     id?: string;
@@ -280,12 +285,14 @@ export function consolidateOrderItems<
     subtotal?: number;
     special_instruction?: string | null;
     options?: OrderItemOption[];
+    is_completed?: boolean;
+    item_ids?: string[];
   },
->(items?: T[] | null): T[] {
+>(items?: T[] | null): ConsolidatedItem<T>[] {
   if (!items || items.length === 0) return [];
 
-  const consolidated: T[] = [];
-  const keyMap = new Map<string, T>();
+  const consolidated: ConsolidatedItem<T>[] = [];
+  const keyMap = new Map<string, ConsolidatedItem<T>>();
 
   for (const item of items) {
     // 1. Dish identity
@@ -311,11 +318,18 @@ export function consolidateOrderItems<
       if (typeof existing.subtotal === 'number' && typeof item.subtotal === 'number') {
         existing.subtotal += item.subtotal;
       }
+      if (item.id && !existing.item_ids.includes(item.id)) {
+        existing.item_ids.push(item.id);
+      }
+      // Group item is completed only if ALL constituent items are completed
+      existing.is_completed = existing.is_completed && Boolean(item.is_completed);
     } else {
-      const cloned: T = {
+      const cloned: ConsolidatedItem<T> = {
         ...item,
         quantity: item.quantity || 1,
         options: item.options ? [...item.options] : [],
+        item_ids: item.item_ids ? [...item.item_ids] : item.id ? [item.id] : [],
+        is_completed: Boolean(item.is_completed),
       };
       keyMap.set(groupKey, cloned);
       consolidated.push(cloned);

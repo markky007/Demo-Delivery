@@ -73,6 +73,58 @@ export const useQueueStore = defineStore('queue', () => {
     orders.value = orders.value.filter((o) => o.id !== orderId);
   }
 
+  /**
+   * Optimistically update order item checklist status in-place.
+   * Eliminates UI re-render storms and provides 0ms response.
+   */
+  function setItemCompleted(orderId: string, itemIds: string[], isCompleted: boolean) {
+    const targetOrder = orders.value.find((o) => o.id === orderId);
+    if (!targetOrder || !targetOrder.items) return;
+
+    let modified = false;
+    for (const item of targetOrder.items) {
+      if (itemIds.includes(item.id)) {
+        item.is_completed = isCompleted;
+        item.completed_at = isCompleted ? new Date().toISOString() : null;
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      targetOrder.updated_at = new Date().toISOString();
+    }
+  }
+
+  /**
+   * Optimistically update order status for instant UI transitions (0ms response).
+   */
+  function updateOrderStatusOptimistic(orderId: string, newStatus: OrderStatus) {
+    const targetOrder = orders.value.find((o) => o.id === orderId);
+    if (!targetOrder) return;
+
+    targetOrder.status = newStatus;
+    const nowIso = new Date().toISOString();
+
+    if (newStatus === OrderStatus.PREPARING && !targetOrder.preparing_at) {
+      targetOrder.preparing_at = nowIso;
+    } else if (newStatus === OrderStatus.PREPARED && !targetOrder.prepared_at) {
+      targetOrder.prepared_at = nowIso;
+    } else if (newStatus === OrderStatus.SERVED && !targetOrder.served_at) {
+      targetOrder.served_at = nowIso;
+    }
+    targetOrder.updated_at = nowIso;
+  }
+
+  /**
+   * Patch order details in-place without replacing the whole array.
+   */
+  function patchOrder(orderId: string, partial: Partial<OrderWithItems>) {
+    const targetOrder = orders.value.find((o) => o.id === orderId);
+    if (!targetOrder) return;
+    Object.assign(targetOrder, partial);
+    targetOrder.updated_at = new Date().toISOString();
+  }
+
   return {
     orders,
     isLoading,
@@ -85,5 +137,8 @@ export const useQueueStore = defineStore('queue', () => {
     setOrders,
     upsertOrder,
     removeOrder,
+    setItemCompleted,
+    updateOrderStatusOptimistic,
+    patchOrder,
   };
 });

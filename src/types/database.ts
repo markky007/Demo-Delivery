@@ -164,6 +164,8 @@ export interface OrderItem {
   quantity: number;
   special_instruction: string | null;
   subtotal: number;
+  is_completed?: boolean;
+  completed_at?: string | null;
   created_at: string;
   updated_at: string;
 }

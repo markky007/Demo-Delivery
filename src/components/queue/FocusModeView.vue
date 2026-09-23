@@ -99,7 +99,9 @@
           :name="pageIdx"
           class="q-pa-none"
         >
+          <!-- Mount actual KitchenSlipCard components for current active slide and immediate adjacent slides -->
           <div
+            v-if="Math.abs(pageIdx - focusPage) <= 1"
             class="kitchen-slips-container"
             :class="`kitchen-slips-container--count-${pageOrders.length}`"
           >
@@ -112,7 +114,20 @@
               @edit="$emit('edit', $event)"
               @history="$emit('history', $event)"
               @advance-status="(id, status) => $emit('advance-status', id, status)"
+              @toggle-item="(orderId, itemIds, isCompleted) => $emit('toggle-item', orderId, itemIds, isCompleted)"
             />
+          </div>
+          <!-- Lightweight placeholder for distant slides to avoid DOM explosion on iPad Safari -->
+          <div
+            v-else
+            class="kitchen-slips-container kitchen-slips-container--placeholder"
+            :class="`kitchen-slips-container--count-${pageOrders.length}`"
+          >
+            <div
+              v-for="order in pageOrders"
+              :key="order.id"
+              class="slip-placeholder-card"
+            ></div>
           </div>
         </q-carousel-slide>
       </q-carousel>
@@ -140,6 +155,7 @@ defineEmits<{
   (e: 'edit', order: OrderWithItems): void;
   (e: 'history', order: OrderWithItems): void;
   (e: 'advance-status', orderId: string, newStatus: OrderStatus): void;
+  (e: 'toggle-item', orderId: string, itemIds: string[], isCompleted: boolean): void;
 }>();
 
 const FOCUS_PAGE_SIZE = 3;
@@ -426,5 +442,12 @@ onUnmounted(() => {
   .kitchen-slips-container--count-3 {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.slip-placeholder-card {
+  min-height: 470px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  border: 1px dashed var(--color-hairline, #d2d2d7);
 }
 </style>

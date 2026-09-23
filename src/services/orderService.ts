@@ -421,3 +421,38 @@ export async function deleteOrderAndSession(orderId: string): Promise<DeleteOrde
     table_session_id: sessionId,
   };
 }
+
+/**
+ * Set completion status for specific order items (Kitchen checklist sync).
+ * Updates order_items.is_completed and completed_at.
+ */
+export async function setOrderItemsCompleted(
+  itemIds: string[],
+  isCompleted: boolean,
+): Promise<void> {
+  if (!itemIds || itemIds.length === 0) return;
+
+  // Try RPC first for atomic update with security definer
+  const { error: rpcError } = await supabase.rpc('set_order_items_completed', {
+    p_item_ids: itemIds,
+    p_is_completed: isCompleted,
+  });
+
+  if (!rpcError) return;
+
+  // Graceful fallback to direct table update if RPC is not yet applied
+  const { error: tableError } = await supabase
+    .from('order_items')
+    .update({
+      is_completed: isCompleted,
+      completed_at: isCompleted ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', itemIds);
+
+  if (tableError) {
+    console.error('Failed to update order item completed status:', tableError);
+    throw new Error(tableError.message);
+  }
+}
+

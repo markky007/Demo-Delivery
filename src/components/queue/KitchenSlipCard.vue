@@ -155,10 +155,10 @@
               :key="getItemKey(item, idx)"
               class="dish-row"
               :class="{
-                'dish-row--checked': isItemChecked(getItemKey(item, idx)),
+                'dish-row--checked': item.is_completed,
                 'dish-row--multi-qty': (item.quantity || 1) > 1,
               }"
-              @click="toggleItemChecked(getItemKey(item, idx))"
+              @click="handleItemClick(item)"
             >
               <div class="row items-start justify-between no-wrap">
                 <!-- Checkbox + Title + Modifiers -->
@@ -166,10 +166,10 @@
                   <!-- Interactive Checkbox -->
                   <div
                     class="dish-checkbox"
-                    :class="{ 'dish-checkbox--active': isItemChecked(getItemKey(item, idx)) }"
+                    :class="{ 'dish-checkbox--active': item.is_completed }"
                   >
                     <q-icon
-                      v-if="isItemChecked(getItemKey(item, idx))"
+                      v-if="item.is_completed"
                       name="check"
                       size="14px"
                     />
@@ -177,7 +177,7 @@
 
                   <!-- Dish Details -->
                   <div class="dish-details col min-width-0">
-                    <div class="dish-title-text" :class="{ 'dish-title-text--done': isItemChecked(getItemKey(item, idx)) }">
+                    <div class="dish-title-text" :class="{ 'dish-title-text--done': item.is_completed }">
                       {{ item.snapshot_name }}
                     </div>
 
@@ -219,7 +219,7 @@
                   class="dish-qty-box font-mono"
                   :class="{
                     'dish-qty-box--multi': (item.quantity || 1) > 1,
-                    'dish-qty-box--done': isItemChecked(getItemKey(item, idx)),
+                    'dish-qty-box--done': item.is_completed,
                   }"
                 >
                   <span class="qty-number">{{ item.quantity }}</span>
@@ -275,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, watch } from 'vue';
 import { OrderStatus } from 'src/types/enums';
 import type { OrderWithItems, MenuItem, MenuCategory } from 'src/types/database';
 import {
@@ -297,45 +297,39 @@ interface Props {
 
 const props = defineProps<Props>();
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'edit', order: OrderWithItems): void;
   (e: 'history', order: OrderWithItems): void;
   (e: 'advance-status', orderId: string, newStatus: OrderStatus): void;
+  (e: 'toggle-item', orderId: string, itemIds: string[], isCompleted: boolean): void;
 }>();
 
 const { formatElapsed, getTimerColorClass } = useElapsedTimer();
 
-// ─── Interactive Dish Checklist State ───────────────────────
-const checkedItemKeys = ref<Set<string>>(new Set());
-
-function getItemKey(item: { id?: string; snapshot_name?: string }, idx: number): string {
+// ─── Interactive Dish Checklist State & Key Helpers ─────────
+function getItemKey(
+  item: { id?: string; item_ids?: string[]; snapshot_name?: string },
+  idx: number,
+): string {
+  if (item.item_ids && item.item_ids.length > 0) {
+    return `${props.order.id}_${item.item_ids.join('_')}`;
+  }
   if (item.id) {
     return `${props.order.id}_${item.id}`;
   }
   return `${props.order.id}_item_${idx}_${item.snapshot_name || ''}`;
 }
 
-function isItemChecked(key: string): boolean {
-  return checkedItemKeys.value.has(key);
-}
-
-function toggleItemChecked(key: string) {
-  const next = new Set(checkedItemKeys.value);
-  if (next.has(key)) {
-    next.delete(key);
-  } else {
-    next.add(key);
-  }
-  checkedItemKeys.value = next;
-
-  // If all items completed now, trigger pleasant audio chime
-  if (isAllCompleted.value) {
-    try {
-      playStatusDoneChime();
-    } catch {
-      // Audio autoplay policy fallback
-    }
-  }
+function handleItemClick(item: {
+  id?: string;
+  item_ids?: string[];
+  is_completed?: boolean;
+}) {
+  const targetIds =
+    item.item_ids && item.item_ids.length > 0 ? item.item_ids : item.id ? [item.id] : [];
+  if (targetIds.length === 0) return;
+  const nextCompleted = !item.is_completed;
+  emit('toggle-item', props.order.id, targetIds, nextCompleted);
 }
 
 // ─── Table & Order Computed Info ────────────────────────────
@@ -401,19 +395,9 @@ const orderGroups = computed(() => {
   );
 });
 
-// Checklist progress
+// Checklist progress computed directly from item states
 const completedItemsCount = computed(() => {
-  let count = 0;
-  let idx = 0;
-  for (const group of orderGroups.value) {
-    for (const item of group.items) {
-      if (checkedItemKeys.value.has(getItemKey(item, idx))) {
-        count++;
-      }
-      idx++;
-    }
-  }
-  return count;
+  return consolidatedItems.value.filter((item) => Boolean(item.is_completed)).length;
 });
 
 const progressPercentage = computed(() => {
@@ -423,6 +407,17 @@ const progressPercentage = computed(() => {
 
 const isAllCompleted = computed(() => {
   return consolidatedCount.value > 0 && completedItemsCount.value === consolidatedCount.value;
+});
+
+// Play audio chime when an order's items all transition to completed
+watch(isAllCompleted, (newVal, oldVal) => {
+  if (newVal && !oldVal) {
+    try {
+      playStatusDoneChime();
+    } catch {
+      // Audio autoplay policy fallback
+    }
+  }
 });
 
 // ─── Option Formatting Helpers ──────────────────────────────

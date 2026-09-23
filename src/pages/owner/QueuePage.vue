@@ -22,6 +22,7 @@
         @edit="openEditOrderDialog"
         @history="openOrderHistoryDialog"
         @advance-status="advanceStatusAndProceed"
+        @toggle-item="handleToggleItem"
       />
 
       <!-- VIEW 2: FRY STATION MODE -->
@@ -67,7 +68,7 @@ import { useNotify } from 'src/composables/useNotify';
 import { useFryStation } from 'src/composables/useFryStation';
 import { useRiceStation } from 'src/composables/useRiceStation';
 import { useElapsedTimer } from 'src/composables/useElapsedTimer';
-import { fetchTodayOrders, advanceOrderStatus } from 'src/services/orderService';
+import { fetchTodayOrders, advanceOrderStatus, setOrderItemsCompleted } from 'src/services/orderService';
 import { supabase } from 'src/services/supabase';
 import { formatQueueNumber, formatPrice } from 'src/utils/formatters';
 import { isTakeawayName } from 'src/services/tableService';
@@ -167,6 +168,16 @@ function updateKnownRevisions(orders: { id: string; revision?: number }[]) {
   }
 }
 
+// Client Device ID to distinguish broadcast origin across iPads
+const clientDeviceId = (() => {
+  let id = sessionStorage.getItem('kds_device_id');
+  if (!id) {
+    id = 'kds_' + Math.random().toString(36).substring(2, 10);
+    sessionStorage.setItem('kds_device_id', id);
+  }
+  return id;
+})();
+
 // Realtime Channel & Debounced Reload
 let realtimeChannel: RealtimeChannel | null = null;
 let reloadTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -199,6 +210,22 @@ onMounted(async () => {
 
   realtimeChannel = supabase
     .channel('orders:kitchen_queue')
+    .on('broadcast', { event: 'kitchen_item_toggled' }, ({ payload }) => {
+      if (payload && payload.senderId !== clientDeviceId) {
+        queueStore.setItemCompleted(payload.orderId, payload.itemIds, payload.isCompleted);
+        if (payload.isAllCompleted) {
+          playStatusDoneChime();
+        }
+      }
+    })
+    .on('broadcast', { event: 'kitchen_status_advanced' }, ({ payload }) => {
+      if (payload && payload.senderId !== clientDeviceId) {
+        queueStore.updateOrderStatusOptimistic(payload.orderId, payload.newStatus);
+        if (payload.newStatus === OrderStatus.PREPARED || payload.newStatus === OrderStatus.SERVED) {
+          playStatusDoneChime();
+        }
+      }
+    })
     .on(
       'postgres_changes',
       {
@@ -286,38 +313,101 @@ onUnmounted(() => {
   releaseElapsedTimer();
 });
 
-async function advanceStatus(orderId: string, newStatus: OrderStatus) {
+/**
+ * Handle dish checklist item toggling with 0ms Optimistic UI + <50ms Realtime Broadcast
+ */
+async function handleToggleItem(orderId: string, itemIds: string[], isCompleted: boolean) {
+  // 1. Instant local optimistic update (0ms response)
+  queueStore.setItemCompleted(orderId, itemIds, isCompleted);
+
+  // Check if all items in this order are completed
+  const targetOrder = queueStore.orders.find((o) => o.id === orderId);
+  const isAllCompleted =
+    targetOrder && targetOrder.items && targetOrder.items.length > 0
+      ? targetOrder.items.every((it) => it.is_completed)
+      : false;
+
+  // 2. Broadcast immediately to peer iPad screens (<50ms sync)
+  if (realtimeChannel) {
+    void realtimeChannel.send({
+      type: 'broadcast',
+      event: 'kitchen_item_toggled',
+      payload: {
+        orderId,
+        itemIds,
+        isCompleted,
+        isAllCompleted,
+        senderId: clientDeviceId,
+      },
+    });
+  }
+
+  // 3. Persist to PostgreSQL in background
   try {
-    const targetOrder = queueStore.orders.find((o) => o.id === orderId);
-    const tableName = targetOrder ? getTableName(targetOrder) : '';
-    const qNumStr = targetOrder ? formatQueueNumber(targetOrder.queue_number) : '';
-
-    await advanceOrderStatus(orderId, newStatus);
-
-    if (newStatus === OrderStatus.PREPARING) {
-      notifySuccess(`โต๊ะ: ${tableName || 'สั่งกลับบ้าน'}`, {
-        title: `รับออเดอร์แล้ว 🔥 • คิว ${qNumStr}`,
-        caption: 'เริ่มขั้นตอนเตรียมและปรุงอาหารตามลำดับ',
-        timeout: 4000,
-      });
-    } else if (newStatus === OrderStatus.PREPARED) {
-      notifySuccess(`พร้อมเสิร์ฟที่ ${tableName || 'จุดรับอาหารกลับบ้าน'}`, {
-        title: `เตรียมอาหารเสร็จแล้ว ✅ • คิว ${qNumStr}`,
-        caption: 'กรุณานำอาหารไปเสิร์ฟให้ลูกค้า',
-        timeout: 4500,
-      });
-    } else if (newStatus === OrderStatus.SERVED) {
-      notifySuccess(`คิว ${qNumStr} (${tableName || 'สั่งกลับบ้าน'})`, {
-        title: 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
-        caption: 'เสร็จสิ้นขั้นตอนและปิดงานในครัวของออเดอร์นี้',
-        timeout: 4000,
-      });
-    } else {
-      notifySuccess('อัปเดตสถานะสำเร็จ', {
-        title: `คิว ${qNumStr}`,
-      });
-    }
+    await setOrderItemsCompleted(itemIds, isCompleted);
   } catch (err) {
+    console.error('Failed to persist item completion status:', err);
+    // Rollback on error
+    queueStore.setItemCompleted(orderId, itemIds, !isCompleted);
+    notifyError('ไม่สามารถบันทึกสถานะเมนูได้ กรุณาลองใหม่อีกครั้ง');
+  }
+}
+
+async function advanceStatus(orderId: string, newStatus: OrderStatus) {
+  const targetOrder = queueStore.orders.find((o) => o.id === orderId);
+  const previousStatus = targetOrder ? targetOrder.status : null;
+  const tableName = targetOrder ? getTableName(targetOrder) : '';
+  const qNumStr = targetOrder ? formatQueueNumber(targetOrder.queue_number) : '';
+
+  // 1. Instant local optimistic update (0ms response)
+  queueStore.updateOrderStatusOptimistic(orderId, newStatus);
+
+  // 2. Broadcast immediately to peer iPad screens (<50ms sync)
+  if (realtimeChannel) {
+    void realtimeChannel.send({
+      type: 'broadcast',
+      event: 'kitchen_status_advanced',
+      payload: {
+        orderId,
+        newStatus,
+        senderId: clientDeviceId,
+      },
+    });
+  }
+
+  // 3. Notifications
+  if (newStatus === OrderStatus.PREPARING) {
+    notifySuccess(`โต๊ะ: ${tableName || 'สั่งกลับบ้าน'}`, {
+      title: `รับออเดอร์แล้ว 🔥 • คิว ${qNumStr}`,
+      caption: 'เริ่มขั้นตอนเตรียมและปรุงอาหารตามลำดับ',
+      timeout: 4000,
+    });
+  } else if (newStatus === OrderStatus.PREPARED) {
+    notifySuccess(`พร้อมเสิร์ฟที่ ${tableName || 'จุดรับอาหารกลับบ้าน'}`, {
+      title: `เตรียมอาหารเสร็จแล้ว ✅ • คิว ${qNumStr}`,
+      caption: 'กรุณานำอาหารไปเสิร์ฟให้ลูกค้า',
+      timeout: 4500,
+    });
+  } else if (newStatus === OrderStatus.SERVED) {
+    notifySuccess(`คิว ${qNumStr} (${tableName || 'สั่งกลับบ้าน'})`, {
+      title: 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
+      caption: 'เสร็จสิ้นขั้นตอนและปิดงานในครัวของออเดอร์นี้',
+      timeout: 4000,
+    });
+  } else {
+    notifySuccess('อัปเดตสถานะสำเร็จ', {
+      title: `คิว ${qNumStr}`,
+    });
+  }
+
+  // 4. Server call
+  try {
+    await advanceOrderStatus(orderId, newStatus);
+  } catch (err) {
+    // Rollback to previous status if server rejected
+    if (previousStatus) {
+      queueStore.updateOrderStatusOptimistic(orderId, previousStatus);
+    }
     const msg = err instanceof Error ? err.message : 'ไม่สามารถอัปเดตสถานะได้';
     notifyError(msg, {
       title: 'อัปเดตสถานะไม่สำเร็จ',

@@ -145,10 +145,7 @@
       </div>
     </template>
     <!-- Food Customization Bottom Sheet Modal (Delivery App Style) -->
-    <ProductDetailModal
-      v-model="showProductDetailModal"
-      :item-id="selectedItemId"
-    />
+    <ProductDetailModal v-model="showProductDetailModal" :item-id="selectedItemId" />
   </q-page>
 </template>
 
@@ -188,6 +185,7 @@ function getItemCartCount(itemId: string): number {
 
 function getCategoryIcon(catName: string): string {
   const name = catName.toLowerCase();
+  if (name.includes('พริกแกง') || name.includes('เครื่องแกง')) return '🍳';
   if (name.includes('ต้ม') || name.includes('ซุป') || name.includes('แกง')) return '🍲';
   if (name.includes('ทอด') || name.includes('ไก่')) return '🍗';
   if (name.includes('ยำ') || name.includes('ส้มตำ') || name.includes('สลัด')) return '🥗';

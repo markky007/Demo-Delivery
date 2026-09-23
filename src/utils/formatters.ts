@@ -362,15 +362,28 @@ export function groupOrderItemsForKitchen<
     const catName = (category?.name || '').toLowerCase().trim();
     const dishName = (item.snapshot_name || menuItem?.name || '').toLowerCase().trim();
 
-    // Check if it belongs to "ยำ/ต้ม"
-    const isYamOrTom =
+    // 1. Explicitly check if it is a stir-fry curry paste dish (พริกแกง / เครื่องแกง / ผัดพริกแกง) or stir-fry dish
+    // These belong to "อาหาร" (food/wok station), NOT "ยำ/ต้ม"
+    const isPrikGaengOrStirFry =
+      catName.includes('พริกแกง') ||
+      dishName.includes('พริกแกง') ||
+      catName.includes('เครื่องแกง') ||
+      dishName.includes('เครื่องแกง') ||
+      dishName.startsWith('ผัด') ||
+      catName.startsWith('ผัด');
+
+    // 2. Check if category is a soup/curry/yam category (excluding prik gaeng stir-fry)
+    const isSoupOrYamCategory =
       catName.includes('ยำ') ||
       catName.includes('ต้ม') ||
-      catName.includes('แกง') ||
       catName.includes('ซุป') ||
       catName.includes('soup') ||
       catName.includes('tom yum') ||
       catName.includes('yum') ||
+      (catName.includes('แกง') && !catName.includes('พริกแกง') && !catName.includes('เครื่องแกง'));
+
+    // 3. Check if dish itself is a soup or yam dish
+    const isSoupOrYamDish =
       dishName.includes('ต้มยำ') ||
       dishName.includes('แกงจืด') ||
       dishName.includes('ต้มจืด') ||
@@ -379,9 +392,18 @@ export function groupOrderItemsForKitchen<
       dishName.includes('แกงส้ม') ||
       dishName.includes('แกงเลียง') ||
       dishName.includes('แกงป่า') ||
+      dishName.includes('แกงอ่อม') ||
+      dishName.includes('แกงเห็ด') ||
+      dishName.includes('แกงเขียวหวาน') ||
+      dishName.includes('แกงเผ็ด') ||
+      dishName.includes('แกงกะหรี่') ||
+      dishName.includes('แกงมัสมั่น') ||
+      dishName.includes('แกงเทโพ') ||
       dishName.startsWith('ยำ') ||
       dishName.includes(' ยำ') ||
       dishName.includes('ส้มตำ');
+
+    const isYamOrTom = !isPrikGaengOrStirFry && (isSoupOrYamCategory || isSoupOrYamDish);
 
     if (isYamOrTom) {
       soupYamItems.push(item);

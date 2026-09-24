@@ -916,7 +916,6 @@ function addToCart() {
   notifySuccess(`เพิ่ม "${selectedItemWithOptions.value.name}" x${quantity.value} ลงในตะกร้าแล้ว`, {
     title: 'เพิ่มลงตะกร้าแล้ว 🛒',
     caption: 'เมนูแนะนำจากการสุ่มอาหาร พร้อมสำหรับสั่งซื้อ',
-    timeout: 3000,
   });
   closeResultDialog();
 }

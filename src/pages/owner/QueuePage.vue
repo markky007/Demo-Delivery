@@ -258,7 +258,7 @@ onMounted(async () => {
               notifySuccess(`คิว ${qNumStr} • ${tableName}`, {
                 title: '🔔 มีออเดอร์ใหม่เข้ามา!',
                 caption: `${itemCount} รายการอาหาร${priceText}`,
-                timeout: 6000,
+                timeout: 3500,
               });
             }
           }
@@ -279,7 +279,7 @@ onMounted(async () => {
               notifyWarning(`คิว ${qNumStr} (${tableName}) มีการปรับเปลี่ยนรายการ`, {
                 title: '⚠️ ลูกค้าแก้ไขออเดอร์',
                 caption: 'กรุณาตรวจสอบจำนวนหรือตัวเลือกที่มีการเปลี่ยนแปลงในครัว',
-                timeout: 6000,
+                timeout: 3500,
               });
             }
             if (newData.status === OrderStatus.PREPARED) {
@@ -380,19 +380,19 @@ async function advanceStatus(orderId: string, newStatus: OrderStatus) {
     notifySuccess(`โต๊ะ: ${tableName || 'สั่งกลับบ้าน'}`, {
       title: `รับออเดอร์แล้ว 🔥 • คิว ${qNumStr}`,
       caption: 'เริ่มขั้นตอนเตรียมและปรุงอาหารตามลำดับ',
-      timeout: 4000,
+      timeout: 2000,
     });
   } else if (newStatus === OrderStatus.PREPARED) {
     notifySuccess(`พร้อมเสิร์ฟที่ ${tableName || 'จุดรับอาหารกลับบ้าน'}`, {
       title: `เตรียมอาหารเสร็จแล้ว ✅ • คิว ${qNumStr}`,
       caption: 'กรุณานำอาหารไปเสิร์ฟให้ลูกค้า',
-      timeout: 4500,
+      timeout: 2000,
     });
   } else if (newStatus === OrderStatus.SERVED) {
     notifySuccess(`คิว ${qNumStr} (${tableName || 'สั่งกลับบ้าน'})`, {
       title: 'ส่งออเดอร์เรียบร้อยแล้ว 🍽️',
       caption: 'เสร็จสิ้นขั้นตอนและปิดงานในครัวของออเดอร์นี้',
-      timeout: 4000,
+      timeout: 2000,
     });
   } else {
     notifySuccess('อัปเดตสถานะสำเร็จ', {

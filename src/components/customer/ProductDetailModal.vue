@@ -648,7 +648,6 @@ function handleAddToCart() {
   notifySuccess(`เพิ่ม "${item.value.name}" (${quantity.value} รายการ) ลงตะกร้าแล้ว`, {
     title: 'เพิ่มลงตะกร้าเรียบร้อย',
     caption: `รวม ${formatPrice(itemTotal.value)}`,
-    timeout: 2000,
   });
 
   emit('added-to-cart', {

@@ -279,9 +279,7 @@ function openConfirmModal() {
 function handleClearCart() {
   cartStore.clearCart();
   showClearCartConfirm.value = false;
-  notifySuccess('ล้างรายการอาหารในตะกร้าเรียบร้อยแล้ว', {
-    timeout: 2000,
-  });
+  notifySuccess('ล้างรายการอาหารในตะกร้าเรียบร้อยแล้ว');
 }
 
 async function executeOrderSubmission() {
@@ -329,7 +327,7 @@ async function executeOrderSubmission() {
         notifyError(`คุณอยู่ห่างจากร้าน ${formatDistance(distance)}`, {
           title: 'อยู่นอกพื้นที่ร้านอาหาร 📍',
           caption: 'ระบบอนุญาตให้สั่งอาหารขณะอยู่ที่ร้านเท่านั้น',
-          timeout: 5000,
+          timeout: 3500,
         });
         isSubmitting.value = false;
         return;
@@ -365,7 +363,7 @@ async function executeOrderSubmission() {
     notifySuccess(`${itemCount} รายการอาหาร • ยอดรวม ${formatPrice(orderTotal)}`, {
       title: qNum ? `🎉 ส่งออเดอร์สำเร็จ • คิว ${qNum}` : '🎉 ส่งออเดอร์สำเร็จ',
       caption: 'ระบบได้ส่งรายการไปยังครัวเรียบร้อยแล้ว สามารถติดตามสถานะได้แบบเรียลไทม์',
-      timeout: 5000,
+      timeout: 2800,
     });
     if (createdOrder?.id) {
       void router.push(`/t/${publicToken.value}/orders/${createdOrder.id}`);
@@ -378,7 +376,7 @@ async function executeOrderSubmission() {
       notifyError('รอบโต๊ะนี้ได้ทำการเช็คบิล/ปิดรอบไปแล้ว', {
         title: 'เซสชันโต๊ะปิดแล้ว',
         caption: 'กรุณาสแกน QR Code ที่โต๊ะใหม่อีกครั้งเพื่อเปิดรอบใหม่',
-        timeout: 5000,
+        timeout: 3500,
       });
       void router.push(`/t/${publicToken.value}`);
     } else {

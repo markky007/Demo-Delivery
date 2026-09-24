@@ -59,7 +59,7 @@ function handleDismiss(id: string) {
 .app-toast-stack-move,
 .app-toast-stack-enter-active,
 .app-toast-stack-leave-active {
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .app-toast-stack-enter-from {

@@ -40,7 +40,7 @@ export interface NotificationPayload {
 
 export const useNotificationStore = defineStore('notification', () => {
   const toasts = ref<NotificationItem[]>([]);
-  const MAX_TOASTS = 5;
+  const MAX_TOASTS = 3;
   let counter = 0;
 
   function normalizeType(type?: string): NotificationType {
@@ -50,12 +50,27 @@ export const useNotificationStore = defineStore('notification', () => {
     return 'info';
   }
 
+  function getDefaultTimeout(type: NotificationType, hasActions = false): number {
+    if (hasActions) return 4000;
+    switch (type) {
+      case 'success':
+        return 1800;
+      case 'info':
+        return 2200;
+      case 'warning':
+        return 2600;
+      case 'error':
+        return 3000;
+    }
+  }
+
   function addToast(payload: NotificationPayload): string {
     const id = `toast-${Date.now()}-${++counter}`;
     const type = normalizeType(payload.type);
 
-    // Default timeouts: errors stay slightly longer for readability
-    const defaultTimeout = type === 'error' ? 4000 : 3000;
+    // Fast, tiered default timeouts: quick feedback for success, ample time for errors & actions
+    const hasActions = Boolean(payload.actions && payload.actions.length > 0);
+    const defaultTimeout = getDefaultTimeout(type, hasActions);
     const timeout = payload.timeout !== undefined ? payload.timeout : defaultTimeout;
 
     const newItem: NotificationItem = {

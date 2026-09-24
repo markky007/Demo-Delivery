@@ -10,6 +10,7 @@
     @touchstart.passive="handleTouchStart"
     @touchmove="handleTouchMove"
     @touchend="handleTouchEnd"
+    @click="handleCardClick"
   >
     <!-- Status Icon Badge -->
     <div class="app-toast-icon-wrap" :class="`icon-bg--${toast.type}`">
@@ -228,6 +229,16 @@ function handleActionClick(action: NotificationAction) {
   }
 }
 
+function handleCardClick(e: MouseEvent) {
+  if (isSwiping.value || dragX.value !== 0 || dragY.value !== 0) return;
+  const target = e.target as HTMLElement | null;
+  if (target?.closest('button, a, input, select, textarea, [role="button"]')) return;
+
+  if (props.toast.dismissible !== false) {
+    emitDismiss();
+  }
+}
+
 // ─── Touch Gestures (Swipe to dismiss) ───────────────────────────────
 function handleTouchStart(e: TouchEvent) {
   if (!e.touches[0]) return;
@@ -302,11 +313,12 @@ onBeforeUnmount(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
   pointer-events: auto;
   user-select: none;
+  cursor: pointer;
   overflow: hidden;
   will-change: transform, opacity;
   transition:
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.25s ease;
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.22s ease;
 }
 
 .app-toast-item:hover {
@@ -315,6 +327,10 @@ onBeforeUnmount(() => {
     0 6px 16px -2px rgba(45, 35, 30, 0.07),
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
   transform: translateY(-1px);
+}
+
+.app-toast-item:active {
+  transform: scale(0.985);
 }
 
 /* ─── Icon Badging ─────────────────────────────────────────────────── */
@@ -475,7 +491,6 @@ onBeforeUnmount(() => {
   left: 0;
   height: 2.5px;
   border-bottom-left-radius: 18px;
-  transition: width 0.08s linear;
 }
 
 .progress-bg--success {

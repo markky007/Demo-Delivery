@@ -152,9 +152,10 @@
                   </div>
                   <div
                     v-else
-                    class="text-caption text-cyan-9 bg-cyan-1 q-px-xs border-radius-sm text-center font-size-11"
+                    class="table-waiting-banner row items-center justify-center q-gutter-x-xs font-size-11"
                   >
-                    รอลูกค้าสั่งอาหาร
+                    <q-icon name="touch_app" size="13px" />
+                    <span>รอลูกค้าสั่งอาหาร</span>
                   </div>
                 </template>
 
@@ -162,9 +163,9 @@
                   <!-- Clean Available Table Center -->
                   <div class="available-center-box column items-center justify-center">
                     <div class="available-icon-bubble">
-                      <q-icon name="qr_code_2" size="20px" class="text-muted" />
+                      <q-icon name="qr_code_2" size="20px" />
                     </div>
-                    <span class="available-hint-text text-muted">แตะเปิดบิล / ดู QR</span>
+                    <span class="available-hint-text">แตะเปิดบิล / ดู QR</span>
                   </div>
                 </template>
               </div>
@@ -636,7 +637,7 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .bay-title {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.88rem;
   color: var(--color-ink, #1d1d1f);
 }
@@ -644,10 +645,10 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 .bay-count-badge {
   font-size: 0.6875rem;
   font-weight: 600;
-  background: rgba(245, 158, 11, 0.14);
+  background: rgba(255, 149, 0, 0.14);
   color: #b45309;
   padding: 2px 8px;
-  border-radius: 980px;
+  border-radius: var(--radius-pill, 980px);
 }
 
 .takeaway-cards-row {
@@ -657,26 +658,27 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .takeaway-seat-box {
-  background: #ffffff;
+  background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-hairline, #d2d2d7);
-  border-radius: 14px;
-  padding: 10px 12px;
+  border-radius: var(--radius-lg, 18px);
+  padding: 10px 14px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: rgba(0, 0, 0, 0.04) 0 2px 8px 0;
 }
 
 .takeaway-seat-box:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: rgba(0, 0, 0, 0.08) 2px 4px 12px 0px;
   border-color: #b0b0b8;
 }
 
 .takeaway-icon-pill {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(255, 149, 0, 0.14);
+  color: #ff9500;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -685,7 +687,7 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 
 /* Dining Hall Section */
 .hall-title {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.95rem;
   color: var(--color-ink, #1d1d1f);
 }
@@ -723,7 +725,7 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .dining-unit:hover .table-surface {
-  box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.1);
+  box-shadow: rgba(0, 0, 0, 0.12) 4px 8px 24px 0px;
   border-color: #b0b0b8;
 }
 
@@ -737,11 +739,11 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 .dining-unit--selected .table-surface {
   box-shadow:
     0 0 0 2px var(--color-primary, #0071e3),
-    0 8px 20px rgba(0, 113, 227, 0.15);
+    rgba(0, 113, 227, 0.15) 0 8px 20px;
   border-color: var(--color-primary, #0071e3);
 }
 
-/* Chair Cushions */
+/* Chair Cushions - Cinema Seat Map Style */
 .chairs-row {
   display: flex;
   justify-content: center;
@@ -751,8 +753,8 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .chair-cushion {
-  width: 28px;
-  height: 8px;
+  width: 30px;
+  height: 9px;
   border-radius: 4px;
   background: var(--color-surface-alt, #e8e8ed);
   border: 1px solid var(--color-hairline, #d2d2d7);
@@ -770,33 +772,38 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .dining-unit--cooking .chair-cushion {
-  background: #fed7aa;
-  border-color: #fdba74;
+  background: #ff9500;
+  border-color: #e08500;
 }
 
 .dining-unit--ready-to-pay .chair-cushion {
-  background: #bbf7d0;
-  border-color: #86efac;
+  background: #34c759;
+  border-color: #28a745;
 }
 
 .dining-unit--paid .chair-cushion {
-  background: #ddd6fe;
-  border-color: #c4b5fd;
+  background: #af52de;
+  border-color: #9333ea;
 }
 
 .dining-unit--seated-no-order .chair-cushion {
-  background: #cffafe;
-  border-color: #a5f3fc;
+  background: #0071e3;
+  border-color: #0066cc;
+}
+
+.dining-unit--available .chair-cushion {
+  background: var(--color-surface-alt, #e8e8ed);
+  border-color: var(--color-hairline, #d2d2d7);
 }
 
 /* Table Surface */
 .table-surface {
   width: 100%;
-  background: #ffffff;
+  background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-hairline, #d2d2d7);
-  border-radius: 18px;
+  border-radius: var(--radius-lg, 18px);
   padding: 10px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: rgba(0, 0, 0, 0.08) 2px 4px 12px 0px;
   transition: all 0.2s ease;
   min-height: 140px;
   display: flex;
@@ -806,16 +813,19 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 
 .table-number-text {
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--color-ink, #1d1d1f);
 }
 
 .table-status-pill-badge {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 980px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill, 980px);
   display: inline-flex;
   align-items: center;
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 
 .table-surface-body {
@@ -829,19 +839,30 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 .table-customer-chip {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: #b45309;
+  color: var(--color-accent-warm, #b64400);
 }
 
 .table-mini-progress-bar {
-  height: 3px;
-  background: #e2e8f0;
-  border-radius: 980px;
+  height: 4px;
+  background: var(--color-surface-alt, #e8e8ed);
+  border-radius: var(--radius-pill, 980px);
   overflow: hidden;
 }
 
 .table-mini-progress-fill {
   height: 100%;
-  border-radius: 980px;
+  border-radius: var(--radius-pill, 980px);
+}
+
+.table-waiting-banner {
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--color-primary-link, #0066cc);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 8px);
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 
 .available-center-box {
@@ -857,10 +878,19 @@ function triggerOpenCustomerLink(table: TableWithQR) {
   align-items: center;
   justify-content: center;
   margin-bottom: 2px;
+  color: var(--color-muted, #6e6e73);
+  transition: all 0.2s ease;
+}
+
+.dining-unit:hover .available-icon-bubble {
+  background: var(--color-surface-alt, #e8e8ed);
+  color: var(--color-ink, #1d1d1f);
 }
 
 .available-hint-text {
   font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-muted, #6e6e73);
 }
 
 .table-surface-footer {
@@ -882,7 +912,7 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 
 .table-amount-wrap .amount-number {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink, #1d1d1f);
 }
 
@@ -962,13 +992,16 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 /* Apple Status Pills & Tags */
+/* Apple Status Pills & Tags */
 .apple-status-pill {
   display: inline-flex;
   align-items: center;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 980px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill, 980px);
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 
 .badge-status--available {
@@ -977,23 +1010,23 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .badge-status--cooking {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
+  background: rgba(255, 149, 0, 0.16);
+  color: var(--color-accent-warm, #b64400);
 }
 
 .badge-status--ready-pay {
-  background: rgba(52, 199, 89, 0.14);
+  background: rgba(52, 199, 89, 0.16);
   color: #15803d;
 }
 
 .badge-status--paid {
-  background: rgba(139, 92, 246, 0.12);
-  color: #6d28d9;
+  background: rgba(175, 82, 222, 0.16);
+  color: #7c3aed;
 }
 
 .badge-status--seated {
-  background: rgba(6, 182, 212, 0.12);
-  color: #0e7490;
+  background: rgba(0, 113, 227, 0.12);
+  color: var(--color-primary-link, #0066cc);
 }
 
 .live-status-dot {
@@ -1005,19 +1038,19 @@ function triggerOpenCustomerLink(table: TableWithQR) {
 }
 
 .live-status-dot--amber {
-  background: #f59e0b;
+  background: #ff9500;
 }
 
 .live-status-dot--green {
-  background: #10b981;
+  background: #34c759;
 }
 
 .live-status-dot--purple {
-  background: #8b5cf6;
+  background: #af52de;
 }
 
 .live-status-dot--cyan {
-  background: #06b6d4;
+  background: #0071e3;
 }
 
 .apple-tag {

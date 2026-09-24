@@ -357,9 +357,9 @@ defineEmits<{
 .apple-table-card {
   background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-hairline, #d2d2d7);
-  border-radius: 20px;
+  border-radius: var(--radius-xl, 28px);
   padding: 18px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: rgba(0, 0, 0, 0.08) 2px 4px 12px 0px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -369,7 +369,7 @@ defineEmits<{
 
 .apple-table-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+  box-shadow: rgba(0, 0, 0, 0.12) 4px 8px 24px 0px;
   border-color: #b0b0b8;
 }
 
@@ -382,7 +382,7 @@ defineEmits<{
 .table-avatar {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -391,7 +391,7 @@ defineEmits<{
 
 .table-name {
   font-size: 1.0625rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink, #1d1d1f);
   line-height: 1.3;
 }
@@ -405,11 +405,11 @@ defineEmits<{
   font-size: 0.6875rem;
   font-weight: 600;
   padding: 1px 7px;
-  border-radius: 980px;
+  border-radius: var(--radius-pill, 980px);
 }
 
 .apple-tag--orange {
-  background: rgba(245, 158, 11, 0.14);
+  background: rgba(255, 149, 0, 0.14);
   color: #b45309;
 }
 
@@ -419,9 +419,11 @@ defineEmits<{
   align-items: center;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 980px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill, 980px);
   white-space: nowrap;
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 
 .badge-status--available {
@@ -430,23 +432,23 @@ defineEmits<{
 }
 
 .badge-status--cooking {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
+  background: rgba(255, 149, 0, 0.16);
+  color: var(--color-accent-warm, #b64400);
 }
 
 .badge-status--ready-pay {
-  background: rgba(52, 199, 89, 0.14);
+  background: rgba(52, 199, 89, 0.16);
   color: #15803d;
 }
 
 .badge-status--paid {
-  background: rgba(139, 92, 246, 0.12);
-  color: #6d28d9;
+  background: rgba(175, 82, 222, 0.16);
+  color: #7c3aed;
 }
 
 .badge-status--seated {
-  background: rgba(6, 182, 212, 0.12);
-  color: #0e7490;
+  background: rgba(0, 113, 227, 0.12);
+  color: var(--color-primary-link, #0066cc);
 }
 
 .live-status-dot {
@@ -458,23 +460,19 @@ defineEmits<{
 }
 
 .live-status-dot--amber {
-  background: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+  background: #ff9500;
 }
 
 .live-status-dot--green {
-  background: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+  background: #34c759;
 }
 
 .live-status-dot--purple {
-  background: #8b5cf6;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+  background: #af52de;
 }
 
 .live-status-dot--cyan {
-  background: #06b6d4;
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.3);
+  background: #0071e3;
 }
 
 /* Card Body */
@@ -504,23 +502,23 @@ defineEmits<{
 
 .apple-progress-track {
   height: 4px;
-  background: #e2e8f0;
-  border-radius: 980px;
+  background: var(--color-surface-alt, #e8e8ed);
+  border-radius: var(--radius-pill, 980px);
   overflow: hidden;
   margin-top: 4px;
 }
 
 .apple-progress-fill {
   height: 100%;
-  border-radius: 980px;
+  border-radius: var(--radius-pill, 980px);
   transition: width 0.3s ease;
 }
 
 .stage-tag {
   font-size: 0.6875rem;
-  font-weight: 500;
+  font-weight: 600;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs, 6px);
 }
 
 .stage-tag--served {
@@ -529,12 +527,12 @@ defineEmits<{
 }
 
 .stage-tag--preparing {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
+  background: rgba(255, 149, 0, 0.12);
+  color: var(--color-accent-warm, #b64400);
 }
 
 .stage-tag--queued {
-  background: #e2e8f0;
+  background: var(--color-surface-alt, #e8e8ed);
   color: var(--color-muted, #6e6e73);
 }
 
@@ -542,7 +540,7 @@ defineEmits<{
 .amount-display-card {
   background: var(--color-surface-footer, #f5f5f7);
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-md, 11px);
   padding: 10px 12px;
   transition: all 0.2s ease;
 }
@@ -559,8 +557,8 @@ defineEmits<{
 
 .bill-total-price {
   font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 /* Empty State */

@@ -47,6 +47,19 @@
           />
 
           <q-btn
+            v-if="activeViewTab === 'analytics'"
+            unelevated
+            dense
+            rounded
+            no-caps
+            color="primary"
+            icon="image"
+            label="ส่งออกรูป"
+            class="q-px-md"
+            @click="showImageExport = true"
+          />
+
+          <q-btn
             v-if="activeViewTab === 'bills'"
             unelevated
             dense
@@ -303,6 +316,14 @@
         </div>
       </template>
 
+      <AnalyticsImageExportDialog
+        v-model="showImageExport"
+        :date-from="dateFrom"
+        :date-to="dateTo"
+        :day-filter="selectedDayFilter"
+        :day-filter-label="dayFilterLabel"
+      />
+
       <!-- ─── Receipt Modal Dialog ──────────────────────────────── -->
       <q-dialog v-model="showReceiptModal" transition-show="scale" transition-hide="scale">
         <q-card style="width: 480px; max-width: 95vw; border-radius: 16px" class="q-pa-sm">
@@ -350,12 +371,14 @@ import SalesKpiCards from 'src/components/analytics/SalesKpiCards.vue';
 import DayOfWeekSalesChart from 'src/components/analytics/DayOfWeekSalesChart.vue';
 import HourlyTrafficChart from 'src/components/analytics/HourlyTrafficChart.vue';
 import MenuPerformanceMatrix from 'src/components/analytics/MenuPerformanceMatrix.vue';
+import AnalyticsImageExportDialog from 'src/components/analytics/AnalyticsImageExportDialog.vue';
 import type { QTableColumn, QTableProps } from 'quasar';
 import type { Bill, OrderWithItems } from 'src/types/database';
 
 const { notifyError, notifySuccess } = useNotify();
 
 const activeViewTab = ref<'analytics' | 'bills'>('analytics');
+const showImageExport = ref(false);
 const isAnalyticsLoading = ref(false);
 const isBillsLoading = ref(false);
 const isExportingCsv = ref(false);
@@ -416,6 +439,12 @@ const dayFilterOptions = [
   { label: 'เฉพาะต้น-กลางสัปดาห์ (จันทร์ - พฤหัสบดี)', value: 'weekdays' },
   { label: 'เฉพาะปลายสัปดาห์ (ศุกร์ - เสาร์)', value: 'weekends' },
 ];
+
+const dayFilterLabel = computed(() => {
+  return (
+    dayFilterOptions.find((option) => option.value === selectedDayFilter.value)?.label ?? 'ทุกวัน'
+  );
+});
 
 // ─── In-Memory Cache for Analytics ──────────────────────────────────────────
 const analyticsCache = new Map<string, FullSalesAnalytics>();

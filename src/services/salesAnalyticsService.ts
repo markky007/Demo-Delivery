@@ -246,17 +246,350 @@ const THAI_DAYS: { [key: number]: { name: string; short: string; order: number }
 
 const PAGE_SIZE = 1000;
 
+const BANGKOK_TIME_ZONE = 'Asia/Bangkok';
+
+const THAI_WEEKDAY = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'] as const;
+
+const WEEKDAY_FILTER_INDEX: Record<string, number> = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
+
+const INTL_WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+export class AnalyticsExportCancelled extends Error {
+  constructor() {
+    super('ยกเลิกการส่งออกรายงาน');
+    this.name = 'AnalyticsExportCancelled';
+  }
+}
+
+export interface DailyTrafficProgress {
+  loaded: number;
+  total: number;
+  label: string;
+}
+
+export interface DailyTrafficRow {
+  dateKey: string;
+  dayName: string;
+  shortLabel: string;
+  totalSales: number;
+  orderCount: number;
+  billCount: number;
+  dishCount: number;
+  peakHourLabel: string | null;
+  peakHourOrders: number;
+  avgWaitMs: number | null;
+  waitMsTotal: number;
+  waitSamples: number;
+  isBusiest: boolean;
+  isTopSales: boolean;
+  isSlowestWait: boolean;
+}
+
+export interface MonthlyTrafficReport {
+  monthKey: string;
+  monthName: string;
+  monthLabel: string;
+  totalSales: number;
+  orderCount: number;
+  billCount: number;
+  dishCount: number;
+  peakHourLabel: string | null;
+  peakHourOrders: number;
+  avgWaitMs: number | null;
+  days: DailyTrafficRow[];
+}
+
+interface BangkokParts {
+  dateKey: string;
+  monthKey: string;
+  hour: number;
+  dayOfWeek: number;
+}
+
+const MAX_WAIT_MS = 4 * 60 * 60 * 1000;
+
+interface DayTrafficBucket {
+  sales: number;
+  orders: number;
+  bills: number;
+  dishes: number;
+  hours: number[];
+  waitMsTotal: number;
+  waitSamples: number;
+}
+
+function throwIfExportCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new AnalyticsExportCancelled();
+}
+
+function errorFromUnknown(error: unknown): Error {
+  if (error instanceof AnalyticsExportCancelled) return error;
+  if (error instanceof Error) return error;
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
+    return new Error(error.message);
+  }
+  return new Error('ดึงข้อมูลสำหรับรายงานไม่สำเร็จ');
+}
+
+export function getBangkokParts(input: string | Date): BangkokParts {
+  const date = typeof input === 'string' ? new Date(input) : input;
+  const partMap = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: BANGKOK_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      hourCycle: 'h23',
+      weekday: 'short',
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  let hour = Number(partMap.hour);
+  if (!Number.isFinite(hour) || hour === 24) hour = 0;
+  const year = partMap.year ?? '0000';
+  const month = partMap.month ?? '01';
+  const day = partMap.day ?? '01';
+  return {
+    dateKey: `${year}-${month}-${day}`,
+    monthKey: `${year}-${month}`,
+    hour,
+    dayOfWeek: INTL_WEEKDAY_INDEX[partMap.weekday ?? ''] ?? 0,
+  };
+}
+
+function bangkokNoon(dateKey: string): Date {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(year || 1970, (month || 1) - 1, day || 1, 5, 0, 0));
+}
+
+export function listBangkokDateKeys(startDate: Date, endDate: Date): string[] {
+  const startKey = getBangkokParts(startDate).dateKey;
+  const endKey = getBangkokParts(endDate).dateKey;
+  if (startKey > endKey) return [];
+
+  const keys: string[] = [];
+  let cursor = bangkokNoon(startKey).getTime();
+  const end = bangkokNoon(endKey).getTime();
+  while (cursor <= end) {
+    keys.push(getBangkokParts(new Date(cursor)).dateKey);
+    cursor += 24 * 60 * 60 * 1000;
+  }
+  return keys;
+}
+
+export function formatBangkokDateKey(dateKey: string, options: Intl.DateTimeFormatOptions): string {
+  return bangkokNoon(dateKey).toLocaleDateString('th-TH', {
+    timeZone: BANGKOK_TIME_ZONE,
+    ...options,
+  });
+}
+
+function matchesExportDayFilter(dayOfWeek: number, dayFilter: string): boolean {
+  const filter = dayFilter.toLowerCase();
+  if (filter === '' || filter === 'all') return true;
+  if (filter === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 4;
+  if (filter === 'weekends') return dayOfWeek === 5 || dayOfWeek === 6;
+  const expected = WEEKDAY_FILTER_INDEX[filter];
+  return expected === undefined ? true : dayOfWeek === expected;
+}
+
+function emptyDayBucket(): DayTrafficBucket {
+  return {
+    sales: 0,
+    orders: 0,
+    bills: 0,
+    dishes: 0,
+    hours: Array.from({ length: 24 }, () => 0),
+    waitMsTotal: 0,
+    waitSamples: 0,
+  };
+}
+
+function waitDurationMs(
+  startAt: string | null | undefined,
+  servedAt: string | null | undefined,
+): number | null {
+  if (!startAt || !servedAt) return null;
+  const duration = new Date(servedAt).getTime() - new Date(startAt).getTime();
+  if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_WAIT_MS) return null;
+  return duration;
+}
+
+function markUniqueMax(
+  days: DailyTrafficRow[],
+  valueOf: (day: DailyTrafficRow) => number,
+  apply: (day: DailyTrafficRow) => void,
+): void {
+  let best = 0;
+  let bestDay: DailyTrafficRow | undefined;
+  let tied = false;
+  days.forEach((day) => {
+    const value = valueOf(day);
+    if (value > best) {
+      best = value;
+      bestDay = day;
+      tied = false;
+    } else if (value === best && value > 0) {
+      tied = true;
+    }
+  });
+  if (bestDay && !tied) apply(bestDay);
+}
+
+function peakFromHours(hours: number[]): { label: string | null; orders: number } {
+  let bestHour = -1;
+  let bestOrders = 0;
+  hours.forEach((count, hour) => {
+    if (count > bestOrders) {
+      bestOrders = count;
+      bestHour = hour;
+    }
+  });
+  if (bestHour < 0 || bestOrders <= 0) return { label: null, orders: 0 };
+  const nextHour = (bestHour + 1) % 24;
+  return {
+    label: `${String(bestHour).padStart(2, '0')}:00 - ${String(nextHour).padStart(2, '0')}:00`,
+    orders: bestOrders,
+  };
+}
+
+function seedDayBuckets(
+  startDate: Date,
+  endDate: Date,
+  dayFilter: string,
+): Map<string, DayTrafficBucket> {
+  const buckets = new Map<string, DayTrafficBucket>();
+  for (const dateKey of listBangkokDateKeys(startDate, endDate)) {
+    const dayOfWeek = getBangkokParts(bangkokNoon(dateKey)).dayOfWeek;
+    if (matchesExportDayFilter(dayOfWeek, dayFilter)) {
+      buckets.set(dateKey, emptyDayBucket());
+    }
+  }
+  return buckets;
+}
+
+function toMonthlyTrafficReports(buckets: Map<string, DayTrafficBucket>): MonthlyTrafficReport[] {
+  const daysByMonth = new Map<string, DailyTrafficRow[]>();
+  const hoursByMonth = new Map<string, number[]>();
+
+  for (const dateKey of [...buckets.keys()].sort()) {
+    const bucket = buckets.get(dateKey);
+    if (!bucket) continue;
+    const monthKey = dateKey.slice(0, 7);
+    const peak = peakFromHours(bucket.hours);
+    const dayOfWeek = getBangkokParts(bangkokNoon(dateKey)).dayOfWeek;
+    const row: DailyTrafficRow = {
+      dateKey,
+      dayName: THAI_WEEKDAY[dayOfWeek] ?? '',
+      shortLabel: formatBangkokDateKey(dateKey, { day: 'numeric', month: 'short' }),
+      totalSales: bucket.sales,
+      orderCount: bucket.orders,
+      billCount: bucket.bills,
+      dishCount: bucket.dishes,
+      peakHourLabel: peak.label,
+      peakHourOrders: peak.orders,
+      avgWaitMs: bucket.waitSamples > 0 ? bucket.waitMsTotal / bucket.waitSamples : null,
+      waitMsTotal: bucket.waitMsTotal,
+      waitSamples: bucket.waitSamples,
+      isBusiest: false,
+      isTopSales: false,
+      isSlowestWait: false,
+    };
+    const days = daysByMonth.get(monthKey) ?? [];
+    days.push(row);
+    daysByMonth.set(monthKey, days);
+
+    const monthHours = hoursByMonth.get(monthKey) ?? Array.from({ length: 24 }, () => 0);
+    bucket.hours.forEach((count, hour) => {
+      monthHours[hour] = (monthHours[hour] ?? 0) + count;
+    });
+    hoursByMonth.set(monthKey, monthHours);
+  }
+
+  return [...daysByMonth.keys()].sort().map((monthKey) => {
+    const days = daysByMonth.get(monthKey) ?? [];
+    let busiestIndex = -1;
+    let busiestOrders = 0;
+    days.forEach((day, index) => {
+      if (day.orderCount > busiestOrders) {
+        busiestOrders = day.orderCount;
+        busiestIndex = index;
+      }
+    });
+    const busiestDay = busiestIndex >= 0 ? days[busiestIndex] : undefined;
+    if (busiestDay && busiestDay.orderCount > 0) busiestDay.isBusiest = true;
+    markUniqueMax(
+      days,
+      (day) => day.totalSales,
+      (day) => {
+        day.isTopSales = true;
+      },
+    );
+    markUniqueMax(
+      days,
+      (day) => day.avgWaitMs ?? 0,
+      (day) => {
+        day.isSlowestWait = true;
+      },
+    );
+
+    const peak = peakFromHours(hoursByMonth.get(monthKey) ?? []);
+    const waitMsTotal = days.reduce((sum, day) => sum + day.waitMsTotal, 0);
+    const waitSamples = days.reduce((sum, day) => sum + day.waitSamples, 0);
+    const anchorKey = `${monthKey}-01`;
+    return {
+      monthKey,
+      monthName: formatBangkokDateKey(anchorKey, { month: 'long' }),
+      monthLabel: formatBangkokDateKey(anchorKey, { month: 'long', year: 'numeric' }),
+      totalSales: days.reduce((sum, day) => sum + day.totalSales, 0),
+      orderCount: days.reduce((sum, day) => sum + day.orderCount, 0),
+      billCount: days.reduce((sum, day) => sum + day.billCount, 0),
+      dishCount: days.reduce((sum, day) => sum + day.dishCount, 0),
+      peakHourLabel: peak.label,
+      peakHourOrders: peak.orders,
+      avgWaitMs: waitSamples > 0 ? waitMsTotal / waitSamples : null,
+      days,
+    };
+  });
+}
+
 /**
  * Helper to fetch all rows across pages for large datasets in Supabase.
  */
 async function fetchAllRows<T>(
   queryBuilder: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+  signal?: AbortSignal,
 ): Promise<T[]> {
   let allRows: T[] = [];
   let from = 0;
   while (true) {
+    throwIfExportCancelled(signal);
     const to = from + PAGE_SIZE - 1;
     const { data, error } = await queryBuilder(from, to);
+    if (signal?.aborted) throw new AnalyticsExportCancelled();
     if (error) {
       console.error('Error fetching paginated data:', error);
       throw error instanceof Error ? error : new Error(JSON.stringify(error));
@@ -289,6 +622,7 @@ export function toLocalDateString(dateInput: string | Date): string {
 export async function fetchSalesDataForPeriod(
   startDate: Date,
   endDate: Date,
+  signal?: AbortSignal,
 ): Promise<{
   bills: RawBillData[];
   orders: RawOrderData[];
@@ -301,8 +635,8 @@ export async function fetchSalesDataForPeriod(
   // Run queries in parallel for high performance, with auto-pagination
   const [bills, orders, orderItems, menuItemsRes] = await Promise.all([
     // 1. Paid Bills in period
-    fetchAllRows<RawBillData>((from, to) =>
-      supabase
+    fetchAllRows<RawBillData>((from, to) => {
+      const query = supabase
         .from('bills')
         .select(
           `
@@ -322,12 +656,13 @@ export async function fetchSalesDataForPeriod(
         .gte('paid_at', fromIso)
         .lte('paid_at', toIso)
         .order('paid_at', { ascending: false })
-        .range(from, to),
-    ),
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    }, signal),
 
     // 2. Orders in period
-    fetchAllRows<RawOrderData>((from, to) =>
-      supabase
+    fetchAllRows<RawOrderData>((from, to) => {
+      const query = supabase
         .from('orders')
         .select(
           `
@@ -349,12 +684,13 @@ export async function fetchSalesDataForPeriod(
         .gte('created_at', fromIso)
         .lte('created_at', toIso)
         .order('created_at', { ascending: true })
-        .range(from, to),
-    ),
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    }, signal),
 
     // 3. Order Items with menu items & category & options
-    fetchAllRows<RawOrderItemData>((from, to) =>
-      supabase
+    fetchAllRows<RawOrderItemData>((from, to) => {
+      const query = supabase
         .from('order_items')
         .select(
           `
@@ -386,12 +722,13 @@ export async function fetchSalesDataForPeriod(
         )
         .gte('created_at', fromIso)
         .lte('created_at', toIso)
-        .range(from, to),
-    ),
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    }, signal),
 
     // 4. All active/available menu items for zero-sales / dead-stock detection
-    fetchAllRows<RawMenuItemData>((from, to) =>
-      supabase
+    fetchAllRows<RawMenuItemData>((from, to) => {
+      const query = supabase
         .from('menu_items')
         .select(
           `
@@ -408,8 +745,9 @@ export async function fetchSalesDataForPeriod(
         )
         .eq('is_active', true)
         .order('name', { ascending: true })
-        .range(from, to),
-    ),
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    }, signal),
   ]);
 
   return {
@@ -445,24 +783,32 @@ export async function fetchFullSalesAnalytics(
   startDate: Date,
   endDate: Date,
   dayFilter = 'all',
+  signal?: AbortSignal,
 ): Promise<FullSalesAnalytics> {
+  throwIfExportCancelled(signal);
   try {
-    const { data, error } = await supabase.rpc('get_sales_analytics', {
+    const rpc = supabase.rpc('get_sales_analytics', {
       p_start_date: startDate.toISOString(),
       p_end_date: endDate.toISOString(),
       p_day_filter: dayFilter,
     });
+    const { data, error } = await (signal ? rpc.abortSignal(signal) : rpc);
 
+    if (signal?.aborted) throw new AnalyticsExportCancelled();
     if (!error && data) {
       return data as FullSalesAnalytics;
     }
     if (error) {
+      if (signal?.aborted) throw new AnalyticsExportCancelled();
       console.warn(
         'RPC get_sales_analytics unavailable or failed, falling back to client computation:',
         error.message,
       );
     }
   } catch (err) {
+    if (err instanceof AnalyticsExportCancelled || signal?.aborted) {
+      throw err instanceof AnalyticsExportCancelled ? err : new AnalyticsExportCancelled();
+    }
     console.warn('Error invoking get_sales_analytics RPC, using client fallback:', err);
   }
 
@@ -470,6 +816,7 @@ export async function fetchFullSalesAnalytics(
   const { bills, orders, orderItems, allMenuItems } = await fetchSalesDataForPeriod(
     startDate,
     endDate,
+    signal,
   );
   const { filteredBills, filteredOrders, filteredOrderItems } = filterDataByDayOfWeek(
     bills,
@@ -1391,4 +1738,193 @@ export function computeSalesAnalytics(
     diningTypeSummary,
     insights,
   };
+}
+
+async function countRows(
+  run: (signal?: AbortSignal) => PromiseLike<{ count: number | null; error: unknown }>,
+  signal?: AbortSignal,
+): Promise<number> {
+  throwIfExportCancelled(signal);
+  const { count, error } = await run(signal);
+  if (signal?.aborted) throw new AnalyticsExportCancelled();
+  if (error) throw errorFromUnknown(error);
+  return count ?? 0;
+}
+
+async function forEachTrafficPage<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  onRows: (rows: T[]) => void,
+  onBatch: (batchSize: number) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  let from = 0;
+  while (true) {
+    throwIfExportCancelled(signal);
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await fetchPage(from, to);
+    if (signal?.aborted) throw new AnalyticsExportCancelled();
+    if (error) throw errorFromUnknown(error);
+    const rows = data ?? [];
+    if (rows.length === 0) break;
+    onRows(rows);
+    onBatch(rows.length);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+}
+
+/**
+ * Group paid bills, kitchen orders, and dishes by Bangkok calendar day.
+ * Streams pages so a multi-month export can report real progress and be cancelled.
+ */
+export async function fetchDailyTrafficForExport(options: {
+  startDate: Date;
+  endDate: Date;
+  dayFilter?: string;
+  signal?: AbortSignal;
+  onProgress?: (progress: DailyTrafficProgress) => void;
+}): Promise<MonthlyTrafficReport[]> {
+  const { startDate, endDate, dayFilter = 'all', signal, onProgress } = options;
+  throwIfExportCancelled(signal);
+
+  const startIso = startDate.toISOString();
+  const endIso = endDate.toISOString();
+  onProgress?.({ loaded: 0, total: 0, label: 'กำลังนับรายการในช่วงที่เลือก' });
+
+  const [orderCount, billCount, itemCount] = await Promise.all([
+    countRows((activeSignal) => {
+      const query = supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', startIso)
+        .lte('created_at', endIso);
+      return activeSignal ? query.abortSignal(activeSignal) : query;
+    }, signal),
+    countRows((activeSignal) => {
+      const query = supabase
+        .from('bills')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'PAID')
+        .gte('paid_at', startIso)
+        .lte('paid_at', endIso);
+      return activeSignal ? query.abortSignal(activeSignal) : query;
+    }, signal),
+    countRows((activeSignal) => {
+      const query = supabase
+        .from('order_items')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', startIso)
+        .lte('created_at', endIso);
+      return activeSignal ? query.abortSignal(activeSignal) : query;
+    }, signal),
+  ]);
+
+  const total = orderCount + billCount + itemCount;
+  let loaded = 0;
+  const report = (label: string) => {
+    onProgress?.({ loaded, total, label });
+  };
+  report('กำลังจัดกลุ่มรายวัน');
+
+  if (total === 0) return [];
+
+  const buckets = seedDayBuckets(startDate, endDate, dayFilter);
+
+  const bump = (batchSize: number, label: string) => {
+    loaded += batchSize;
+    const shownLoaded = Math.min(loaded, total);
+    const shownTotal = Math.max(total, 1);
+    onProgress?.({
+      loaded: shownLoaded,
+      total: shownTotal,
+      label: `${label} ${shownLoaded.toLocaleString('th-TH')} จาก ${shownTotal.toLocaleString('th-TH')}`,
+    });
+  };
+
+  await forEachTrafficPage<{
+    created_at: string;
+    queued_at: string | null;
+    served_at: string | null;
+  }>(
+    (from, to) => {
+      const query = supabase
+        .from('orders')
+        .select('created_at, queued_at, served_at')
+        .gte('created_at', startIso)
+        .lte('created_at', endIso)
+        .order('created_at', { ascending: true })
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    },
+    (rows) => {
+      rows.forEach((row) => {
+        const parts = getBangkokParts(row.created_at);
+        const bucket = buckets.get(parts.dateKey);
+        if (!bucket) return;
+        bucket.orders += 1;
+        bucket.hours[parts.hour] = (bucket.hours[parts.hour] ?? 0) + 1;
+        const waitMs = waitDurationMs(row.queued_at || row.created_at, row.served_at);
+        if (waitMs == null) return;
+        bucket.waitMsTotal += waitMs;
+        bucket.waitSamples += 1;
+      });
+    },
+    (batchSize) => bump(batchSize, 'กำลังจัดกลุ่มรายวัน'),
+    signal,
+  );
+
+  await forEachTrafficPage<{ paid_at: string | null; total_amount: number }>(
+    (from, to) => {
+      const query = supabase
+        .from('bills')
+        .select('paid_at, total_amount')
+        .eq('status', 'PAID')
+        .gte('paid_at', startIso)
+        .lte('paid_at', endIso)
+        .order('paid_at', { ascending: true })
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    },
+    (rows) => {
+      rows.forEach((row) => {
+        if (!row.paid_at) return;
+        const parts = getBangkokParts(row.paid_at);
+        const bucket = buckets.get(parts.dateKey);
+        if (!bucket) return;
+        bucket.bills += 1;
+        bucket.sales += row.total_amount || 0;
+      });
+    },
+    (batchSize) => bump(batchSize, 'กำลังจัดกลุ่มรายวัน'),
+    signal,
+  );
+
+  await forEachTrafficPage<{ quantity: number; created_at: string }>(
+    (from, to) => {
+      const query = supabase
+        .from('order_items')
+        .select('quantity, created_at')
+        .gte('created_at', startIso)
+        .lte('created_at', endIso)
+        .order('created_at', { ascending: true })
+        .range(from, to);
+      return signal ? query.abortSignal(signal) : query;
+    },
+    (rows) => {
+      rows.forEach((row) => {
+        const parts = getBangkokParts(row.created_at);
+        const bucket = buckets.get(parts.dateKey);
+        if (!bucket) return;
+        bucket.dishes += row.quantity || 0;
+      });
+    },
+    (batchSize) => bump(batchSize, 'กำลังจัดกลุ่มรายวัน'),
+    signal,
+  );
+
+  const months = toMonthlyTrafficReports(buckets);
+  const hasActivity = months.some(
+    (month) => month.orderCount > 0 || month.billCount > 0 || month.dishCount > 0,
+  );
+  return hasActivity ? months : [];
 }

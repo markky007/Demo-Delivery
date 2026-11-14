@@ -4,9 +4,10 @@
       <!-- Header -->
       <div class="row items-center justify-between q-mb-lg">
         <div>
-          <h5 class="q-my-none text-weight-bold page-title">พิกัดร้านและขอบเขตการสั่ง</h5>
+          <h5 class="q-my-none text-weight-bold page-title">พิกัดร้านและการแจ้งเตือนพื้นที่</h5>
           <p class="text-caption text-grey-7 q-mb-none">
-            กำหนดตำแหน่งร้านบนแผนที่และตั้งค่าระยะรัศมีเพื่อป้องกันการสั่งอาหารนอกร้าน
+            กำหนดตำแหน่งร้านเพื่อแจ้งเตือนลูกค้าเมื่อพิกัดอุปกรณ์อยู่นอกรัศมี การสั่งอาหารยืนยันด้วย
+            QR ของโต๊ะ
           </p>
         </div>
         <q-btn
@@ -67,12 +68,12 @@
               <q-card-section>
                 <div class="row items-center justify-between no-wrap">
                   <div class="q-pr-md">
-                    <div class="text-subtitle2 text-weight-bold">ระบบตรวจสอบพิกัด (Geofencing)</div>
+                    <div class="text-subtitle2 text-weight-bold">แจ้งเตือนพิกัดอุปกรณ์</div>
                     <div class="text-caption text-grey-7">
                       {{
                         isGeofenceEnabled
-                          ? 'เปิดใช้งาน: บล็อกการสั่งอาหารหากอยู่นอกรัศมีร้าน'
-                          : 'ปิดใช้งาน: อนุญาตให้สั่งได้โดยไม่เช็คพิกัด'
+                          ? 'เปิดใช้งาน: แจ้งเตือนเมื่อพิกัดอยู่นอกรัศมีร้าน'
+                          : 'ปิดใช้งาน: ไม่ตรวจพิกัดอุปกรณ์'
                       }}
                     </div>
                   </div>
@@ -91,7 +92,7 @@
                   </q-badge>
                 </div>
                 <div class="text-caption text-grey-7 q-mb-md">
-                  ลูกค้าต้องอยู่ในรัศมีนี้จากจุดปักหมุด จึงจะสามารถกดยืนยันออเดอร์ได้
+                  ใช้รัศมีนี้สำหรับคำเตือนเท่านั้น สิทธิ์สั่งอาหารตรวจจาก QR และ guest token
                 </div>
 
                 <q-slider

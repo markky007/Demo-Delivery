@@ -381,15 +381,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import {
   fetchOrder,
-  fetchActiveKitchenOrders,
+  fetchCustomerQueuePositions,
   calculateQueuePosition,
-  type ActiveKitchenOrder,
+  type CustomerQueueSnapshot,
 } from 'src/services/orderService';
-import { supabase } from 'src/services/supabase';
 import {
   formatPrice,
   formatDateTime,
@@ -403,18 +402,17 @@ import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import EditOrderModal from 'src/components/EditOrderModal.vue';
 import OrderHistoryModal from 'src/components/OrderHistoryModal.vue';
 import type { OrderWithItems } from 'src/types/database';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const route = useRoute();
+const router = useRouter();
 const sessionStore = useSessionStore();
 
 const order = ref<OrderWithItems | null>(null);
-const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
+const queueSnapshot = ref<CustomerQueueSnapshot>({ totalActive: 0, positions: {} });
 const isLoading = ref(true);
 const showEditModal = ref(false);
 const showHistoryModal = ref(false);
-let realtimeChannel: RealtimeChannel | null = null;
-let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 const publicToken = computed(
   () => (route.params.publicToken as string) || sessionStore.publicToken || '',
@@ -432,12 +430,7 @@ const queueInfo = computed(() => {
       isCurrentOrNext: false,
     };
   }
-  return calculateQueuePosition(
-    order.value.queue_number,
-    order.value.status,
-    activeKitchenOrders.value,
-    order.value.created_at,
-  );
+  return calculateQueuePosition(order.value.id, order.value.status, queueSnapshot.value);
 });
 
 const statusBannerMessage = computed(() => {
@@ -506,67 +499,40 @@ function isStepCompleted(step: number): boolean {
 
 async function refreshOrderData() {
   const orderId = route.params.orderId as string;
+  const sessionId = sessionStore.tableSession?.id;
+  const guestToken = sessionStore.guestSession?.session_token;
+  if (!sessionId || !guestToken) return;
   try {
-    const [fetchedOrder, kitchenOrders] = await Promise.all([
-      fetchOrder(orderId),
-      fetchActiveKitchenOrders(),
+    const [fetchedOrder, snapshot] = await Promise.all([
+      fetchOrder(orderId, guestToken),
+      fetchCustomerQueuePositions(sessionId, guestToken),
     ]);
     order.value = fetchedOrder;
-    activeKitchenOrders.value = kitchenOrders;
-  } catch {
-    // Ignore background refresh errors
+    queueSnapshot.value = snapshot;
+  } catch (err) {
+    console.error('Failed to refresh customer order:', err);
   }
 }
 
-/** Called after EditOrderModal saves — adds a small delay for RPC transaction to commit */
 async function onOrderSaved() {
-  await new Promise((resolve) => setTimeout(resolve, 300));
   await refreshOrderData();
 }
 
-/** Debounced refresh to prevent race conditions from rapid realtime events */
-function debouncedRefresh() {
-  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
-  refreshDebounceTimer = setTimeout(() => {
-    void refreshOrderData();
-  }, 500);
-}
-
 onMounted(async () => {
-  const orderId = route.params.orderId as string;
+  if (!sessionStore.tableSession || !sessionStore.guestSession) {
+    void router.replace(`/t/${publicToken.value}`);
+    return;
+  }
   try {
-    const [fetchedOrder, kitchenOrders] = await Promise.all([
-      fetchOrder(orderId),
-      fetchActiveKitchenOrders(),
-    ]);
-    order.value = fetchedOrder;
-    activeKitchenOrders.value = kitchenOrders;
+    await refreshOrderData();
   } finally {
     isLoading.value = false;
   }
-
-  // Subscribe to live changes on orders table
-  realtimeChannel = supabase
-    .channel(`order-detail-live-queue-${orderId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'orders',
-      },
-      () => {
-        debouncedRefresh();
-      },
-    )
-    .subscribe();
+  pollTimer = setInterval(() => void refreshOrderData(), 5000);
 });
 
 onUnmounted(() => {
-  if (realtimeChannel) {
-    void supabase.removeChannel(realtimeChannel);
-  }
-  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+  if (pollTimer) clearInterval(pollTimer);
 });
 </script>
 
@@ -939,7 +905,9 @@ onUnmounted(() => {
   background: var(--color-primary) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 20px rgba(0, 113, 227, 0.3);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .add-more-order-btn:hover {

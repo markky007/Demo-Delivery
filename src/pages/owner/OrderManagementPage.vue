@@ -11,7 +11,7 @@
 
       <!-- ─── 2. Apple KPI Metrics Grid (Interactive) ──────────────────── -->
       <OrderMetrics
-        :total-orders="dateScopedOrders.length"
+        :total-orders="metrics.ALL || 0"
         :in-kitchen-count="inKitchenCount"
         :served-count="servedCount"
         :total-revenue="totalRevenue"
@@ -32,9 +32,9 @@
         :table-filter-options="tableFilterOptions"
         :sort-options="sortOptions"
         :is-any-filter-active="isAnyFilterActive"
-        :total-filtered-count="filteredOrders.length"
+        :total-filtered-count="totalOrders"
         @apply-date-preset="applyDatePreset"
-        @apply-custom-dates="loadOrders"
+        @apply-custom-dates="applyCustomDates"
         @reset-filters="resetFilters"
       />
 
@@ -85,6 +85,10 @@
         />
       </div>
 
+      <div v-if="totalPages > 1" class="row justify-center q-my-lg">
+        <q-pagination v-model="currentPage" :max="totalPages" :max-pages="7" boundary-numbers />
+      </div>
+
       <!-- ─── 5. Order Detail Modal Dialog ────────────────────────────── -->
       <OrderDetailModal
         v-model="showDetailModal"
@@ -114,14 +118,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useNotify } from 'src/composables/useNotify';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from 'src/services/supabase';
 import { fetchManageOrders, deleteOrderAndSession } from 'src/services/orderService';
 import { fetchTables } from 'src/services/tableService';
 import type { OrderWithItems, TableWithQR } from 'src/types/database';
-import { OrderStatus } from 'src/types/enums';
+import type { OrderStatus } from 'src/types/enums';
 
 // Subcomponents
 import OrderHeader from 'src/components/orders/OrderHeader.vue';
@@ -148,6 +152,14 @@ const isRealtimeConnected = ref(false);
 
 // Raw Data loaded for current Date Range
 const dateScopedOrders = ref<OrderWithItems[]>([]);
+const currentPage = ref(1);
+const pageSize = 30;
+const totalOrders = ref(0);
+const filteredRevenue = ref(0);
+const metrics = ref<Record<string, number>>({});
+const totalPages = computed(() => Math.max(1, Math.ceil(totalOrders.value / pageSize)));
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+let loadRequestId = 0;
 const tables = ref<TableWithQR[]>([]);
 
 // ─── Filter States ─────────────────────────────────────────────────────
@@ -206,108 +218,15 @@ const isAnyFilterActive = computed(() => {
   );
 });
 
-// ─── Reactive Filtered & Sorted Orders ─────────────────────────────────
-const filteredOrders = computed(() => {
-  let list = [...dateScopedOrders.value];
-
-  // 1. Status Filter
-  if (selectedStatus.value !== 'ALL') {
-    list = list.filter((o) => o.status === selectedStatus.value);
-  }
-
-  // 2. Table / Dining Type Filter
-  if (selectedTableFilter.value === 'DINE_IN') {
-    list = list.filter((o) => !o.table_session?.customer_name);
-  } else if (selectedTableFilter.value === 'TAKEAWAY') {
-    list = list.filter((o) => Boolean(o.table_session?.customer_name));
-  } else if (selectedTableFilter.value.startsWith('TABLE_')) {
-    const targetTableId = selectedTableFilter.value.replace('TABLE_', '');
-    list = list.filter((o) => o.table_session?.table?.id === targetTableId);
-  }
-
-  // 3. Search Query Filter
-  if (searchQuery.value && searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase();
-    list = list.filter((order) => {
-      const qNumStr = String(order.queue_number);
-      if (qNumStr.includes(q) || `#${qNumStr}`.includes(q)) return true;
-
-      const tableName = order.table_session?.table?.name?.toLowerCase() || '';
-      const custName = order.table_session?.customer_name?.toLowerCase() || '';
-      if (tableName.includes(q) || custName.includes(q)) return true;
-
-      if (
-        order.items?.some(
-          (it) =>
-            it.snapshot_name.toLowerCase().includes(q) ||
-            (it.special_instruction && it.special_instruction.toLowerCase().includes(q)),
-        )
-      ) {
-        return true;
-      }
-
-      if (order.id.toLowerCase().includes(q)) return true;
-
-      return false;
-    });
-  }
-
-  // 4. Sorting
-  list.sort((a, b) => {
-    switch (sortBy.value) {
-      case 'CREATED_ASC':
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      case 'QUEUE_ASC':
-        return a.queue_number - b.queue_number;
-      case 'QUEUE_DESC':
-        return b.queue_number - a.queue_number;
-      case 'AMOUNT_DESC':
-        return (b.total_amount || 0) - (a.total_amount || 0);
-      case 'CREATED_DESC':
-      default:
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }
-  });
-
-  return list;
-});
-
-// ─── Status Counts (Based on current Date Range) ───────────────────────
-const statusCounts = computed<Record<string, number>>(() => {
-  const counts: Record<string, number> = {
-    ALL: dateScopedOrders.value.length,
-    [OrderStatus.QUEUED]: 0,
-    [OrderStatus.PREPARING]: 0,
-    [OrderStatus.PREPARED]: 0,
-    [OrderStatus.SERVED]: 0,
-  };
-
-  for (const o of dateScopedOrders.value) {
-    const current = counts[o.status] ?? 0;
-    counts[o.status] = current + 1;
-  }
-
-  return counts;
-});
-
-// ─── Computed Stats for Metrics ────────────────────────────────────────
+// Filters, sorting, counts, and paging are applied in the database.
+const filteredOrders = computed(() => dateScopedOrders.value);
+const statusCounts = computed<Record<string, number>>(() => metrics.value);
 const inKitchenCount = computed(
   () =>
-    dateScopedOrders.value.filter(
-      (o) =>
-        o.status === OrderStatus.QUEUED ||
-        o.status === OrderStatus.PREPARING ||
-        o.status === OrderStatus.PREPARED,
-    ).length,
+    (metrics.value.QUEUED || 0) + (metrics.value.PREPARING || 0) + (metrics.value.PREPARED || 0),
 );
-
-const servedCount = computed(
-  () => dateScopedOrders.value.filter((o) => o.status === OrderStatus.SERVED).length,
-);
-
-const totalRevenue = computed(() =>
-  filteredOrders.value.reduce((sum, o) => sum + (o.total_amount || 0), 0),
-);
+const servedCount = computed(() => metrics.value.SERVED || 0);
+const totalRevenue = computed(() => filteredRevenue.value);
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 function formatQueueNumOnly(num: number): string {
@@ -355,11 +274,17 @@ function applyDatePreset(preset: DatePresetType) {
     customDateTo.value = '';
   }
 
+  currentPage.value = 1;
   void loadOrders();
 }
 
 function handleSelectMetricStatus(status: OrderStatus | 'ALL') {
   selectedStatus.value = status;
+}
+
+function applyCustomDates() {
+  currentPage.value = 1;
+  void loadOrders();
 }
 
 function resetFilters() {
@@ -372,22 +297,38 @@ function resetFilters() {
 
 // ─── Data Loading ──────────────────────────────────────────────────────
 async function loadOrders() {
+  const requestId = ++loadRequestId;
   isLoading.value = true;
   try {
     const fetched = await fetchManageOrders({
-      dateFrom: customDateFrom.value ? customDateFrom.value : undefined,
-      dateTo: customDateTo.value ? customDateTo.value : undefined,
-      status: 'ALL',
+      dateFrom: customDateFrom.value || undefined,
+      dateTo: customDateTo.value || undefined,
+      status: selectedStatus.value,
+      tableFilter: selectedTableFilter.value,
+      search: searchQuery.value,
+      sort: sortBy.value,
+      page: currentPage.value,
+      pageSize,
     });
-    dateScopedOrders.value = fetched;
+    if (requestId !== loadRequestId) return;
+    const lastPage = Math.max(1, Math.ceil(fetched.total / pageSize));
+    if (currentPage.value > lastPage) {
+      currentPage.value = lastPage;
+      return;
+    }
+    dateScopedOrders.value = fetched.orders;
+    totalOrders.value = fetched.total;
+    filteredRevenue.value = fetched.filteredRevenue;
+    metrics.value = fetched.metrics;
   } catch (err) {
+    if (requestId !== loadRequestId) return;
     notifyError({
       title: 'โหลดออเดอร์ไม่สำเร็จ',
       message:
         err instanceof Error ? err.message : 'ไม่สามารถโหลดรายการออเดอร์ได้ โปรดลองใหม่อีกครั้ง',
     });
   } finally {
-    isLoading.value = false;
+    if (requestId === loadRequestId) isLoading.value = false;
   }
 }
 
@@ -489,12 +430,26 @@ async function handleConfirmDeleteOrder() {
 }
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────
+watch(currentPage, () => void loadOrders());
+watch([selectedStatus, selectedTableFilter, sortBy], () => {
+  currentPage.value = 1;
+  void loadOrders();
+});
+watch(searchQuery, () => {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1;
+    void loadOrders();
+  }, 300);
+});
+
 onMounted(() => {
   void loadInitialData();
 });
 
 onUnmounted(() => {
   if (realtimeChannel) void supabase.removeChannel(realtimeChannel);
+  if (searchTimer) clearTimeout(searchTimer);
 });
 </script>
 

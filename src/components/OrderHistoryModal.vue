@@ -175,7 +175,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { fetchOrderHistory } from 'src/services/orderService';
+import { useSessionStore } from 'src/stores/sessionStore';
 import { formatPrice, formatQueueNumber, isTakeawayOption } from 'src/utils/formatters';
 import type { OrderHistory, OrderHistorySnapshotOption } from 'src/types/database';
 
@@ -191,6 +193,8 @@ defineEmits<{
 
 const isLoading = ref(false);
 const histories = ref<OrderHistory[]>([]);
+const route = useRoute();
+const sessionStore = useSessionStore();
 
 watch(
   () => [props.modelValue, props.orderId],
@@ -205,7 +209,10 @@ watch(
 async function loadHistory(id: string) {
   isLoading.value = true;
   try {
-    histories.value = await fetchOrderHistory(id);
+    const guestToken = route.path.startsWith('/t/')
+      ? sessionStore.guestSession?.session_token
+      : undefined;
+    histories.value = await fetchOrderHistory(id, guestToken);
   } catch (err) {
     console.error('Failed to load order history:', err);
     histories.value = [];

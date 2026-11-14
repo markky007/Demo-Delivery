@@ -195,7 +195,7 @@ onMounted(async () => {
     const isTakeawayTable = isTakeawayName(result.table.name);
 
     if (isTakeawayTable) {
-      const activeTakeaway = await getActiveTakeawaySessionForGuest(result.table.id, guestToken);
+      const activeTakeaway = await getActiveTakeawaySessionForGuest(publicToken, guestToken);
       if (activeTakeaway) {
         hasActiveGuestSession.value = true;
         existingActiveTableSession = activeTakeaway.tableSession;
@@ -253,7 +253,7 @@ async function startOrdering() {
 
       // Create a NEW takeaway session specifically for this customer
       const { tableSession, guestSession } = await createTakeawaySession(
-        sessionStore.table.id,
+        publicToken,
         guestToken,
         trimmedName,
       );
@@ -270,10 +270,7 @@ async function startOrdering() {
       await router.push(`/t/${publicToken}/menu`);
     } else {
       // Regular Dine-in table session
-      const { tableSession, guestSession } = await joinOrCreateSession(
-        sessionStore.table.id,
-        guestToken,
-      );
+      const { tableSession, guestSession } = await joinOrCreateSession(publicToken, guestToken);
 
       sessionStore.setContext(
         sessionStore.restaurant,
@@ -408,7 +405,9 @@ async function startOrdering() {
   background: var(--color-primary) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 20px rgba(0, 113, 227, 0.3);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .welcome-start-btn:hover {

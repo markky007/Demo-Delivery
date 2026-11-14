@@ -83,7 +83,9 @@
             </div>
           </div>
           <div class="row items-center">
-            <span class="cart-total-price tabular-nums">{{ formatPrice(cartStore.totalAmount) }}</span>
+            <span class="cart-total-price tabular-nums">{{
+              formatPrice(cartStore.totalAmount)
+            }}</span>
             <q-icon name="arrow_forward" size="18px" class="q-ml-xs cart-arrow-icon" />
           </div>
         </div>
@@ -101,10 +103,8 @@ import { isTakeawayName } from 'src/services/tableService';
 import { formatPrice } from 'src/utils/formatters';
 import logoMarkSvg from 'src/assets/logo-mark.svg';
 
-import { supabase } from 'src/services/supabase';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { getCustomerSession } from 'src/services/sessionService';
 import { useNotify } from 'src/composables/useNotify';
-import type { Table, TableSession } from 'src/types/database';
 
 const route = useRoute();
 const router = useRouter();
@@ -114,7 +114,8 @@ const { notifyInfo } = useNotify();
 
 const isScrolled = ref(false);
 const isCartBouncing = ref(false);
-let sessionRealtimeChannel: RealtimeChannel | null = null;
+let sessionPollTimer: ReturnType<typeof setInterval> | null = null;
+let isPollingSession = false;
 let bounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 watch(
@@ -174,86 +175,51 @@ function handleScroll() {
   isScrolled.value = window.scrollY > 10;
 }
 
-function subscribeToSessionUpdates() {
-  if (!sessionStore.tableSession?.id) return;
-  if (sessionRealtimeChannel) {
-    void supabase.removeChannel(sessionRealtimeChannel);
+async function refreshSession() {
+  const currentSession = sessionStore.tableSession;
+  const guestToken = sessionStore.guestSession?.session_token;
+  if (!currentSession || !guestToken || isPollingSession) return;
+
+  isPollingSession = true;
+  try {
+    const result = await getCustomerSession(currentSession.id, guestToken);
+    if (!result) return;
+
+    const moved = result.tableSession.id !== currentSession.id;
+    const tableChanged = result.table.id !== sessionStore.table?.id;
+    sessionStore.updateTable(result.table);
+    sessionStore.updateTableSession(result.tableSession);
+    if (result.publicToken && result.publicToken !== sessionStore.publicToken) {
+      sessionStore.updatePublicToken(result.publicToken);
+      if (route.name) {
+        await router.replace({
+          name: route.name as string,
+          params: { ...route.params, publicToken: result.publicToken },
+          query: route.query,
+        });
+      }
+    }
+    if (moved || tableChanged) {
+      notifyInfo(`โต๊ะของคุณถูกย้ายไปยัง ${result.table.name} เรียบร้อยแล้ว`, {
+        title: moved ? 'ย้ายรวมโต๊ะสำเร็จ 🔀' : 'ย้ายโต๊ะสำเร็จ',
+      });
+    }
+  } catch (err) {
+    console.error('Failed to refresh customer session:', err);
+  } finally {
+    isPollingSession = false;
   }
-
-  sessionRealtimeChannel = supabase
-    .channel(`customer_session_${sessionStore.tableSession.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'table_sessions',
-        filter: `id=eq.${sessionStore.tableSession.id}`,
-      },
-      (payload) => {
-        void (async () => {
-          const updated = payload.new as {
-            table_id?: string;
-            customer_name?: string;
-            merged_into_session_id?: string | null;
-          };
-
-          // 1. If this session was merged into another table session
-          if (updated?.merged_into_session_id) {
-            const { data: targetSession } = await supabase
-              .from('table_sessions')
-              .select('*, table:tables(*)')
-              .eq('id', updated.merged_into_session_id)
-              .maybeSingle();
-
-            if (targetSession) {
-              const targetTable = (targetSession as unknown as { table?: Table }).table;
-              if (targetTable) {
-                sessionStore.updateTable(targetTable);
-              }
-              sessionStore.updateTableSession(targetSession as TableSession);
-
-              notifyInfo(
-                `โต๊ะของคุณถูกย้ายมารวมกับ ${targetTable?.name || 'โต๊ะใหม่'} เรียบร้อยแล้ว`,
-                {
-                  title: 'ย้ายรวมโต๊ะสำเร็จ 🔀',
-                  caption: 'ออเดอร์และบิลทั้งหมดถูกโอนมารวมกันเรียบร้อย',
-                },
-              );
-
-              // Re-subscribe to the new active session
-              subscribeToSessionUpdates();
-            }
-            return;
-          }
-
-          // 2. Standard table transfer
-          if (updated?.table_id && updated.table_id !== sessionStore.table?.id) {
-            const { data: newTable } = await supabase
-              .from('tables')
-              .select('*')
-              .eq('id', updated.table_id)
-              .maybeSingle();
-            if (newTable) {
-              sessionStore.updateTable(newTable);
-            }
-          }
-        })();
-      },
-    )
-    .subscribe();
 }
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true });
-  subscribeToSessionUpdates();
+  sessionPollTimer = setInterval(() => void refreshSession(), 5000);
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
-  if (sessionRealtimeChannel) {
-    void supabase.removeChannel(sessionRealtimeChannel);
-  }
+  if (sessionPollTimer) clearInterval(sessionPollTimer);
+  if (bounceTimeout) clearTimeout(bounceTimeout);
 });
 </script>
 
@@ -295,7 +261,9 @@ onUnmounted(() => {
   background: var(--color-surface-footer);
   color: var(--color-ink) !important;
   border-radius: var(--radius-pill);
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .header-action-btn:hover {
@@ -387,7 +355,9 @@ onUnmounted(() => {
   box-shadow: 0 6px 20px rgba(0, 113, 227, 0.32);
   font-weight: 600;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
 }
 
 .floating-cart-btn:hover {
@@ -404,9 +374,15 @@ onUnmounted(() => {
 }
 
 @keyframes cartBtnPop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.03) translateY(-2px); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.03) translateY(-2px);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .cart-count-badge {
@@ -454,7 +430,9 @@ onUnmounted(() => {
 /* Page transitions */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .page-fade-enter-from {

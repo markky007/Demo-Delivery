@@ -264,11 +264,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSessionStore } from 'src/stores/sessionStore';
 import {
   fetchSessionOrders,
-  fetchActiveKitchenOrders,
+  fetchCustomerQueuePositions,
   calculateQueuePosition,
-  type ActiveKitchenOrder,
+  type CustomerQueueSnapshot,
 } from 'src/services/orderService';
-import { supabase } from 'src/services/supabase';
 import {
   formatPrice,
   formatTime,
@@ -281,17 +280,15 @@ import StatusBadge from 'src/components/StatusBadge.vue';
 import EmptyState from 'src/components/EmptyState.vue';
 import LoadingSkeleton from 'src/components/LoadingSkeleton.vue';
 import type { OrderWithItems } from 'src/types/database';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const route = useRoute();
 const router = useRouter();
 const sessionStore = useSessionStore();
 
 const allOrders = ref<OrderWithItems[]>([]);
-const activeKitchenOrders = ref<ActiveKitchenOrder[]>([]);
+const queueSnapshot = ref<CustomerQueueSnapshot>({ totalActive: 0, positions: {} });
 const isLoading = ref(true);
-let realtimeChannel: RealtimeChannel | null = null;
-let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 const publicToken = computed(() => route.params.publicToken as string);
 
@@ -314,12 +311,7 @@ function openOrder(orderId: string) {
 }
 
 function getQueueInfo(order: OrderWithItems) {
-  return calculateQueuePosition(
-    order.queue_number,
-    order.status,
-    activeKitchenOrders.value,
-    order.created_at,
-  );
+  return calculateQueuePosition(order.id, order.status, queueSnapshot.value);
 }
 
 function getQueueRankLabel(order: OrderWithItems): string {
@@ -359,67 +351,36 @@ function getQueueRankClass(order: OrderWithItems): string {
 }
 
 async function refreshData() {
-  if (sessionStore.tableSession) {
-    try {
-      const [sessOrders, kitchenOrders] = await Promise.all([
-        fetchSessionOrders(sessionStore.tableSession.id),
-        fetchActiveKitchenOrders(),
-      ]);
-      allOrders.value = sessOrders;
-      activeKitchenOrders.value = kitchenOrders;
-    } catch {
-      // Ignore background refresh errors
-    }
+  const sessionId = sessionStore.tableSession?.id;
+  const guestToken = sessionStore.guestSession?.session_token;
+  if (!sessionId || !guestToken) return;
+  try {
+    const [sessOrders, snapshot] = await Promise.all([
+      fetchSessionOrders(sessionId, guestToken),
+      fetchCustomerQueuePositions(sessionId, guestToken),
+    ]);
+    allOrders.value = sessOrders;
+    queueSnapshot.value = snapshot;
+  } catch (err) {
+    console.error('Failed to refresh customer orders:', err);
   }
-}
-
-/** Debounced refresh to prevent race conditions during order updates */
-function debouncedRefresh() {
-  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
-  refreshDebounceTimer = setTimeout(() => {
-    void refreshData();
-  }, 500);
 }
 
 onMounted(async () => {
-  if (!sessionStore.tableSession) {
+  if (!sessionStore.tableSession || !sessionStore.guestSession) {
     void router.replace(`/t/${publicToken.value}`);
     return;
   }
-
   try {
-    const [sessOrders, kitchenOrders] = await Promise.all([
-      fetchSessionOrders(sessionStore.tableSession.id),
-      fetchActiveKitchenOrders(),
-    ]);
-    allOrders.value = sessOrders;
-    activeKitchenOrders.value = kitchenOrders;
+    await refreshData();
   } finally {
     isLoading.value = false;
   }
-
-  // Subscribe to realtime changes on orders table to update queue counts across all tables
-  realtimeChannel = supabase
-    .channel('customer-orders-live-queue')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'orders',
-      },
-      () => {
-        debouncedRefresh();
-      },
-    )
-    .subscribe();
+  pollTimer = setInterval(() => void refreshData(), 5000);
 });
 
 onUnmounted(() => {
-  if (realtimeChannel) {
-    void supabase.removeChannel(realtimeChannel);
-  }
-  if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+  if (pollTimer) clearInterval(pollTimer);
 });
 </script>
 

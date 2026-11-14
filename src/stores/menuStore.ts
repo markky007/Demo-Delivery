@@ -48,7 +48,7 @@ export const useMenuStore = defineStore('menu', () => {
 
   // ─── Actions ─────────────────────────────────────────
 
-  async function fetchCategories() {
+  async function fetchCategories(): Promise<boolean> {
     const { data, error: err } = await supabase
       .from('menu_categories')
       .select('*')
@@ -56,19 +56,21 @@ export const useMenuStore = defineStore('menu', () => {
 
     if (err) {
       error.value = err.message;
-      return;
+      return false;
     }
     categories.value = data ?? [];
+    return true;
   }
 
-  async function fetchItems() {
+  async function fetchItems(): Promise<boolean> {
     const { data, error: err } = await supabase.from('menu_items').select('*').order('sort_order');
 
     if (err) {
       error.value = err.message;
-      return;
+      return false;
     }
     items.value = data ?? [];
+    return true;
   }
 
   async function fetchItemWithOptions(
@@ -165,8 +167,8 @@ export const useMenuStore = defineStore('menu', () => {
     isLoading.value = true;
     error.value = null;
     try {
-      await Promise.all([fetchCategories(), fetchItems()]);
-      isLoaded.value = true;
+      const results = await Promise.all([fetchCategories(), fetchItems()]);
+      isLoaded.value = results.every(Boolean);
     } finally {
       isLoading.value = false;
     }

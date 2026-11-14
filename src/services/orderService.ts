@@ -15,10 +15,11 @@ import { OrderStatus } from 'src/types/enums';
  * The RPC validates availability, prices, options, and assigns queue_number.
  */
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
-  const { data, error } = await supabase.rpc('create_order', {
+  const { data, error } = await supabase.rpc('create_order_verified', {
     p_table_session_id: payload.table_session_id,
     p_guest_session_token: payload.guest_session_token,
     p_items: payload.items,
+    p_public_token: payload.public_token,
   });
 
   if (error) throw new Error(error.message);
@@ -60,7 +61,19 @@ export async function kitchenUpdateOrder(
 /**
  * Fetch revision history of an order (before edits).
  */
-export async function fetchOrderHistory(orderId: string): Promise<OrderHistory[]> {
+export async function fetchOrderHistory(
+  orderId: string,
+  guestToken?: string,
+): Promise<OrderHistory[]> {
+  if (guestToken) {
+    const { data, error } = await supabase.rpc('get_order_history_for_guest', {
+      p_order_id: orderId,
+      p_guest_session_token: guestToken,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as OrderHistory[];
+  }
+
   // Try RPC first
   const { data: rpcData, error: rpcError } = await supabase.rpc('get_order_history', {
     p_order_id: orderId,
@@ -99,27 +112,12 @@ export async function advanceOrderStatus(orderId: string, newStatus: OrderStatus
  */
 export async function fetchSessionOrders(
   tableSessionId: string,
-  guestSessionId?: string,
+  guestToken: string,
 ): Promise<OrderWithItems[]> {
-  let query = supabase
-    .from('orders')
-    .select(
-      `
-      *,
-      items:order_items (
-        *,
-        options:order_item_options (*)
-      )
-    `,
-    )
-    .eq('table_session_id', tableSessionId)
-    .order('queue_number');
-
-  if (guestSessionId) {
-    query = query.eq('guest_session_id', guestSessionId);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc('customer_fetch_orders', {
+    p_session_id: tableSessionId,
+    p_guest_token: guestToken,
+  });
   if (error) throw new Error(error.message);
   return (data ?? []) as OrderWithItems[];
 }
@@ -160,38 +158,33 @@ export async function fetchTodayOrders(): Promise<OrderWithItems[]> {
 /**
  * Fetch a single order with items.
  */
-export async function fetchOrder(orderId: string): Promise<OrderWithItems | null> {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(
-      `
-      *,
-      table_session:table_sessions (
-        id,
-        customer_name,
-        table:tables (
-          id,
-          name
-        )
-      ),
-      items:order_items (
-        *,
-        options:order_item_options (*)
-      )
-    `,
-    )
-    .eq('id', orderId)
-    .single();
-
-  if (error) return null;
-  return data as OrderWithItems;
+export async function fetchOrder(
+  orderId: string,
+  guestToken: string,
+): Promise<OrderWithItems | null> {
+  const { data, error } = await supabase.rpc('customer_fetch_order', {
+    p_order_id: orderId,
+    p_guest_token: guestToken,
+  });
+  if (error) throw new Error(error.message);
+  return (data as OrderWithItems | null) ?? null;
 }
 
-export interface ActiveKitchenOrder {
-  id: string;
-  queue_number: number;
-  status: OrderStatus;
-  created_at: string;
+export interface CustomerQueueSnapshot {
+  totalActive: number;
+  positions: Record<string, number>;
+}
+
+export async function fetchCustomerQueuePositions(
+  tableSessionId: string,
+  guestToken: string,
+): Promise<CustomerQueueSnapshot> {
+  const { data, error } = await supabase.rpc('customer_queue_positions', {
+    p_session_id: tableSessionId,
+    p_guest_token: guestToken,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? { totalActive: 0, positions: {} }) as CustomerQueueSnapshot;
 }
 
 export interface QueuePositionResult {
@@ -202,35 +195,17 @@ export interface QueuePositionResult {
   isCurrentOrNext: boolean;
 }
 
-/**
- * Fetch all unserved orders in the kitchen (for customer queue calculation).
- */
-export async function fetchActiveKitchenOrders(): Promise<ActiveKitchenOrder[]> {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('id, queue_number, status, created_at')
-    .neq('status', 'SERVED')
-    .order('created_at', { ascending: true })
-    .order('queue_number', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
-
-/**
- * Calculate queue position and queues ahead for a customer order.
- */
+/** Build the customer-facing status from the database's queue count. */
 export function calculateQueuePosition(
-  targetQueueNumber: number,
+  orderId: string,
   targetStatus: OrderStatus,
-  activeKitchenOrders: ActiveKitchenOrder[],
-  targetCreatedAt?: string,
+  snapshot: CustomerQueueSnapshot,
 ): QueuePositionResult {
   if (targetStatus === OrderStatus.SERVED) {
     return {
       queuesAhead: 0,
       queuePosition: 0,
-      totalActive: activeKitchenOrders.length,
+      totalActive: snapshot.totalActive,
       statusText: 'เสิร์ฟอาหารเรียบร้อยแล้ว',
       isCurrentOrNext: false,
     };
@@ -240,37 +215,25 @@ export function calculateQueuePosition(
     return {
       queuesAhead: 0,
       queuePosition: 1,
-      totalActive: activeKitchenOrders.length,
+      totalActive: snapshot.totalActive,
       statusText: 'ปรุงเสร็จแล้ว กำลังนำไปเสิร์ฟ',
       isCurrentOrNext: true,
     };
   }
 
-  const ordersAhead = activeKitchenOrders.filter((o) => {
-    if (o.status === OrderStatus.SERVED) return false;
-    if (targetCreatedAt && o.created_at) {
-      return new Date(o.created_at).getTime() < new Date(targetCreatedAt).getTime();
-    }
-    return o.queue_number < targetQueueNumber;
-  });
-  const queuesAhead = ordersAhead.length;
+  const queuesAhead = snapshot.positions[orderId] ?? 0;
   const queuePosition = queuesAhead + 1;
-
-  let statusText: string;
-  if (queuesAhead === 0) {
-    if (targetStatus === OrderStatus.PREPARING) {
-      statusText = 'กำลังปรุงอาหาร (คิวปัจจุบัน)';
-    } else {
-      statusText = 'เป็นคิวถัดไป ครัวกำลังจะเริ่มทำ';
-    }
-  } else {
-    statusText = `รออีก ${queuesAhead} คิวก่อนหน้า`;
-  }
+  const statusText =
+    queuesAhead === 0
+      ? targetStatus === OrderStatus.PREPARING
+        ? 'กำลังปรุงอาหาร (คิวปัจจุบัน)'
+        : 'เป็นคิวถัดไป ครัวกำลังจะเริ่มทำ'
+      : `รออีก ${queuesAhead} คิวก่อนหน้า`;
 
   return {
     queuesAhead,
     queuePosition,
-    totalActive: activeKitchenOrders.length,
+    totalActive: snapshot.totalActive,
     statusText,
     isCurrentOrNext: queuesAhead === 0,
   };
@@ -280,85 +243,37 @@ export interface FetchManageOrdersFilter {
   dateFrom?: string | undefined;
   dateTo?: string | undefined;
   status?: OrderStatus | 'ALL' | undefined;
-  tableId?: string | undefined;
+  tableFilter?: string | undefined;
+  search?: string | undefined;
+  sort?: string | undefined;
+  page?: number | undefined;
+  pageSize?: number | undefined;
 }
 
-/**
- * Fetch orders for owner Order Management page with flexible filters.
- */
+export interface ManageOrdersPage {
+  orders: OrderWithItems[];
+  total: number;
+  filteredRevenue: number;
+  metrics: Record<string, number>;
+}
+
 export async function fetchManageOrders(
   filters: FetchManageOrdersFilter = {},
-): Promise<OrderWithItems[]> {
-  let query = supabase
-    .from('orders')
-    .select(
-      `
-      *,
-      table_session:table_sessions (
-        id,
-        status,
-        customer_name,
-        created_at,
-        closed_at,
-        table:tables (
-          id,
-          name
-        )
-      ),
-      items:order_items (
-        *,
-        options:order_item_options (*)
-      )
-    `,
-    )
-    .order('created_at', { ascending: false });
-
-  if (filters.dateFrom) {
-    const parts = filters.dateFrom.split('-');
-    if (parts.length === 3) {
-      const fromDate = new Date(
-        Number(parts[0]),
-        Number(parts[1]) - 1,
-        Number(parts[2]),
-        0,
-        0,
-        0,
-        0,
-      );
-      query = query.gte('created_at', fromDate.toISOString());
-    }
-  }
-
-  if (filters.dateTo) {
-    const parts = filters.dateTo.split('-');
-    if (parts.length === 3) {
-      const toDate = new Date(
-        Number(parts[0]),
-        Number(parts[1]) - 1,
-        Number(parts[2]),
-        23,
-        59,
-        59,
-        999,
-      );
-      query = query.lte('created_at', toDate.toISOString());
-    }
-  }
-
-  if (filters.status && filters.status !== 'ALL') {
-    query = query.eq('status', filters.status);
-  }
-
-  const { data, error } = await query;
+): Promise<ManageOrdersPage> {
+  const from = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`).toISOString() : null;
+  const to = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59.999`).toISOString() : null;
+  const { data, error } = await supabase.rpc('owner_list_orders', {
+    p_start: from,
+    p_end: to,
+    p_status: filters.status ?? 'ALL',
+    p_table_filter: filters.tableFilter ?? 'ALL',
+    p_search: filters.search?.trim() ?? '',
+    p_sort: filters.sort ?? 'CREATED_DESC',
+    p_page: filters.page ?? 1,
+    p_page_size: filters.pageSize ?? 30,
+  });
   if (error) throw new Error(error.message);
-
-  let orders = (data ?? []) as OrderWithItems[];
-
-  if (filters.tableId && filters.tableId !== 'ALL') {
-    orders = orders.filter((o) => o.table_session?.table?.id === filters.tableId);
-  }
-
-  return orders;
+  return data as ManageOrdersPage;
 }
 
 export interface DeleteOrderResult {
@@ -455,4 +370,3 @@ export async function setOrderItemsCompleted(
     throw new Error(tableError.message);
   }
 }
-

@@ -20,62 +20,16 @@ export type ResolveTableResult =
  * Validates token existence, active status, expiration timestamp, and table availability.
  */
 export async function resolveTableFromToken(publicToken: string): Promise<ResolveTableResult> {
-  const { data, error } = await supabase
-    .from('table_qr_tokens')
-    .select(
-      `
-      id,
-      table_id,
-      public_token,
-      is_active,
-      generated_at,
-      expires_at,
-      revoked_at,
-      table:tables (
-        id,
-        restaurant_id,
-        name,
-        sort_order,
-        is_active,
-        restaurant:restaurants (
-          id,
-          name,
-          description,
-          logo_url,
-          latitude,
-          longitude,
-          geofence_radius_meters,
-          is_geofence_enabled
-        )
-      )
-    `,
-    )
-    .eq('public_token', publicToken)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('resolve_table_token', {
+    p_public_token: publicToken,
+  });
 
   if (error || !data) {
     return { status: 'NOT_FOUND' };
   }
 
-  // Check if token was revoked or marked inactive
-  if (!data.is_active) {
-    return { status: 'EXPIRED' };
-  }
-
-  // Validate table is active
-  const tableData = data.table as unknown as Table & {
-    restaurant: Restaurant;
-  };
-  if (!tableData?.is_active) {
-    return { status: 'INACTIVE' };
-  }
-
-  return {
-    status: 'SUCCESS',
-    qrToken: data as unknown as TableQRToken,
-    table: tableData,
-    restaurant: tableData.restaurant,
-  };
+  const result = data as ResolveTableResult;
+  return result;
 }
 
 // ─── Owner CRUD ──────────────────────────────────────────

@@ -6,8 +6,8 @@
       row-key="id"
       flat
       class="apple-orders-table"
-      :rows-per-page-options="[15, 30, 50, 100]"
-      :pagination="{ rowsPerPage: 15 }"
+      :rows-per-page-options="[0]"
+      :pagination="{ rowsPerPage: 0 }"
     >
       <!-- Cell: Queue Number -->
       <template #body-cell-queue_number="props">
@@ -153,7 +153,6 @@ const columns = [
     label: 'คิว',
     field: 'queue_number',
     align: 'left' as const,
-    sortable: true,
     style: 'width: 90px',
   },
   {
@@ -161,7 +160,6 @@ const columns = [
     label: 'โต๊ะ / ปลายทาง',
     field: (row: OrderWithItems) => getTableDisplayName(row),
     align: 'left' as const,
-    sortable: true,
     style: 'min-width: 170px',
   },
   {
@@ -176,7 +174,6 @@ const columns = [
     label: 'ยอดรวม',
     field: 'total_amount',
     align: 'right' as const,
-    sortable: true,
     style: 'width: 120px',
   },
   {
@@ -184,7 +181,6 @@ const columns = [
     label: 'สถานะ',
     field: 'status',
     align: 'center' as const,
-    sortable: true,
     style: 'width: 140px',
   },
   {

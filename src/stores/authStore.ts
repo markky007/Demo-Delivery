@@ -9,10 +9,12 @@ import type { User } from '@supabase/supabase-js';
 export const useAuthStore = defineStore('auth', () => {
   // ─── State ───────────────────────────────────────────
   const user = ref<User | null>(null);
+  const isOwner = ref(false);
   const isLoading = ref(true);
+  let authListenerInstalled = false;
 
   // ─── Getters ─────────────────────────────────────────
-  const isAuthenticated = computed(() => !!user.value);
+  const isAuthenticated = computed(() => !!user.value && isOwner.value);
 
   // ─── Actions ─────────────────────────────────────────
 
@@ -23,16 +25,34 @@ export const useAuthStore = defineStore('auth', () => {
         data: { session },
       } = await supabase.auth.getSession();
       user.value = session?.user ?? null;
+      if (session) {
+        const { data, error } = await supabase.rpc('is_owner');
+        isOwner.value = !error && data === true;
+      } else {
+        isOwner.value = false;
+      }
     } catch {
       user.value = null;
+      isOwner.value = false;
     } finally {
       isLoading.value = false;
     }
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((_event, session) => {
-      user.value = session?.user ?? null;
-    });
+    if (!authListenerInstalled) {
+      authListenerInstalled = true;
+      supabase.auth.onAuthStateChange((_event, session) => {
+        user.value = session?.user ?? null;
+        isOwner.value = false;
+        if (session) {
+          setTimeout(() => {
+            void supabase.rpc('is_owner').then(({ data, error }) => {
+              isOwner.value = !error && data === true;
+            });
+          }, 0);
+        }
+      });
+    }
   }
 
   async function login(email: string, password: string): Promise<{ error: string | null }> {
@@ -43,6 +63,14 @@ export const useAuthStore = defineStore('auth', () => {
         return { error: error.message };
       }
       user.value = data.user;
+      const { data: ownerAccess, error: ownerError } = await supabase.rpc('is_owner');
+      if (ownerError || ownerAccess !== true) {
+        await supabase.auth.signOut();
+        user.value = null;
+        isOwner.value = false;
+        return { error: 'บัญชีนี้ไม่มีสิทธิ์เข้าหน้าเจ้าของร้าน' };
+      }
+      isOwner.value = true;
       return { error: null };
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Login failed';
@@ -55,10 +83,12 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     await supabase.auth.signOut();
     user.value = null;
+    isOwner.value = false;
   }
 
   return {
     user,
+    isOwner,
     isLoading,
     isAuthenticated,
     initialize,

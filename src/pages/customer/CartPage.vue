@@ -154,7 +154,9 @@
 
           <div class="row justify-between items-center text-body2 text-grey-8 q-mb-xs">
             <span>ค่าอาหารรวม</span>
-            <span class="text-weight-medium tabular-nums">{{ formatPrice(cartStore.totalAmount) }}</span>
+            <span class="text-weight-medium tabular-nums">{{
+              formatPrice(cartStore.totalAmount)
+            }}</span>
           </div>
 
           <q-separator class="q-my-sm" />
@@ -180,7 +182,9 @@
           >
             <div class="row items-center justify-between full-width q-px-sm">
               <span class="text-weight-bold">ตรวจสอบและสั่งอาหาร</span>
-              <span class="text-weight-bold text-h6 tabular-nums">{{ formatPrice(cartStore.totalAmount) }}</span>
+              <span class="text-weight-bold text-h6 tabular-nums">{{
+                formatPrice(cartStore.totalAmount)
+              }}</span>
             </div>
           </q-btn>
         </div>
@@ -295,7 +299,7 @@ async function executeOrderSubmission() {
   isSubmitting.value = true;
 
   try {
-    // 1. Geolocation verification if enabled by restaurant
+    // Optional location hint; the server authorizes the order using the QR and guest token.
     const rest = sessionStore.restaurant;
     if (
       rest?.is_geofence_enabled &&
@@ -308,33 +312,27 @@ async function executeOrderSubmission() {
 
       if (!posResult.success) {
         notifyWarning(posResult.message, {
-          title: 'แจ้งเตือนพิกัดตำแหน่ง',
+          title: 'ไม่สามารถตรวจพิกัดได้',
         });
-        isSubmitting.value = false;
-        return;
-      }
-
-      const distance = calculateDistanceMeters(
-        posResult.latitude,
-        posResult.longitude,
-        rest.latitude,
-        rest.longitude,
-      );
-
-      const maxAllowed = rest.geofence_radius_meters ?? 100;
-
-      if (distance > maxAllowed) {
-        notifyError(`คุณอยู่ห่างจากร้าน ${formatDistance(distance)}`, {
-          title: 'อยู่นอกพื้นที่ร้านอาหาร 📍',
-          caption: 'ระบบอนุญาตให้สั่งอาหารขณะอยู่ที่ร้านเท่านั้น',
-          timeout: 3500,
-        });
-        isSubmitting.value = false;
-        return;
+      } else {
+        const distance = calculateDistanceMeters(
+          posResult.latitude,
+          posResult.longitude,
+          rest.latitude,
+          rest.longitude,
+        );
+        const maxAllowed = rest.geofence_radius_meters ?? 100;
+        if (distance > maxAllowed) {
+          notifyWarning(`อุปกรณ์ระบุว่าอยู่ห่างจากร้าน ${formatDistance(distance)}`, {
+            title: 'พิกัดอยู่นอกรัศมีที่ตั้งไว้',
+            caption: 'ระบบจะยืนยันสิทธิ์สั่งอาหารจาก QR ของโต๊ะ',
+            timeout: 3500,
+          });
+        }
       }
     }
 
-    // 2. Prepare payload
+    // Prepare payload
     const items: CreateOrderItemPayload[] = cartStore.items.map((item) => {
       const optionIds = item.selected_options.map((o) => o.option_id);
       return {
@@ -349,10 +347,11 @@ async function executeOrderSubmission() {
     const itemCount = cartStore.itemCount;
     const orderTotal = cartStore.totalAmount;
 
-    // 3. Submit order
+    // Submit order
     const createdOrder = await createOrder({
       table_session_id: sessionStore.tableSession.id,
       guest_session_token: sessionStore.guestSession.session_token,
+      public_token: sessionStore.publicToken || publicToken.value,
       items,
     });
 
@@ -558,7 +557,9 @@ async function executeOrderSubmission() {
   background: var(--color-primary) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 20px rgba(0, 113, 227, 0.32);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .confirm-btn:hover:not(:disabled) {

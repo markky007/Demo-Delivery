@@ -102,7 +102,9 @@ async function handleLogin() {
     const { error } = await authStore.login(email.value, password.value);
 
     if (error) {
-      errorMsg.value = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+      errorMsg.value = error.includes('ไม่มีสิทธิ์')
+        ? error
+        : 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
       return;
     }
 

@@ -76,6 +76,10 @@ export const useSessionStore = defineStore('session', () => {
     tableSession.value = session;
   }
 
+  function updatePublicToken(token: string) {
+    publicToken.value = token;
+  }
+
   return {
     // State
     restaurant,
@@ -96,6 +100,7 @@ export const useSessionStore = defineStore('session', () => {
     setContext,
     updateTable,
     updateTableSession,
+    updatePublicToken,
     clearSession,
     setError,
     setLoading,

@@ -30,6 +30,7 @@ export interface CartItem {
 export interface CreateOrderPayload {
   table_session_id: string;
   guest_session_token: string;
+  public_token: string;
   items: CreateOrderItemPayload[];
 }
 

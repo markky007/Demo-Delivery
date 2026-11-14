@@ -404,7 +404,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { MenuCategory, MenuItem, FryConfig } from 'src/types/database';
 import type { OptionGroupWithSubOptions } from 'src/pages/owner/MenuManagementPage.vue';
 import { STANDARD_INGREDIENTS, inferMainIngredient } from 'src/utils/ingredientHelper';
@@ -465,7 +465,7 @@ const fryPresets = [
   { name: 'ทะเลทอด', unit: 'ออเดอร์', special: 'ทะเลทอดพิเศษ' },
 ];
 
-const form = reactive({
+const form = ref({
   name: '',
   description: '',
   base_price: 0,
@@ -476,7 +476,7 @@ const form = reactive({
   is_available: true,
 });
 
-const fryConfig = reactive<FryConfig>({
+const fryConfig = ref<FryConfig>({
   is_fried: false,
   fry_name: '',
   fry_qty: 1,
@@ -490,12 +490,12 @@ const categoryOptions = computed(() =>
 );
 
 function applyFryPreset(name: string, unit = 'ออเดอร์', specialName?: string) {
-  fryConfig.is_fried = true;
-  fryConfig.fry_name = name;
-  fryConfig.unit = unit;
-  fryConfig.fry_qty = 1;
-  fryConfig.special_fry_name = specialName || `${name}พิเศษ`;
-  fryConfig.special_fry_qty = 1;
+  fryConfig.value.is_fried = true;
+  fryConfig.value.fry_name = name;
+  fryConfig.value.unit = unit;
+  fryConfig.value.fry_qty = 1;
+  fryConfig.value.special_fry_name = specialName || `${name}พิเศษ`;
+  fryConfig.value.special_fry_qty = 1;
 }
 
 watch(
@@ -504,42 +504,43 @@ watch(
     if (isOpen) {
       if (props.initialItem) {
         // Edit mode: populate
-        form.name = props.initialItem.name;
-        form.description = props.initialItem.description || '';
-        form.base_price = props.initialItem.base_price;
-        form.image_url = props.initialItem.image_url || '';
-        form.category_id = props.initialItem.category_id;
-        form.main_ingredient =
+        form.value.name = props.initialItem.name;
+        form.value.description = props.initialItem.description || '';
+        form.value.base_price = props.initialItem.base_price;
+        form.value.image_url = props.initialItem.image_url || '';
+        form.value.category_id = props.initialItem.category_id;
+        form.value.main_ingredient =
           props.initialItem.main_ingredient || inferMainIngredient(props.initialItem.name);
-        form.is_active = props.initialItem.is_active;
-        form.is_available = props.initialItem.is_available;
+        form.value.is_active = props.initialItem.is_active;
+        form.value.is_available = props.initialItem.is_available;
 
         if (
           props.initialItem.fry_config &&
           typeof props.initialItem.fry_config.is_fried === 'boolean'
         ) {
-          fryConfig.is_fried = props.initialItem.fry_config.is_fried;
-          fryConfig.fry_name = props.initialItem.fry_config.fry_name || props.initialItem.name;
-          fryConfig.fry_qty = props.initialItem.fry_config.fry_qty || 1;
-          fryConfig.special_fry_name = props.initialItem.fry_config.special_fry_name || '';
-          fryConfig.special_fry_qty = props.initialItem.fry_config.special_fry_qty || 1;
-          fryConfig.unit = props.initialItem.fry_config.unit || 'ออเดอร์';
+          fryConfig.value.is_fried = props.initialItem.fry_config.is_fried;
+          fryConfig.value.fry_name =
+            props.initialItem.fry_config.fry_name || props.initialItem.name;
+          fryConfig.value.fry_qty = props.initialItem.fry_config.fry_qty || 1;
+          fryConfig.value.special_fry_name = props.initialItem.fry_config.special_fry_name || '';
+          fryConfig.value.special_fry_qty = props.initialItem.fry_config.special_fry_qty || 1;
+          fryConfig.value.unit = props.initialItem.fry_config.unit || 'ออเดอร์';
         } else {
           const inferred = inferFryConfigFromName(props.initialItem.name);
           if (inferred) {
-            fryConfig.is_fried = inferred.is_fried;
-            fryConfig.fry_name = inferred.fry_name || props.initialItem.name;
-            fryConfig.fry_qty = inferred.fry_qty || 1;
-            fryConfig.special_fry_name = inferred.special_fry_name || '';
-            fryConfig.special_fry_qty = inferred.special_fry_qty || 1;
-            fryConfig.unit = inferred.unit || 'ออเดอร์';
+            fryConfig.value.is_fried = inferred.is_fried;
+            fryConfig.value.fry_name = inferred.fry_name || props.initialItem.name;
+            fryConfig.value.fry_qty = inferred.fry_qty || 1;
+            fryConfig.value.special_fry_name = inferred.special_fry_name || '';
+            fryConfig.value.special_fry_qty = inferred.special_fry_qty || 1;
+            fryConfig.value.unit = inferred.unit || 'ออเดอร์';
           } else {
-            fryConfig.is_fried = false;
-            fryConfig.fry_name = props.initialItem.name;
-            fryConfig.fry_qty = 1;
-            fryConfig.special_fry_name = '';
-            fryConfig.special_fry_qty = 1;
-            fryConfig.unit = 'ออเดอร์';
+            fryConfig.value.is_fried = false;
+            fryConfig.value.fry_name = props.initialItem.name;
+            fryConfig.value.fry_qty = 1;
+            fryConfig.value.special_fry_name = '';
+            fryConfig.value.special_fry_qty = 1;
+            fryConfig.value.unit = 'ออเดอร์';
           }
         }
 
@@ -547,21 +548,21 @@ watch(
         selectedOptionGroupIds.value = [...props.initialOptionGroupIds];
       } else {
         // Create mode: reset
-        form.name = '';
-        form.description = '';
-        form.base_price = 0;
-        form.image_url = '';
-        form.category_id = props.categories[0]?.id || '';
-        form.main_ingredient = '';
-        form.is_active = true;
-        form.is_available = true;
+        form.value.name = '';
+        form.value.description = '';
+        form.value.base_price = 0;
+        form.value.image_url = '';
+        form.value.category_id = props.categories[0]?.id || '';
+        form.value.main_ingredient = '';
+        form.value.is_active = true;
+        form.value.is_available = true;
 
-        fryConfig.is_fried = false;
-        fryConfig.fry_name = '';
-        fryConfig.fry_qty = 1;
-        fryConfig.special_fry_name = '';
-        fryConfig.special_fry_qty = 1;
-        fryConfig.unit = 'ออเดอร์';
+        fryConfig.value.is_fried = false;
+        fryConfig.value.fry_name = '';
+        fryConfig.value.fry_qty = 1;
+        fryConfig.value.special_fry_name = '';
+        fryConfig.value.special_fry_qty = 1;
+        fryConfig.value.unit = 'ออเดอร์';
 
         previewImageUrl.value = '';
         const diningGroup = props.allOptionGroups.find(
@@ -609,7 +610,7 @@ function handleFileSelected(event: Event) {
 function removeImage() {
   pendingImageFile.value = null;
   previewImageUrl.value = '';
-  form.image_url = '';
+  form.value.image_url = '';
   if (fileInputRef.value) fileInputRef.value.value = '';
 }
 
@@ -621,18 +622,18 @@ function handleUrlInput(val: string | number | null) {
 }
 
 function handleSubmit() {
-  if (!form.name.trim()) {
+  if (!form.value.name.trim()) {
     notifyError('กรุณากรอกชื่อเมนูอาหาร');
     return;
   }
-  if (!form.category_id) {
+  if (!form.value.category_id) {
     notifyError('กรุณาเลือกหมวดหมู่');
     return;
   }
 
   emit('save', {
-    itemForm: { ...form, name: form.name.trim() },
-    fryConfig: { ...fryConfig },
+    itemForm: { ...form.value, name: form.value.name.trim() },
+    fryConfig: { ...fryConfig.value },
     optionGroupIds: [...selectedOptionGroupIds.value],
     pendingFile: pendingImageFile.value,
   });

@@ -1,8 +1,24 @@
 # Security changes: staging and release order
 
-Migrations `00026`–`00032` are code changes only until applied to a database. Do not run
-`supabase db push` against production before resolving the two existing `00022` migration
-versions and comparing the remote migration history. Use a disposable staging database first.
+## Demo-Delivery remote status (2026-11-14)
+
+The linked remote database already contained the schema and all 20 final function bodies from
+`00001`–`00025`, but its Supabase CLI migration history was empty. Both `00022` function bodies
+matched their original migration files exactly. Their SQL is now consolidated in one local
+`00022` migration file so the CLI has one version to track.
+
+With owner approval, CLI history was repaired for `00001`–`00025` without rerunning their SQL.
+The dry run then listed only `00026`–`00032`; these seven migrations were pushed successfully.
+The remote migration list and local files now match, `supabase db push --dry-run` reports that
+the remote is up to date, and `supabase/tests/security_regression.sql` passed on the remote.
+The owner UID was provisioned separately through the SQL Editor before the push. Customer and
+owner write flows still require an authorized end-to-end check with test data.
+
+## Procedure for other environments
+
+Migrations `00026`–`00032` must be checked against each target database before applying them.
+Compare the remote migration history and schema before `supabase db push`. Use a disposable
+staging database first.
 
 1. Apply the new migrations to staging and run `supabase/tests/security_regression.sql`.
 2. Find the exact Supabase Auth UID of every owner or staff account using the Auth dashboard.

@@ -1,0 +1,23 @@
+trigger:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+  - job: unit_allure
+    displayName: Unit tests and Allure report
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '24.x'
+      - script: npm install --package-lock=false --no-audit --no-fund
+        displayName: Install dependencies
+      - script: npm run test:allure
+        displayName: Run isolated unit tests
+      - script: npm run allure:generate
+        displayName: Generate Allure report
+        condition: always()
+      - publish: allure-report
+        artifact: allure-report
+        condition: always()

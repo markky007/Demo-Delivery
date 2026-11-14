@@ -1,4 +1,4 @@
--- Run on a disposable staging database after applying migrations 00026-00032.
+-- Run on a disposable staging database after applying migrations 00026-00033.
 -- These assertions do not write application data.
 DO $test$
 DECLARE
@@ -25,6 +25,17 @@ BEGIN
 
   IF NOT has_function_privilege('anon', 'public.create_order_verified(uuid,text,jsonb,text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'Customer order entry RPC is not executable by anon';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_proc AS p
+    CROSS JOIN LATERAL unnest(COALESCE(p.proconfig, ARRAY[]::TEXT[])) AS cfg(setting)
+    WHERE p.oid = 'public.create_order(uuid,text,jsonb)'::regprocedure
+      AND split_part(setting, '=', 1) = 'search_path'
+      AND replace(split_part(setting, '=', 2), ' ', '') = 'pg_catalog,public,pg_temp'
+  ) THEN
+    RAISE EXCEPTION 'create_order must resolve its legacy unqualified names when called by create_order_verified';
   END IF;
 
   IF EXISTS (

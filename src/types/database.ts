@@ -89,6 +89,7 @@ export interface MenuItem {
   name: string;
   description: string | null;
   image_url: string | null;
+  thumb_path: string | null;
   base_price: number;
   is_active: boolean;
   is_available: boolean;

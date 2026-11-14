@@ -386,12 +386,17 @@ async function handleSaveItem(payloadData: {
 
   try {
     let finalImageUrl = payloadData.itemForm.image_url;
+    let finalThumbPath = payloadData.itemForm.image_url
+      ? (editingItem.value?.thumb_path ?? null)
+      : null;
 
     // Upload file if new image was picked
     if (payloadData.pendingFile) {
       isUploading.value = true;
       try {
-        finalImageUrl = await uploadMenuImage(payloadData.pendingFile);
+        const uploaded = await uploadMenuImage(payloadData.pendingFile);
+        finalImageUrl = uploaded.imageUrl;
+        finalThumbPath = uploaded.thumbPath;
       } catch (uploadErr) {
         console.error('Image upload failed:', uploadErr);
         notifyError('อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
@@ -419,6 +424,7 @@ async function handleSaveItem(payloadData: {
       description: payloadData.itemForm.description || null,
       base_price: payloadData.itemForm.base_price,
       image_url: finalImageUrl || null,
+      thumb_path: finalThumbPath,
       category_id: payloadData.itemForm.category_id,
       main_ingredient: payloadData.itemForm.main_ingredient || null,
       is_active: payloadData.itemForm.is_active,

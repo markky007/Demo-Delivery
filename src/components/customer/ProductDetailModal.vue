@@ -350,6 +350,7 @@
 </template>
 
 <script setup lang="ts">
+import { menuThumbnailUrl } from 'src/utils/menuImage';
 import { ref, reactive, computed, watch } from 'vue';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
@@ -639,7 +640,7 @@ function handleAddToCart() {
     item.value.id,
     item.value.name,
     item.value.base_price,
-    item.value.image_url,
+    menuThumbnailUrl(item.value),
     quantity.value,
     specialInstruction.value.trim(),
     selectedOpts,

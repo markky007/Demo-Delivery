@@ -11,7 +11,7 @@
       <div class="item-thumb q-mr-md">
         <img
           v-if="item.image_url"
-          :src="item.image_url"
+          :src="menuThumbnailUrl(item) || undefined"
           :alt="item.name"
           loading="lazy"
           decoding="async"
@@ -112,6 +112,7 @@
 </template>
 
 <script setup lang="ts">
+import { menuThumbnailUrl } from 'src/utils/menuImage';
 import { computed } from 'vue';
 import type { MenuItem } from 'src/types/database';
 import { formatPrice } from 'src/utils/formatters';

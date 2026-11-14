@@ -11,9 +11,9 @@ const BUCKET_NAME = 'menu-images';
  */
 export async function compressImage(
   file: File,
-  maxWidth = 800,
-  maxHeight = 800,
-  quality = 0.82,
+  maxWidth = 1600,
+  maxHeight = 1600,
+  quality = 0.8,
 ): Promise<{ blob: Blob; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -45,8 +45,7 @@ export async function compressImage(
 
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Export as compressed WebP or JPEG
-      const mimeType = 'image/jpeg';
+      const mimeType = 'image/webp';
       const dataUrl = canvas.toDataURL(mimeType, quality);
 
       canvas.toBlob(
@@ -76,42 +75,23 @@ export async function compressImage(
  * @param file - The image File object to upload
  * @returns Public URL or compressed Data URL of the uploaded image
  */
-export async function uploadMenuImage(file: File): Promise<string> {
-  const fileName = `item-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.jpg`;
-  const filePath = `items/${fileName}`;
-
-  try {
-    // 1. Compress image before uploading
-    const { blob, dataUrl } = await compressImage(file, 800, 800, 0.82);
-
-    // 2. Try uploading compressed blob to Supabase Storage
-    const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, blob, {
-      cacheControl: '31536000',
-      contentType: 'image/jpeg',
-      upsert: true,
-    });
-
-    // 3. If upload succeeded, return public URL
-    if (!uploadError) {
-      const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-      return data.publicUrl;
-    }
-
-    console.warn(
-      'Supabase storage upload failed, using compressed Data URL fallback:',
-      uploadError,
-    );
-    // Fallback: Use compressed Data URL (small ~50KB) instead of multi-MB raw file
-    return dataUrl;
-  } catch (err) {
-    console.warn('Compression or upload failed, attempting small thumbnail fallback:', err);
-    try {
-      const { dataUrl } = await compressImage(file, 400, 400, 0.6);
-      return dataUrl;
-    } catch {
-      return '';
-    }
-  }
+export async function uploadMenuImage(
+  file: File,
+): Promise<{ imageUrl: string; thumbPath: string }> {
+  const id = crypto.randomUUID();
+  const imagePath = `items/${id}.webp`;
+  const thumbPath = `items/thumb/${id}.webp`;
+  const [image, thumb] = await Promise.all([
+    compressImage(file, 1600, 1600, 0.8),
+    compressImage(file, 320, 320, 0.8),
+  ]);
+  const bucket = supabase.storage.from(BUCKET_NAME);
+  const options = { cacheControl: '31536000', contentType: 'image/webp', upsert: false };
+  const { error: imageError } = await bucket.upload(imagePath, image.blob, options);
+  if (imageError) throw imageError;
+  const { error: thumbError } = await bucket.upload(thumbPath, thumb.blob, options);
+  if (thumbError) throw thumbError;
+  return { imageUrl: bucket.getPublicUrl(imagePath).data.publicUrl, thumbPath };
 }
 
 /**

@@ -86,7 +86,7 @@
             <div class="menu-item-image-wrapper">
               <img
                 v-if="item.image_url"
-                :src="item.image_url"
+                v-near-image="menuThumbnailUrl(item)"
                 :alt="item.name"
                 loading="lazy"
                 decoding="async"
@@ -150,6 +150,8 @@
 </template>
 
 <script setup lang="ts">
+import { menuThumbnailUrl } from 'src/utils/menuImage';
+import type { Directive } from 'vue';
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useMenuStore } from 'src/stores/menuStore';
@@ -162,6 +164,37 @@ import RandomMenuGame from 'src/components/RandomMenuGame.vue';
 import ProductDetailModal from 'src/components/customer/ProductDetailModal.vue';
 import type { MenuItem } from 'src/types/database';
 
+const imageObservers = new WeakMap<HTMLImageElement, IntersectionObserver>();
+const vNearImage: Directive<HTMLImageElement, string | null> = {
+  mounted(el, binding) {
+    if (!binding.value) return;
+    el.dataset.nearSrc = binding.value;
+    if (!('IntersectionObserver' in window)) {
+      el.src = binding.value;
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (el.dataset.nearSrc) el.src = el.dataset.nearSrc;
+        observer.disconnect();
+        imageObservers.delete(el);
+      },
+      { rootMargin: '300px' },
+    );
+    imageObservers.set(el, observer);
+    observer.observe(el);
+  },
+  updated(el, binding) {
+    if (binding.value === binding.oldValue) return;
+    if (binding.value) el.dataset.nearSrc = binding.value;
+    if (el.hasAttribute('src') && binding.value) el.src = binding.value;
+  },
+  unmounted(el) {
+    imageObservers.get(el)?.disconnect();
+    imageObservers.delete(el);
+  },
+};
 const router = useRouter();
 const route = useRoute();
 const menuStore = useMenuStore();

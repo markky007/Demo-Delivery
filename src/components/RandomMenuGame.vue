@@ -82,7 +82,7 @@
             <div class="slot-image-box">
               <img
                 v-if="currentItemDisplay.image_url"
-                :src="currentItemDisplay.image_url"
+                :src="menuThumbnailUrl(currentItemDisplay) || undefined"
                 :alt="currentItemDisplay.name"
                 class="slot-image"
               />
@@ -105,9 +105,7 @@
 
         <div class="spin-footer-hint text-caption q-mt-md">
           <template v-if="spinPhase === 'spinning'"> กำลังค้นหาเมนูที่ใช่สำหรับคุณ... </template>
-          <template v-else-if="spinPhase === 'slowing'">
-            ใกล้จะหยุดแล้ว เตรียมอร่อยได้เลย!
-          </template>
+          <template v-else-if="spinPhase === 'slowing'"> ใกล้จะหยุดแล้ว เตรียมอร่อยได้เลย! </template>
           <template v-else> กำลังเปิดหน้าต่างเลือกตัวเลือกเมนู... </template>
         </div>
       </q-card>
@@ -135,9 +133,7 @@
               </div>
               <div class="ellipsis">
                 <div class="result-header-title">เมนูที่คุณสุ่มได้</div>
-                <div class="result-header-subtitle">
-                  เลือกตัวเลือกตามต้องการแล้วเพิ่มลงตะกร้าได้ทันที
-                </div>
+                <div class="result-header-subtitle">เลือกตัวเลือกตามต้องการแล้วเพิ่มลงตะกร้าได้ทันที</div>
               </div>
             </div>
             <q-btn
@@ -475,6 +471,7 @@
 </template>
 
 <script setup lang="ts">
+import { menuThumbnailUrl } from 'src/utils/menuImage';
 import { ref, reactive, computed, onUnmounted } from 'vue';
 import { useMenuStore } from 'src/stores/menuStore';
 import { useCartStore } from 'src/stores/cartStore';
@@ -907,7 +904,7 @@ function addToCart() {
     selectedItemWithOptions.value.id,
     selectedItemWithOptions.value.name,
     selectedItemWithOptions.value.base_price,
-    selectedItemWithOptions.value.image_url,
+    menuThumbnailUrl(selectedItemWithOptions.value),
     quantity.value,
     specialInstruction.value,
     collectSelectedOptions(),

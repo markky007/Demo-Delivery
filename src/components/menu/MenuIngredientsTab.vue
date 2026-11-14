@@ -271,7 +271,12 @@
                 <div class="row items-center justify-between no-wrap">
                   <div class="row items-center no-wrap col q-mr-sm">
                     <div class="subdish-thumb q-mr-sm">
-                      <img v-if="dish.image_url" :src="dish.image_url" :alt="dish.name" />
+                      <img
+                        v-if="dish.image_url"
+                        :src="menuThumbnailUrl(dish) || undefined"
+                        :alt="dish.name"
+                        loading="lazy"
+                      />
                       <q-icon v-else name="restaurant" size="18px" color="grey-4" />
                     </div>
                     <div class="col ellipsis">
@@ -318,6 +323,7 @@
 </template>
 
 <script setup lang="ts">
+import { menuThumbnailUrl } from 'src/utils/menuImage';
 import { ref, reactive, computed } from 'vue';
 import type { MenuItem } from 'src/types/database';
 import { formatPrice } from 'src/utils/formatters';

@@ -299,6 +299,7 @@
 </template>
 
 <script setup lang="ts">
+import { menuThumbnailUrl } from 'src/utils/menuImage';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useNotify } from 'src/composables/useNotify';
@@ -579,7 +580,7 @@ function addToCart() {
     item.value.id,
     item.value.name,
     item.value.base_price,
-    item.value.image_url,
+    menuThumbnailUrl(item.value),
     quantity.value,
     specialInstruction.value,
     collectSelectedOptions(),
@@ -873,7 +874,9 @@ function addToCart() {
   background: var(--color-primary) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 20px rgba(0, 113, 227, 0.32);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .add-to-cart-btn:hover:not(:disabled) {
